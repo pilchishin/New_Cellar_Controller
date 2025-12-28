@@ -1,0 +1,56 @@
+# PlatformIO build artifacts
+.pio/
+build/
+.firmware/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.tmp
+*.temp
+
+# Project specific build outputs
+*.bin
+*.hex
+*.elf
+*.map
+
+# Temporary files
+*.log
+*.bak
+*.backup
+
+# Configuration files that might contain sensitive data
+.local/
+config.local.*
+
+# Documentation and data files that are generated
+docs/_build/
+*.pyc
+__pycache__/
+
+# Do not ignore important PlatformIO project files
+!platformio.ini
+!src/
+!include/
+!lib/
+!test/
+!boards/
+!scripts/
+
+# Ignore everything in the root that is not explicitly allowed
+!*.ini
+!*.h
+!*.cpp
+!*.c
+!*.hpp
+!*.cc
+!*.ino
