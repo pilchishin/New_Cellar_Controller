@@ -8,6 +8,11 @@
 #define HUMIDITY_SENSOR_PIN A1
 #define OZONE_SENSOR_PIN A2
 
+// Пины и адреса датчиков
+#define DS18B20_PIN 2  // Пин для DS18B20 по умолчанию
+#define BME280_ADDRESS 0x76  // Основной адрес BME280
+#define HTU21D_ADDRESS 0x40  // Адрес HTU21D
+
 // Пины управления
 #define FAN_PIN 2
 #define HEATER_PIN 3
@@ -33,5 +38,14 @@
 // Адреса EEPROM
 #define EEPROM_SETTINGS_ADDR 0
 #define EEPROM_CALIBRATION_ADDR 50
+
+// Константы для датчиков
+#define DS18B20_RESOLUTION 12  // Разрешение DS18B20 в битах
+#define HTU21D_TEMP_RESOLUTION 14  // Разрешение температуры HTU21D в битах
+#define HTU21D_HUM_RESOLUTION 12  // Разрешение влажности HTU21D в битах
+
+// Тайминги для датчиков
+#define HTU21D_TEMP_MEASUREMENT_TIME 50 // Время измерения температуры HTU21D в мс
+#define HTU21D_HUM_MEASUREMENT_TIME 16   // Время измерения влажности HTU21D в мс
 
 #endif // CONFIG_H
