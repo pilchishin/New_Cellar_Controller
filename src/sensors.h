@@ -2,7 +2,6 @@
 #define SENSORS_H
 
 #include "config.h"
-#include <stdint.h>  // Для типов данных uint8_t, uint16_t, uint32_t
 #include <Arduino.h> // Для функций и типов Arduino
 
 
@@ -33,7 +32,13 @@ public:
      * Считывает текущие значения температуры и влажности с доступных датчиков
      */
     void readSensors();
-       
+    
+    /**
+     * @brief Обновление состояния сенсоров (неблокирующий метод)
+     * Использует millis() для таймингов, не содержит delay()
+     */
+    void updateSensors();
+    
     /**
      * @brief Получение температуры с BME280
      * @return Температура в градусах Цельсия
@@ -63,6 +68,36 @@ public:
      * @return Температура в градусах Цельсия
      */
     float getDS18B20Temperature();
+    
+    /**
+     * @brief Получение температуры с BME280 (новое объявление)
+     * @return Температура в градусах Цельсия
+     */
+    float getBmeTemp();
+    
+    /**
+     * @brief Получение влажности с BME280 (новое объявление)
+     * @return Влажность в процентах
+     */
+    float getBmeHum();
+    
+    /**
+     * @brief Получение температуры с HTU21D (новое объявление)
+     * @return Температура в градусах Цельсия
+     */
+    float getHtuTemp();
+    
+    /**
+     * @brief Получение влажности с HTU21D (новое объявление)
+     * @return Влажность в процентах
+     */
+    float getHtuHum();
+    
+    /**
+     * @brief Получение температуры с DS18B20 (новое объявление)
+     * @return Температура в градусах Цельсия
+     */
+    float getDsTemp();
     
     /**
      * @brief Проверка валидности данных температуры с BME280
@@ -123,6 +158,14 @@ private:
     bool htu21dTempValid;
     bool htu21dHumidityValid;
     bool ds18b20TempValid;
+    
+    // Поля для неблокирующей архитектуры
+    unsigned long lastBmeReadTime;
+    unsigned long lastHtuReadTime;
+    unsigned long lastDsReadTime;
+    const unsigned long bmeReadInterval = 1000;  // Интервал опроса BME280 в мс
+    const unsigned long htuReadInterval = 1000;  // Интервал опроса HTU21D в мс
+    const unsigned long dsReadInterval = 1000;   // Интервал опроса DS18B20 в мс
     
     // Методы для работы с DS18B20
     /**
