@@ -1,57 +1,83 @@
 #ifndef FILTERS_H
 #define FILTERS_H
 
+#ifdef THREAD_SAFE_FILTERS
+#include <mutex>
+#endif
+
+template<typename T = float>
 class Filter {
 public:
-    Filter();
-    virtual ~Filter();
+    Filter() : lastOutput(T(0)) {}
+    virtual ~Filter() {}
     
-    virtual float apply(float input) = 0;
-    virtual void reset();
+    virtual T apply(T input) = 0;
+    virtual void reset() {
+        lastOutput = T(0);
+    }
     
 protected:
-    float lastOutput;
+    T lastOutput;
+#ifdef THREAD_SAFE_FILTERS
+    std::mutex mtx;
+#endif
 };
 
-class MovingAverageFilter : public Filter {
+template<typename T = float>
+class MovingAverageFilter : public Filter<T> {
 public:
     MovingAverageFilter(int windowSize);
-    virtual float apply(float input) override;
+    virtual T apply(T input) override;
     virtual void reset() override;
     
 private:
     int windowSize;
-    float* buffer;
+    T* buffer;
     int index;
     int count;
-    float sum;
+    T sum;
 };
 
-class MedianFilter : public Filter {
+template<typename T = float>
+class MedianFilter : public Filter<T> {
 public:
     MedianFilter(int windowSize);
-    virtual float apply(float input) override;
+    virtual T apply(T input) override;
     virtual void reset() override;
     
 private:
     int windowSize;
-    float* buffer;
+    T* buffer;
     int index;
     int count;
+    void sortBuffer(T* arr, int size);
 };
 
-class KalmanFilter : public Filter {
+template<typename T = float>
+class EMAFilter : public Filter<T> {
 public:
-    KalmanFilter(float processNoise, float measurementNoise);
-    virtual float apply(float input) override;
+    EMAFilter(T alpha);
+    virtual T apply(T input) override;
     virtual void reset() override;
     
 private:
-    float processNoise;
-    float measurementNoise;
-    float estimate;
-    float error;
-    float kalmanGain;
+    T alpha;
+    bool initialized;
+};
+
+template<typename T = float>
+class KalmanFilter : public Filter<T> {
+public:
+    KalmanFilter(T processNoise, T measurementNoise);
+    virtual T apply(T input) override;
+    virtual void reset() override;
+    
+private:
+    T processNoise;
+    T measurementNoise;
+    T estimate;
+    T error;
+    T kalmanGain;
 };
 
 #endif // FILTERS_H

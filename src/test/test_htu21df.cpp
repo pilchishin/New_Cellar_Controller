@@ -5,7 +5,7 @@
 // Создаем экземпляр датчика HTU21DF напрямую
 Adafruit_HTU21DF htu = Adafruit_HTU21DF();
 
-void setup() {
+void testHTU21DF() {
   Serial.begin(9600);
   Serial.println("HTU21DF Sensor Test");
   
@@ -14,11 +14,9 @@ void setup() {
     Serial.println("HTU21DF sensor initialized successfully");
   } else {
     Serial.println("Failed to initialize HTU21DF sensor");
-    while (1) delay(1); // Останавливаем выполнение при ошибке инициализации
+    return; // Вместо остановки, просто выходим
   }
-}
 
-void loop() {
   // Считываем показания температуры и влажности
   float temperature = htu.readTemperature();
   float humidity = htu.readHumidity();
@@ -35,6 +33,4 @@ void loop() {
     Serial.print(humidity);
     Serial.println(" %");
   }
-  
-  delay(2000); // Ждем 2 секунды перед следующим измерением
 }

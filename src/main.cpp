@@ -11,11 +11,11 @@
 
 // Создание экземпляров наших менеджеров
 SensorManager sensorManager;
-ClimateManager climateManager;
+ClimateController climateController;
 DisplayManager displayManager;
 MenuManager menuManager;
 FSM fsm;
-OzoneManager ozoneManager;
+OzoneController ozoneController;
 RTCManager rtcManager;
 EEPROMManager eepromManager;
 
@@ -24,36 +24,35 @@ void setup() {
     Serial.begin(960);
     
     // Инициализация всех подсистем
-    sensorManager.init();
+    sensorManager.begin();
     displayManager.init();
     menuManager.init();
     fsm.init();
-    ozoneManager.init();
-    rtcManager.init();
+    ozoneController.init();
+    rtcManager.begin();
     eepromManager.init();
     
-    // Инициализация менеджера климата после сенсоров
-    climateManager.init(&sensorManager);
+    // Инициализация контроллера климата после сенсоров
+    climateController.setSensorManager(&sensorManager);
+    climateController.init();
     
     // Отображение стартового сообщения
-    displayManager.displayStartupMessage();
+    displayManager.displayStatusScreen();
     
     Serial.println("Cellar Controller initialized");
 }
 
 void loop() {
     // Обновление всех подсистем
-    sensorManager.updateSensors();
-    climateManager.update();
-    ozoneManager.update();
-    rtcManager.update();
+    climateController.update();
+    ozoneController.update();
     fsm.update();
     
     // Обновление дисплея
     displayManager.update();
     
     // Обработка меню
-    menuManager.handleMenu();
+    menuManager.update();
     
     // Небольшая задержка, чтобы не перегружать процессор
     delay(10);

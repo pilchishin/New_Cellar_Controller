@@ -1,10 +1,10 @@
 #include "rtc.h"
 
-RTC_DS3231::RTC_DS3231() {
+RTCManager::RTCManager() {
     // Конструктор пустой, инициализация в begin()
 }
 
-bool RTC_DS3231::begin() {
+bool RTCManager::begin() {
     if (!rtc.begin()) {
         // RTC не найден
         return false;
@@ -18,34 +18,34 @@ bool RTC_DS3231::begin() {
     return true;
 }
 
-DateTime RTC_DS3231::getDateTime() {
+DateTime RTCManager::getDateTime() {
     return rtc.now();
 }
 
-void RTC_DS3231::setDateTime(const DateTime &dt) {
+void RTCManager::setDateTime(const DateTime &dt) {
     rtc.adjust(dt);
 }
 
-uint8_t RTC_DS3231::getHour() {
+uint8_t RTCManager::getHour() {
     return rtc.now().hour();
 }
 
-uint8_t RTC_DS3231::getMinute() {
+uint8_t RTCManager::getMinute() {
     return rtc.now().minute();
 }
 
-uint8_t RTC_DS3231::getSecond() {
+uint8_t RTCManager::getSecond() {
     return rtc.now().second();
 }
 
-uint8_t RTC_DS3231::getDay() {
+uint8_t RTCManager::getDay() {
     return rtc.now().day();
 }
 
-uint8_t RTC_DS3231::getMonth() {
+uint8_t RTCManager::getMonth() {
     return rtc.now().month();
 }
 
-uint16_t RTC_DS3231::getYear() {
+uint16_t RTCManager::getYear() {
     return rtc.now().year();
 }

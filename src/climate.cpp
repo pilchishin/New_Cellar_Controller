@@ -7,6 +7,7 @@ ClimateController::ClimateController() {
     currentHumidity = 0.0f;
     heaterEnabled = false;
     fanEnabled = false;
+    sensorManager = nullptr;
 }
 
 void ClimateController::init() {
@@ -15,52 +16,66 @@ void ClimateController::init() {
 
 void ClimateController::update() {
     // Обновление состояния климат-контроллера
+    if (sensorManager != nullptr) {
+        currentTemperature = sensorManager->getFilteredTemperature();
+        currentHumidity = sensorManager->getFilteredHumidity();
+    }
 }
 
 void ClimateController::setTargetTemperature(float temp) {
     // Установка целевой температуры
+    targetTemperature = temp;
 }
 
 void ClimateController::setTargetHumidity(float humidity) {
     // Установка целевой влажности
+    targetHumidity = humidity;
 }
 
 float ClimateController::getTargetTemperature() {
-    return 0.0f;
+    return targetTemperature;
 }
 
 float ClimateController::getTargetHumidity() {
-    return 0.0f;
+    return targetHumidity;
 }
 
 void ClimateController::enableHeater() {
     // Включение нагревателя
+    heaterEnabled = true;
 }
 
 void ClimateController::disableHeater() {
     // Выключение нагревателя
+    heaterEnabled = false;
 }
 
 void ClimateController::enableFan() {
     // Включение вентилятора
+    fanEnabled = true;
 }
 
 void ClimateController::disableFan() {
     // Выключение вентилятора
+    fanEnabled = false;
 }
 
 bool ClimateController::isHeaterEnabled() {
-    return false;
+    return heaterEnabled;
 }
 
 bool ClimateController::isFanEnabled() {
-    return false;
+    return fanEnabled;
 }
 
 float ClimateController::getCurrentTemperature() {
-    return 0.0f;
+    return currentTemperature;
 }
 
 float ClimateController::getCurrentHumidity() {
-    return 0.0f;
+    return currentHumidity;
+}
+
+void ClimateController::setSensorManager(SensorManager* sensorMgr) {
+    sensorManager = sensorMgr;
 }

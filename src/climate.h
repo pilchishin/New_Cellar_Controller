@@ -2,6 +2,7 @@
 #define CLIMATE_H
 
 #include "config.h"
+#include "sensors.h"
 
 class ClimateController {
 public:
@@ -25,6 +26,9 @@ public:
     float getCurrentTemperature();
     float getCurrentHumidity();
     
+    // Метод для установки SensorManager
+    void setSensorManager(SensorManager* sensorMgr);
+    
 private:
     float targetTemperature;
     float targetHumidity;
@@ -33,6 +37,8 @@ private:
     
     bool heaterEnabled;
     bool fanEnabled;
+    
+    SensorManager* sensorManager;
 };
 
 #endif // CLIMATE_H

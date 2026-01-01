@@ -4,7 +4,7 @@
 #include "sensors.h"
 
 // Простой тест для проверки корректности изменений
-void setup() {
+void testSensor() {
   Serial.begin(9600);
   
   // Создание экземпляра HTU21DSensor
@@ -25,8 +25,4 @@ void setup() {
   } else {
     Serial.println("Failed to initialize HTU21D sensor");
   }
-}
-
-void loop() {
-  // Пустой цикл для теста
 }

@@ -8,12 +8,12 @@
 /**
  * @brief Класс для работы с DS3231 RTC
  */
-class RTC_DS3231 {
+class RTCManager {
 public:
     /**
      * @brief Конструктор
      */
-    RTC_DS3231();
+    RTCManager();
 
     /**
      * @brief Инициализация RTC
@@ -48,7 +48,7 @@ public:
     uint16_t getYear();
 
 private:
-    RTC_DS3231_Class rtc;  // объект библиотеки RTClib
+    RTC_DS3231 rtc;  // объект библиотеки RTClib
 };
 
 #endif // RTC_H

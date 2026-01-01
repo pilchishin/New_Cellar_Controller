@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <Wire.h>
+#include "filters.h"
 
 // Предварительные объявления для библиотек датчиков
 class Adafruit_BME280;
@@ -111,6 +112,55 @@ private:
     int pin;
     OneWire* oneWire;
     DallasTemperature* sensors;
+};
+
+/**
+ * @brief Класс для управления сенсорами с фильтрацией данных
+ *
+ * SensorManager объединяет работу с различными датчиками и применяет
+ * фильтры к полученным данным для уменьшения шума и выбросов.
+ */
+class SensorManager {
+public:
+    /**
+     * @brief Конструктор класса SensorManager
+     * @param medianWindowSize Размер окна для медианного фильтра (по умолчанию 3)
+     * @param emaAlpha Коэффициент альфа для EMA фильтра (по умолчанию 0.2f)
+     */
+    SensorManager(int medianWindowSize = 3, float emaAlpha = 0.2f);
+    
+    /**
+     * @brief Инициализация всех датчиков
+     * @return true в случае успешной инициализации всех датчиков, false в противном случае
+     */
+    bool begin();
+    
+    /**
+     * @brief Получение отфильтрованной температуры с датчиков
+     * @return Температура в градусах Цельсия, или NAN в случае ошибки
+     */
+    float getFilteredTemperature();
+    
+    /**
+     * @brief Получение отфильтрованной влажности с датчиков
+     * @return Влажность в процентах, или NAN в случае ошибки
+     */
+    float getFilteredHumidity();
+    
+    /**
+     * @brief Сброс всех фильтров
+     */
+    void resetFilters();
+
+private:
+    BME280Sensor bme280;
+    HTU21DSensor htu21d;
+    DS18B20Sensor ds18b20;
+    
+    MedianFilter<float> tempMedianFilter;
+    EMAFilter<float> tempEmaFilter;
+    MedianFilter<float> humidityMedianFilter;
+    EMAFilter<float> humidityEmaFilter;
 };
 
 #endif // SENSORS_H
