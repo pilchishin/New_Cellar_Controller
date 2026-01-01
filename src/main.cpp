@@ -9,7 +9,7 @@
 #include "eeprom.h"
 #include "utils.h"
 
-// Create instances of our managers
+// Создание экземпляров наших менеджеров
 SensorManager sensorManager;
 ClimateManager climateManager;
 DisplayManager displayManager;
@@ -20,10 +20,10 @@ RTCManager rtcManager;
 EEPROMManager eepromManager;
 
 void setup() {
-    // Initialize serial communication
-    Serial.begin(9600);
+    // Инициализация последовательной связи
+    Serial.begin(960);
     
-    // Initialize all subsystems
+    // Инициализация всех подсистем
     sensorManager.init();
     displayManager.init();
     menuManager.init();
@@ -32,29 +32,29 @@ void setup() {
     rtcManager.init();
     eepromManager.init();
     
-    // Initialize climate manager after sensors
+    // Инициализация менеджера климата после сенсоров
     climateManager.init(&sensorManager);
     
-    // Display startup message
+    // Отображение стартового сообщения
     displayManager.displayStartupMessage();
     
     Serial.println("Cellar Controller initialized");
 }
 
 void loop() {
-    // Update all subsystems
+    // Обновление всех подсистем
     sensorManager.updateSensors();
     climateManager.update();
     ozoneManager.update();
     rtcManager.update();
     fsm.update();
     
-    // Update display
+    // Обновление дисплея
     displayManager.update();
     
-    // Handle menu
+    // Обработка меню
     menuManager.handleMenu();
     
-    // Small delay to prevent overwhelming the processor
+    // Небольшая задержка, чтобы не перегружать процессор
     delay(10);
 }

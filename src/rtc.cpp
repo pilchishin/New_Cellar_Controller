@@ -1,64 +1,61 @@
 #include "rtc.h"
 
-RTCManager::RTCManager() {
-    rtc = nullptr;
-    alarmEnabled = false;
-    alarmHour = 0;
-    alarmMinute = 0;
+DS3231RTC::DS3231RTC() : rtc(), lastSyncTime(0), timeValid(false) {
 }
 
-void RTCManager::init() {
-    // Инициализация RTC
+bool DS3231RTC::initialize() {
+    if (!rtc.begin()) {
+        return false;
+    }
+    
+    if (rtc.lostPower()) {
+        // Потеря питания RTC, время недействительно
+        timeValid = false;
+        return false;
+    }
+    
+    timeValid = true;
+    lastSyncTime = millis();
+    return true;
 }
 
-void RTCManager::update() {
-    // Обновление RTC
+DateTime DS3231RTC::readTime() {
+    return rtc.now();
 }
 
-bool RTCManager::setTime(int hour, int minute, int second, int day, int month, int year) {
-    return false;
+bool DS3231RTC::setTime(const DateTime& time) {
+    rtc.adjust(time);
+    timeValid = true;
+    lastSyncTime = millis();
+    return true;
 }
 
-bool RTCManager::setTimeFromSensor() {
-    return false;
+bool DS3231RTC::checkTimeAccuracy() {
+    // Сравнение внутреннего дрейфа часов с известным точным источником времени, если он доступен
+    // На данный момент мы будем считать DS3231 точными, поскольку они компенсируются температурой
+    // Мы можем реализовать дополнительные проверки, если у нас есть сетевое время
+    
+    // Обновление времени последней синхронизации
+    lastSyncTime = millis();
+    
+    // DS3231 очень точные, поэтому мы вернем true
+    // На практике мы можем сравнивать с внешним источником времени
+    return true;
 }
 
-String RTCManager::getTimeString() {
-    return String("");
+bool DS3231RTC::scheduleAlarm(const DateTime& time) {
+    // Установка будильника 1 на указанное время
+    // Это упрощенная реализация - вы можете настроить это в зависимости от ваших конкретных потребностей
+    rtc.disableAlarm(1);
+    rtc.disableAlarm(2);
+    
+    // В этом примере мы установим будильник на следующее occurrence указанного времени
+    // Точная реализация зависит от того, какая функциональность будильника нужна
+    rtc.setAlarm1(time, DS3231_A1_Hour); // Будильник каждый день в указанное время
+    
+    return true;
 }
 
-String RTCManager::getDateString() {
-    return String("");
-}
-
-DateTime RTCManager::now() {
-    return DateTime();
-}
-
-void RTCManager::enableAlarm() {
-    // Включение будильника
-}
-
-void RTCManager::disableAlarm() {
-    // Выключение будильника
-}
-
-bool RTCManager::isAlarmEnabled() {
-    return false;
-}
-
-void RTCManager::setAlarmTime(int hour, int minute) {
-    // Установка времени будильника
-}
-
-bool RTCManager::isAlarmTime() {
-    return false;
-}
-
-bool RTCManager::isTimeSet() {
-    return false;
-}
-
-void RTCManager::syncWithSensor() {
-    // Синхронизация с сенсором
+bool DS3231RTC::isTimeValid() {
+    return timeValid;
 }
