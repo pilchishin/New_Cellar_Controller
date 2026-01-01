@@ -151,6 +151,60 @@ public:
      * @brief Сброс всех фильтров
      */
     void resetFilters();
+    
+    /**
+     * @brief Обновление опроса датчиков по таймеру
+     * @return true если опрос был выполнен, false если еще не время
+     */
+    bool update();
+    
+    /**
+     * @brief Получение последнего значения температуры с BME280
+     * @return Последнее значение температуры или NAN, если датчик недоступен
+     */
+    float getLastBmeTemp() const { return lastBmeTemp; }
+    
+    /**
+     * @brief Получение последнего значения влажности с BME280
+     * @return Последнее значение влажности или NAN, если датчик недоступен
+     */
+    float getLastBmeHumidity() const { return lastBmeHumidity; }
+    
+    /**
+     * @brief Получение последнего значения температуры с HTU21DF
+     * @return Последнее значение температуры или NAN, если датчик недоступен
+     */
+    float getLastHtuTemp() const { return lastHtuTemp; }
+    
+    /**
+     * @brief Получение последнего значения влажности с HTU21DF
+     * @return Последнее значение влажности или NAN, если датчик недоступен
+     */
+    float getLastHtuHumidity() const { return lastHtuHumidity; }
+    
+    /**
+     * @brief Получение последнего значения температуры с DS18B20
+     * @return Последнее значение температуры или NAN, если датчик недоступен
+     */
+    float getLastDsTemp() const { return lastDsTemp; }
+    
+    /**
+     * @brief Проверка доступности датчика BME280
+     * @return true, если датчик доступен, иначе false
+     */
+    bool isBmeAvailable() const { return bmeAvailable; }
+    
+    /**
+     * @brief Проверка доступности датчика HTU21DF
+     * @return true, если датчик доступен, иначе false
+     */
+    bool isHtuAvailable() const { return htuAvailable; }
+    
+    /**
+     * @brief Проверка доступности датчика DS18B20
+     * @return true, если датчик доступен, иначе false
+     */
+    bool isDsAvailable() const { return dsAvailable; }
 
 private:
     BME280Sensor bme280;
@@ -161,6 +215,19 @@ private:
     EMAFilter<float> tempEmaFilter;
     MedianFilter<float> humidityMedianFilter;
     EMAFilter<float> humidityEmaFilter;
+    
+    unsigned long lastPollTime;
+    bool initialized;
+    
+    // Переменные для хранения последних значений датчиков
+    float lastBmeTemp;
+    float lastBmeHumidity;
+    float lastHtuTemp;
+    float lastHtuHumidity;
+    float lastDsTemp;
+    bool bmeAvailable;
+    bool htuAvailable;
+    bool dsAvailable;
 };
 
 #endif // SENSORS_H

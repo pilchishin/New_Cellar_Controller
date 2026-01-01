@@ -10,48 +10,6 @@ void copyBuffer(T* dest, const T* src, int count) {
 
 // Реализация шаблонных методов для шаблонных классов
 template<typename T>
-MovingAverageFilter<T>::MovingAverageFilter(int windowSize) : Filter<T>() {
-    this->windowSize = windowSize;
-    buffer = new T[windowSize];
-    index = 0;
-    count = 0;
-    sum = T(0);
-}
-
-template<typename T>
-T MovingAverageFilter<T>::apply(T input) {
-#ifdef THREAD_SAFE_FILTERS
-    std::lock_guard<std::mutex> lock(this->mtx);
-#endif
-    if (count < windowSize) {
-        buffer[index] = input;
-        sum += input;
-        count++;
-    } else {
-        sum -= buffer[index];
-        buffer[index] = input;
-        sum += input;
-    }
-    index = (index + 1) % windowSize;
-    T result = sum / T(count);
-    this->lastOutput = result;
-    return result;
-}
-
-template<typename T>
-void MovingAverageFilter<T>::reset() {
-#ifdef THREAD_SAFE_FILTERS
-    std::lock_guard<std::mutex> lock(this->mtx);
-#endif
-    index = 0;
-    count = 0;
-    sum = T(0);
-    for(int i = 0; i < windowSize; i++) {
-        buffer[i] = T(0);
-    }
-}
-
-template<typename T>
 MedianFilter<T>::MedianFilter(int windowSize) : Filter<T>() {
     this->windowSize = windowSize;
     buffer = new T[windowSize];
@@ -156,41 +114,10 @@ void EMAFilter<T>::reset() {
     this->initialized = false;
 }
 
-template<typename T>
-KalmanFilter<T>::KalmanFilter(T processNoise, T measurementNoise) : Filter<T>() {
-    this->processNoise = processNoise;
-    this->measurementNoise = measurementNoise;
-    this->estimate = T(0);
-    this->error = T(0);
-    this->kalmanGain = T(0);
-}
-
-template<typename T>
-T KalmanFilter<T>::apply(T input) {
-#ifdef THREAD_SAFE_FILTERS
-    std::lock_guard<std::mutex> lock(this->mtx);
-#endif
-    return T(0); // Заглушка - полная реализация требует более сложной логики
-}
-
-template<typename T>
-void KalmanFilter<T>::reset() {
-#ifdef THREAD_SAFE_FILTERS
-    std::lock_guard<std::mutex> lock(this->mtx);
-#endif
-    this->estimate = T(0);
-    this->error = T(0);
-    this->kalmanGain = T(0);
-}
-
 // Явная специализация для float (частичная реализация)
-template class MovingAverageFilter<float>;
 template class MedianFilter<float>;
 template class EMAFilter<float>;
-template class KalmanFilter<float>;
 
 // Также добавим специализацию для int, если понадобится
-template class MovingAverageFilter<int>;
 template class MedianFilter<int>;
 template class EMAFilter<int>;
-template class KalmanFilter<int>;

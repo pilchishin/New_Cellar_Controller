@@ -21,7 +21,7 @@ EEPROMManager eepromManager;
 
 void setup() {
     // Инициализация последовательной связи
-    Serial.begin(960);
+    Serial.begin(9600);
     
     // Инициализация всех подсистем
     sensorManager.begin();
@@ -53,6 +53,9 @@ void loop() {
     
     // Обработка меню
     menuManager.update();
+    
+    // Обновление опроса датчиков (логика с таймером находится внутри метода)
+    sensorManager.update();
     
     // Небольшая задержка, чтобы не перегружать процессор
     delay(10);

@@ -24,21 +24,6 @@ protected:
 };
 
 template<typename T = float>
-class MovingAverageFilter : public Filter<T> {
-public:
-    MovingAverageFilter(int windowSize);
-    virtual T apply(T input) override;
-    virtual void reset() override;
-    
-private:
-    int windowSize;
-    T* buffer;
-    int index;
-    int count;
-    T sum;
-};
-
-template<typename T = float>
 class MedianFilter : public Filter<T> {
 public:
     MedianFilter(int windowSize);
@@ -63,21 +48,6 @@ public:
 private:
     T alpha;
     bool initialized;
-};
-
-template<typename T = float>
-class KalmanFilter : public Filter<T> {
-public:
-    KalmanFilter(T processNoise, T measurementNoise);
-    virtual T apply(T input) override;
-    virtual void reset() override;
-    
-private:
-    T processNoise;
-    T measurementNoise;
-    T estimate;
-    T error;
-    T kalmanGain;
 };
 
 #endif // FILTERS_H
