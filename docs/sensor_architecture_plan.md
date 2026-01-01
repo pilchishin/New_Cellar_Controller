@@ -9,7 +9,7 @@
 - Arduino nano
 - Язык: C++ (Arduino IDE)
 - Использовать библиотеки: 
-  - HTU21D → SparkFun HTU21D
+  - HTU21D → Adafruit HTU21DF
   - BME280 → Adafruit BME280
   - DS18B20 → OneWire + DallasTemperature
 - Отдельно получать: температуру и влажность с BME280, температуру и влажность с HTU21D, температуру с DS18B20

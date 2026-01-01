@@ -2,7 +2,7 @@
 
 // Подключение необходимых библиотек
 #include <Adafruit_BME280.h>
-#include "SparkFunHTU21D.h"
+#include "Adafruit_HTU21DF.h"
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
@@ -36,11 +36,11 @@ float BME280Sensor::getHumidity() {
 
 // Реализация класса HTU21DSensor
 HTU21DSensor::HTU21DSensor() {
-    htu21d = new HTU21D();
+    htu21d = new Adafruit_HTU21DF();
 }
 
 bool HTU21DSensor::begin() {
-    if (!htu21d->begin()) {
+    if (!htu21d->begin(&Wire)) {
         return false;
     }
     return true;

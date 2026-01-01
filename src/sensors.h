@@ -6,7 +6,7 @@
 
 // Предварительные объявления для библиотек датчиков
 class Adafruit_BME280;
-class HTU21D;
+class Adafruit_HTU21DF;
 class OneWire;
 class DallasTemperature;
 
@@ -78,7 +78,7 @@ public:
     float getHumidity();
 
 private:
-    HTU21D* htu21d;
+    Adafruit_HTU21DF* htu21d;
 };
 
 /**

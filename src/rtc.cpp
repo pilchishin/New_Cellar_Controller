@@ -1,61 +1,51 @@
 #include "rtc.h"
 
-DS3231RTC::DS3231RTC() : rtc(), lastSyncTime(0), timeValid(false) {
+RTC_DS3231::RTC_DS3231() {
+    // Конструктор пустой, инициализация в begin()
 }
 
-bool DS3231RTC::initialize() {
+bool RTC_DS3231::begin() {
     if (!rtc.begin()) {
+        // RTC не найден
         return false;
     }
-    
+
+    // Если RTC остановлен, запускаем его
     if (rtc.lostPower()) {
-        // Потеря питания RTC, время недействительно
-        timeValid = false;
-        return false;
+        rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
     }
-    
-    timeValid = true;
-    lastSyncTime = millis();
+
     return true;
 }
 
-DateTime DS3231RTC::readTime() {
+DateTime RTC_DS3231::getDateTime() {
     return rtc.now();
 }
 
-bool DS3231RTC::setTime(const DateTime& time) {
-    rtc.adjust(time);
-    timeValid = true;
-    lastSyncTime = millis();
-    return true;
+void RTC_DS3231::setDateTime(const DateTime &dt) {
+    rtc.adjust(dt);
 }
 
-bool DS3231RTC::checkTimeAccuracy() {
-    // Сравнение внутреннего дрейфа часов с известным точным источником времени, если он доступен
-    // На данный момент мы будем считать DS3231 точными, поскольку они компенсируются температурой
-    // Мы можем реализовать дополнительные проверки, если у нас есть сетевое время
-    
-    // Обновление времени последней синхронизации
-    lastSyncTime = millis();
-    
-    // DS3231 очень точные, поэтому мы вернем true
-    // На практике мы можем сравнивать с внешним источником времени
-    return true;
+uint8_t RTC_DS3231::getHour() {
+    return rtc.now().hour();
 }
 
-bool DS3231RTC::scheduleAlarm(const DateTime& time) {
-    // Установка будильника 1 на указанное время
-    // Это упрощенная реализация - вы можете настроить это в зависимости от ваших конкретных потребностей
-    rtc.disableAlarm(1);
-    rtc.disableAlarm(2);
-    
-    // В этом примере мы установим будильник на следующее occurrence указанного времени
-    // Точная реализация зависит от того, какая функциональность будильника нужна
-    rtc.setAlarm1(time, DS3231_A1_Hour); // Будильник каждый день в указанное время
-    
-    return true;
+uint8_t RTC_DS3231::getMinute() {
+    return rtc.now().minute();
 }
 
-bool DS3231RTC::isTimeValid() {
-    return timeValid;
+uint8_t RTC_DS3231::getSecond() {
+    return rtc.now().second();
+}
+
+uint8_t RTC_DS3231::getDay() {
+    return rtc.now().day();
+}
+
+uint8_t RTC_DS3231::getMonth() {
+    return rtc.now().month();
+}
+
+uint16_t RTC_DS3231::getYear() {
+    return rtc.now().year();
 }

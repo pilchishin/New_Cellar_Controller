@@ -2,62 +2,53 @@
 #define RTC_H
 
 #include <Arduino.h>
-#include <RTClib.h>
+#include <Wire.h>
+#include <RTClib.h>  // Библиотека для DS3231
 
 /**
- * @brief Класс для работы с RTC DS3231
- * 
- * Класс предоставляет функциональность для работы с часами реального времени DS3231
+ * @brief Класс для работы с DS3231 RTC
  */
-class DS3231RTC {
+class RTC_DS3231 {
 public:
     /**
-     * @brief Конструктор класса DS3231RTC
+     * @brief Конструктор
      */
-    DS3231RTC();
-    
+    RTC_DS3231();
+
     /**
      * @brief Инициализация RTC
-     * @return true в случае успешной инициализации, false в противном случае
+     * @return true если инициализация успешна, false если ошибка
      */
-    bool initialize();
-    
+    bool begin();
+
     /**
-     * @brief Чтение текущего времени
-     * @return Объект DateTime с текущим временем
+     * @brief Получить текущие дату и время
+     * @return Объект DateTime из библиотеки RTClib
      */
-    DateTime readTime();
-    
+    DateTime getDateTime();
+
     /**
-     * @brief Установка времени
-     * @param time Объект DateTime с временем для установки
-     * @return true в случае успешной установки, false в противном случае
+     * @brief Установить дату и время
+     * @param dt Объект DateTime с нужными значениями
      */
-    bool setTime(const DateTime& time);
-    
+    void setDateTime(const DateTime &dt);
+
     /**
-     * @brief Проверка точности времени
-     * @return true если время точное, false если есть расхождения
+     * @brief Получить текущие часы, минуты, секунды
      */
-    bool checkTimeAccuracy();
-    
+    uint8_t getHour();
+    uint8_t getMinute();
+    uint8_t getSecond();
+
     /**
-     * @brief Настройка будильника
-     * @param time Время для установки будильника
-     * @return true в случае успешной настройки, false в противном случае
+     * @brief Получить текущие день, месяц, год
      */
-    bool scheduleAlarm(const DateTime& time);
-    
-    /**
-     * @brief Проверка действительности времени
-     * @return true если время действительное, false в противном случае
-     */
-    bool isTimeValid();
+    uint8_t getDay();
+    uint8_t getMonth();
+    uint16_t getYear();
 
 private:
-    RTC_DS3231 rtc; ///< Объект RTC
-    unsigned long lastSyncTime; ///< Время последней синхронизации
-    bool timeValid; ///< Действительность времени
+    RTC_DS3231_Class rtc;  // объект библиотеки RTClib
 };
 
 #endif // RTC_H
