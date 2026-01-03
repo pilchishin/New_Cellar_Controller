@@ -19,8 +19,7 @@
 #define TEMP_MAX 15
 #define HUMIDITY_MIN 70
 #define HUMIDITY_MAX 85
-#define OZONE_MIN 0.05
-#define OZONE_MAX 0.20
+
 
 // Тайминги
 #define OZONE_INTERVAL 3600000  // 1 час в миллисекундах
@@ -38,6 +37,11 @@
 #define DS18B20_RESOLUTION 12  // Разрешение DS18B20 в битах
 #define HTU21D_TEMP_RESOLUTION 14  // Разрешение температуры HTU21D в битах
 #define HTU21D_HUM_RESOLUTION 12  // Разрешение влажности HTU21D в битах
+
+//Параметры фильтров
+#define MEDIAN_FILTER_WINDOW_SIZE 6
+#define EMA_FILTER_ALPHA 0.1f
+
 // Тайминги для датчиков
 #define HTU21D_TEMP_MEASUREMENT_TIME 50 // Время измерения температуры HTU21D в мс
 #define HTU21D_HUM_MEASUREMENT_TIME 16   // Время измерения влажности HTU21D в мс
