@@ -43,8 +43,14 @@ public:
      */
     float getHumidity();
 
+    MedianFilter<float, 6> tempMedian;
+    EMAFilter tempEma{0.2f};
+    
+    MedianFilter<float, 6> humMedian;
+    EMAFilter humEma{0.2f};
+
 private:
-    Adafruit_BME280* bme;
+    Adafruit_BME280 bme;
 };
 
 /**
@@ -79,7 +85,7 @@ public:
     float getHumidity();
 
 private:
-    Adafruit_HTU21DF* htu21d;
+    Adafruit_HTU21DF htu21d;
 };
 
 /**
@@ -92,9 +98,9 @@ class DS18B20Sensor {
 public:
     /**
      * @brief Конструктор класса DS18B20Sensor
-     * @param pin Пин, к которому подключен датчик
+     * @param DS18B20_PIN Пин, к которому подключен датчик
      */
-    DS18B20Sensor(int pin);
+    DS18B20Sensor(int DS18B20_PIN);
     
     /**
      * @brief Инициализация датчика DS18B20
@@ -109,35 +115,9 @@ public:
     float getTemperature();
 
 private:
-    int pin;
-    OneWire* oneWire;
-    DallasTemperature* sensors;
-};
-
-
-
-private:
-    BME280Sensor bme280;
-    HTU21DSensor htu21d;
-    DS18B20Sensor ds18b20;
-    
-    MedianFilter<float> tempMedianFilter;
-    EMAFilter<float> tempEmaFilter;
-    MedianFilter<float> humidityMedianFilter;
-    EMAFilter<float> humidityEmaFilter;
-    
-    unsigned long lastPollTime;
-    bool initialized;
-    
-    // Переменные для хранения последних значений датчиков
-    float lastBmeTemp;
-    float lastBmeHumidity;
-    float lastHtuTemp;
-    float lastHtuHumidity;
-    float lastDsTemp;
-    bool bmeAvailable;
-    bool htuAvailable;
-    bool dsAvailable;
+    int  DS18B20_PIN;
+    OneWire oneWire{DS18B20_PIN};
+    DallasTemperature sensors{&oneWire};
 };
 
 #endif // SENSORS_H

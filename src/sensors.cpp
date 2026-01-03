@@ -64,10 +64,10 @@ float HTU21DSensor::getHumidity() {
 }
 
 // Реализация класса DS18B20Sensor
-DS18B20Sensor::DS18B20Sensor(int pin) {
-    this->pin = pin;
-    oneWire = new OneWire(pin);
-    sensors = new DallasTemperature(oneWire);
+DS18B20Sensor::DS18B20Sensor(int DS18B20_PIN) {
+    this->DS18B20_PIN = DS18B20_PIN;
+    oneWire = OneWire(DS18B20_PIN);
+    sensors = DallasTemperature(oneWire);
 }
 
 bool DS18B20Sensor::begin() {
