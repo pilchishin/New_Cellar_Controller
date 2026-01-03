@@ -119,38 +119,7 @@ float SensorManager::getFilteredTemperature() {
     float htu_temp = htu21d.getTemperature();
     float ds_temp = ds18b20.getTemperature();
     
-    // Выбираем первое доступное значение или усредняем, если несколько доступны
-    float temp_values[3];
-    int count = 0;
-    
-    if (!isnan(bme_temp)) {
-        temp_values[count++] = bme_temp;
-    }
-    if (!isnan(htu_temp)) {
-        temp_values[count++] = htu_temp;
-    }
-    if (!isnan(ds_temp)) {
-        temp_values[count++] = ds_temp;
-    }
-    
-    if (count == 0) {
-        return NAN; // Нет доступных значений
-    }
-    
-    // Если только одно значение - используем его
-    float raw_temp;
-    if (count == 1) {
-        raw_temp = temp_values[0];
-    } else {
-        // Иначе усредняем доступные значения
-        float sum = 0;
-        for (int i = 0; i < count; i++) {
-            sum += temp_values[i];
-        }
-        raw_temp = sum / count;
-    }
-    
-    // Применяем фильтры: сначала медианный, затем EMA
+      // Применяем фильтры: сначала медианный, затем EMA
     float median_filtered = tempMedianFilter.apply(raw_temp);
     float final_filtered = tempEmaFilter.apply(median_filtered);
     
@@ -162,34 +131,7 @@ float SensorManager::getFilteredHumidity() {
     float bme_humidity = bme280.getHumidity();
     float htu_humidity = htu21d.getHumidity();
     
-    // Выбираем первое доступное значение или усредняем, если несколько доступны
-    float humidity_values[2];
-    int count = 0;
-    
-    if (!isnan(bme_humidity)) {
-        humidity_values[count++] = bme_humidity;
-    }
-    if (!isnan(htu_humidity)) {
-        humidity_values[count++] = htu_humidity;
-    }
-    
-    if (count == 0) {
-        return NAN; // Нет доступных значений
-    }
-    
-    // Если только одно значение - используем его
-    float raw_humidity;
-    if (count == 1) {
-        raw_humidity = humidity_values[0];
-    } else {
-        // Иначе усредняем доступные значения
-        float sum = 0;
-        for (int i = 0; i < count; i++) {
-            sum += humidity_values[i];
-        }
-        raw_humidity = sum / count;
-    }
-    
+      
     // Применяем фильтры: сначала медианный, затем EMA
     float median_filtered = humidityMedianFilter.apply(raw_humidity);
     float final_filtered = humidityEmaFilter.apply(median_filtered);
