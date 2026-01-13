@@ -38,10 +38,13 @@
 #define DS18B20_RESOLUTION 12  // Разрешение DS18B20 в битах
 #define HTU21D_TEMP_RESOLUTION 14  // Разрешение температуры HTU21D в битах
 #define HTU21D_HUM_RESOLUTION 12  // Разрешение влажности HTU21D в битах
+
 // Тайминги для датчиков
 #define HTU21D_TEMP_MEASUREMENT_TIME 50 // Время измерения температуры HTU21D в мс
 #define HTU21D_HUM_MEASUREMENT_TIME 16   // Время измерения влажности HTU21D в мс
 #define SENSOR_POLL_INTERVAL_MS 10000    // Интервал опроса датчиков в миллисекундах (10 секунд)
+#define SENSOR_READ_RETRIES  3
 
+ 
 
 #endif // CONFIG_H

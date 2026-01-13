@@ -2,122 +2,228 @@
 #define SENSORS_H
 
 #include <Arduino.h>
-#include <Wire.h>
-#include "filters.h"
 
-// Предварительные объявления для библиотек датчиков
-class Adafruit_BME280;
-class Adafruit_HTU21DF;
-class OneWire;
-class DallasTemperature;
+/* ============================================================
+ * Общие типы и перечисления
+ * ============================================================ */
 
 /**
- * @brief Класс для работы с датчиком BME280
- *
- * Датчик BME280 позволяет измерять температуру и влажность.
- * Использует библиотеку Adafruit BME280.
+ * Общее состояние датчика.
+ * Любая ошибка переводит датчик в ERROR и требует ручного сброса.
  */
-class BME280Sensor {
-public:
-    /**
-     * @brief Конструктор класса BME280Sensor
-     */
-    BME280Sensor();
-    
-    /**
-     * @brief Инициализация датчика BME280
-     * @param addr Адрес датчика на шине I2C (по умолчанию 0x76)
-     * @return true в случае успешной инициализации, false в противном случае
-     */
-    bool begin(uint8_t addr = 0x76);
-    
-    /**
-     * @brief Получение температуры с датчика BME280
-     * @return Температура в градусах Цельсия, или NAN в случае ошибки
-     */
-    float getTemperature();
-    
-    /**
-     * @brief Получение влажности с датчика BME280
-     * @return Влажность в процентах, или NAN в случае ошибки
-     */
-    float getHumidity();
-
-    MedianFilter<float, 6> tempMedian;
-    EMAFilter tempEma{0.2f};
-    
-    MedianFilter<float, 6> humMedian;
-    EMAFilter humEma{0.2f};
-
-private:
-    Adafruit_BME280 bme;
+enum class SensorState : uint8_t {
+    OK,
+    ERROR
 };
 
 /**
- * @brief Класс для работы с датчиком HTU21D
- *
- * Датчик HTU21D позволяет измерять температуру и влажность.
- * Использует библиотеку SparkFun HTU21D.
+ * Тип датчика — нужен для логирования, меню и диагностики
  */
-class HTU21DSensor {
-public:
-    /**
-     * @brief Конструктор класса HTU21DSensor
-     */
-    HTU21DSensor();
-    
-    /**
-     * @brief Инициализация датчика HTU21D
-     * @return true в случае успешной инициализации, false в противном случае
-     */
-    bool begin();
-    
-    /**
-     * @brief Получение температуры с датчика HTU21D
-     * @return Температура в градусах Цельсия, или NAN в случае ошибки
-     */
-    float getTemperature();
-    
-    /**
-     * @brief Получение влажности с датчика HTU21D
-     * @return Влажность в процентах, или NAN в случае ошибки
-     */
-    float getHumidity();
-
-private:
-    Adafruit_HTU21DF htu21d;
+enum class SensorType : uint8_t {
+    BME280_IN,
+    HTU21D_OUT,
+    DS18B20_CTRL
 };
 
 /**
- * @brief Класс для работы с датчиком DS18B20
- *
- * Датчик DS18B20 позволяет измерять температуру.
- * Использует библиотеки OneWire и DallasTemperature.
+ * Структура "сырых" данных датчика
+ * (до фильтрации)
  */
-class DS18B20Sensor {
+struct SensorRawData {
+    float temperature;   // °C
+    float humidity;      // %RH (если есть)
+    bool  hasHumidity;   // true для BME280/HTU21D
+};
+
+/**
+ * Структура данных после фильтрации
+ */
+struct SensorFilteredData {
+    float temperature;   // °C
+    float humidity;      // %RH (если есть)
+    bool  hasHumidity;
+};
+
+/* ============================================================
+ * Базовый абстрактный класс датчика
+ * ============================================================ */
+
+/**
+ * Абстрактный базовый класс.
+ * Определяет единый интерфейс для всех датчиков.
+ */
+class SensorBase {
 public:
-    /**
-     * @brief Конструктор класса DS18B20Sensor
-     * @param DS18B20_PIN Пин, к которому подключен датчик
-     */
-    DS18B20Sensor(int DS18B20_PIN);
-    
-    /**
-     * @brief Инициализация датчика DS18B20
-     * @return true в случае успешной инициализации, false в противном случае
-     */
-    bool begin();
-    
-    /**
-     * @brief Получение температуры с датчика DS18B20
-     * @return Температура в градусах Цельсия, или NAN в случае ошибки
-     */
-    float getTemperature();
+    virtual ~SensorBase() {}
+
+    /** Инициализация датчика */
+    virtual bool begin() = 0;
+
+    /** Чтение данных с повторными попытками */
+    virtual bool read() = 0;
+
+    /** Сброс ошибки (ручной) */
+    virtual void resetError();
+
+    /** Проверка состояния */
+    SensorState getState() const;
+
+    /** Тип датчика */
+    SensorType getType() const;
+
+    /** Сырые данные */
+    const SensorRawData& getRawData() const;
+
+    /** Отфильтрованные данные */
+    const SensorFilteredData& getFilteredData() const;
+
+protected:
+    SensorBase(SensorType type, bool hasHumidity);
+
+    /** Применение оффсетов */
+    void applyOffsets(SensorRawData& data);
+
+    /** Валидация данных */
+    bool validate(const SensorRawData& data);
+
+    /** Перевод в состояние ошибки */
+    void setError();
+
+protected:
+    SensorType          _type;
+    SensorState         _state;
+
+    SensorRawData       _raw;
+    SensorFilteredData  _filtered;
+
+    float _tempOffset;   // °C
+    float _humOffset;    // %RH
+
+    bool  _hasHumidity;
+};
+
+/* ============================================================
+ * BME280 (внутренний датчик)
+ * ============================================================ */
+
+class SensorBME280 : public SensorBase {
+public:
+    SensorBME280();
+
+    bool begin() override;
+    bool read() override;
 
 private:
-    int  DS18B20_PIN;
-    OneWire oneWire{DS18B20_PIN};
-    DallasTemperature sensors{&oneWire};
+    bool readOnce();
+};
+
+/* ============================================================
+ * HTU21D (уличный датчик)
+ * ============================================================ */
+
+class SensorHTU21D : public SensorBase {
+public:
+    SensorHTU21D();
+
+    bool begin() override;
+    bool read() override;
+
+private:
+    bool readOnce();
+};
+
+/* ============================================================
+ * DS18B20 (контрольный датчик)
+ * ============================================================ */
+
+class SensorDS18B20 : public SensorBase {
+public:
+    SensorDS18B20(uint8_t oneWirePin);
+
+    bool begin() override;
+    bool read() override;
+
+private:
+    uint8_t _pin;
+    bool readOnce();
+};
+
+/* ============================================================
+ * Менеджер датчиков
+ * ============================================================ */
+
+/**
+ * Центральная точка работы с датчиками.
+ * Вызывается из loop().
+ */
+class SensorsManager {
+public:
+    SensorsManager();
+
+    /** Инициализация всех датчиков */
+    bool begin();
+
+    /** Опрос всех датчиков (раз в 10 секунд) */
+    void update();
+
+    /** Признак глобальной ошибки */
+    bool hasError() const;
+
+    /** Доступ к датчикам */
+    SensorBME280&   bme();
+    SensorHTU21D&   htu();
+    SensorDS18B20&  ds18();
+
+private:
+    unsigned long _lastPollMs;
+
+    SensorBME280  _bme280;
+    SensorHTU21D  _htu21d;
+    SensorDS18B20 _ds18b20;
 };
 
 #endif // SENSORS_H
+
+/**
+ *                  ┌─────────────────────────┐
+                    │      SensorsManager     │
+                    │─────────────────────────│
+                    │ - lastPollMs            │
+                    │─────────────────────────│
+                    │ + begin()               │
+                    │ + update()              │
+                    │ + hasError()            │
+                    │ + bme()                 │
+                    │ + htu()                 │
+                    │ + ds18()                │
+                    └─────────┬───────┬───────┘
+                              │       │
+        ┌─────────────────────┘       └─────────────────────┐
+        │                                                   │
+┌───────────────┐    ┌───────────────┐      ┌──────────────────┐
+│  SensorBME280 │    │ SensorHTU21D  │      │  SensorDS18B20   │
+│───────────────│    │───────────────│      │──────────────────│
+│ + begin()     │    │ + begin()     │      │ + begin()        │
+│ + read()      │    │ + read()      │      │ + read()         │
+│ - readOnce()  │    │ - readOnce()  │      │ - readOnce()     │
+└───────▲───────┘    └───────▲───────┘      └───────▲──────────┘
+        │                    │                          │
+        └───────────────┬────┴───────────────┬──────────┘
+                        │
+              ┌────────────────────┐
+              │    SensorBase      │
+              │────────────────────│
+              │ SensorType         │
+              │ SensorState        │
+              │ RawData            │
+              │ FilteredData       │
+              │ Offsets            │
+              │────────────────────│
+              │ + begin() = 0      │
+              │ + read() = 0       │
+              │ + resetError()     │
+              │ + validate()       │
+              │ + applyOffsets()   │
+              └────────────────────┘
+
+ */

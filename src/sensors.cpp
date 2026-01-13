@@ -1,277 +1,326 @@
 #include "sensors.h"
 #include "config.h"
 
-// Подключение необходимых библиотек
+#include <Wire.h>
 #include <Adafruit_BME280.h>
-#include "Adafruit_HTU21DF.h"
+#include <Adafruit_HTU21DF.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
-// Реализация класса BME280Sensor
-BME280Sensor::BME280Sensor() {
-    bme = new Adafruit_BME280();
-}
+/* ============================================================
+ * Глобальные объекты библиотек
+ * (инкапсулированы внутри .cpp)
+ * ============================================================ */
 
-bool BME280Sensor::begin(uint8_t addr) {
-    if (!bme->begin(addr)) {
-        return false;
-    }
-    return true;
-}
+static Adafruit_BME280     g_bme280;
+static Adafruit_HTU21DF   g_htu21d;
+static OneWire*           g_oneWire = nullptr;
+static DallasTemperature* g_ds18b20 = nullptr;
 
-float BME280Sensor::getTemperature() {
-    float temp = bme->readTemperature();
-    if (isnan(temp)) {
-        return NAN;
-    }
-    return temp;
-}
+/* ============================================================
+ * SensorBase
+ * ============================================================ */
 
-float BME280Sensor::getHumidity() {
-    float humidity = bme->readHumidity();
-    if (isnan(humidity)) {
-        return NAN;
-    }
-    return humidity;
-}
-
-// Реализация класса HTU21DSensor
-HTU21DSensor::HTU21DSensor() {
-    htu21d = new Adafruit_HTU21DF();
-}
-
-bool HTU21DSensor::begin() {
-    if (!htu21d->begin(&Wire)) {
-        return false;
-    }
-    return true;
-}
-
-float HTU21DSensor::getTemperature() {
-    float temp = htu21d->readTemperature();
-    if (isnan(temp)) {
-        return NAN;
-    }
-    return temp;
-}
-
-float HTU21DSensor::getHumidity() {
-    float humidity = htu21d->readHumidity();
-    if (isnan(humidity)) {
-        return NAN;
-    }
-    return humidity;
-}
-
-// Реализация класса DS18B20Sensor
-DS18B20Sensor::DS18B20Sensor(int DS18B20_PIN) {
-    this->DS18B20_PIN = DS18B20_PIN;
-    oneWire = OneWire(DS18B20_PIN);
-    sensors = DallasTemperature(oneWire);
-}
-
-bool DS18B20Sensor::begin() {
-    sensors->begin();
-    if (sensors->getDeviceCount() == 0) {
-        return false;
-    }
-    return true;
-}
-
-float DS18B20Sensor::getTemperature() {
-    sensors->requestTemperatures();
-    float temp = sensors->getTempCByIndex(0);
-    if (temp == DEVICE_DISCONNECTED_C) {
-        return NAN;
-    }
-    return temp;
-}
-
-// Реализация класса SensorManager
-SensorManager::SensorManager(int medianWindowSize, float emaAlpha) :
-    tempMedianFilter(medianWindowSize), tempEmaFilter(emaAlpha),
-    humidityMedianFilter(medianWindowSize), humidityEmaFilter(emaAlpha),
-    ds18b20(2), // Предполагаем, что DS18B20 подключен к пину 2
-    lastPollTime(0),
-    initialized(false),
-    lastBmeTemp(NAN),
-    lastBmeHumidity(NAN),
-    lastHtuTemp(NAN),
-    lastHtuHumidity(NAN),
-    lastDsTemp(NAN),
-    bmeAvailable(false),
-    htuAvailable(false),
-    dsAvailable(false)
+SensorBase::SensorBase(SensorType type, bool hasHumidity)
+    : _type(type),
+      _state(SensorState::ERROR),
+      _tempOffset(0.0f),
+      _humOffset(0.0f),
+      _hasHumidity(hasHumidity)
 {
-    // Конструктор
+    _raw = { NAN, NAN, hasHumidity };
+    _filtered = { NAN, NAN, hasHumidity };
 }
 
-bool SensorManager::begin() {
-    bool bme_ok = bme280.begin();
-    bool htu_ok = htu21d.begin();
-    bool ds_ok = ds18b20.begin();
-    return bme_ok && htu_ok && ds_ok;
+void SensorBase::resetError()
+{
+    _state = SensorState::OK; //  Сброс ошибки (ручной) */
 }
 
-float SensorManager::getFilteredTemperature() {
-    // Получаем температуру с разных датчиков
-    float bme_temp = bme280.getTemperature();
-    float htu_temp = htu21d.getTemperature();
-    float ds_temp = ds18b20.getTemperature();
-    
-      // Применяем фильтры: сначала медианный, затем EMA
-    float median_filtered = tempMedianFilter.apply(raw_temp);
-    float final_filtered = tempEmaFilter.apply(median_filtered);
-    
-    return final_filtered;
+SensorState SensorBase::getState() const
+{
+    return _state;
 }
 
-float SensorManager::getFilteredHumidity() {
-    // Получаем влажность с разных датчиков
-    float bme_humidity = bme280.getHumidity();
-    float htu_humidity = htu21d.getHumidity();
-    
-      
-    // Применяем фильтры: сначала медианный, затем EMA
-    float median_filtered = humidityMedianFilter.apply(raw_humidity);
-    float final_filtered = humidityEmaFilter.apply(median_filtered);
-    
-    return final_filtered;
+SensorType SensorBase::getType() const
+{
+    return _type;
 }
 
-void SensorManager::resetFilters() {
-    tempMedianFilter.reset();
-    tempEmaFilter.reset();
-    humidityMedianFilter.reset();
-    humidityEmaFilter.reset();
+const SensorRawData& SensorBase::getRawData() const
+{
+    return _raw;
 }
 
-bool SensorManager::update() {
-    unsigned long currentTime = millis();
-    
-    // Проверяем, прошло ли достаточно времени с последнего опроса
-    if (!initialized || (currentTime - lastPollTime >= SENSOR_POLL_INTERVAL_MS)) {
-        // Обновляем время последнего опроса
-        lastPollTime = currentTime;
-        initialized = true;
-        
-        // Выполняем опрос датчиков и применяем фильтры
-        float bme_temp = bme280.getTemperature();
-        float htu_temp = htu21d.getTemperature();
-        float ds_temp = ds18b20.getTemperature();
-        float bme_humidity = bme280.getHumidity();
-        float htu_humidity = htu21d.getHumidity();
-        
-        // Обновляем флаги доступности датчиков
-        bmeAvailable = !isnan(bme_temp) && !isnan(bme_humidity);
-        htuAvailable = !isnan(htu_temp) && !isnan(htu_humidity);
-        dsAvailable = !isnan(ds_temp);
-        
-        // Сохраняем последние значения
-        if (!isnan(bme_temp)) lastBmeTemp = bme_temp;
-        if (!isnan(bme_humidity)) lastBmeHumidity = bme_humidity;
-        if (!isnan(htu_temp)) lastHtuTemp = htu_temp;
-        if (!isnan(htu_humidity)) lastHtuHumidity = htu_humidity;
-        if (!isnan(ds_temp)) lastDsTemp = ds_temp;
-        
-        // Обработка температуры
-        float temp_values[3];
-        int temp_count = 0;
-        
-        if (!isnan(bme_temp)) {
-            temp_values[temp_count++] = bme_temp;
-        }
-        if (!isnan(htu_temp)) {
-            temp_values[temp_count++] = htu_temp;
-        }
-        if (!isnan(ds_temp)) {
-            temp_values[temp_count++] = ds_temp;
-        }
-        
-        float filtered_temp = NAN;
-        if (temp_count > 0) {
-            float raw_temp;
-            if (temp_count == 1) {
-                raw_temp = temp_values[0];
-            } else {
-                // Усредняем доступные значения
-                float sum = 0;
-                for (int i = 0; i < temp_count; i++) {
-                    sum += temp_values[i];
-                }
-                raw_temp = sum / temp_count;
-            }
-            
-            // Применяем фильтры: сначала медианный, затем EMA
-            float median_filtered = tempMedianFilter.apply(raw_temp);
-            filtered_temp = tempEmaFilter.apply(median_filtered);
-        }
-        
-        // Обработка влажности
-        float humidity_values[2];
-        int humidity_count = 0;
-        
-        if (!isnan(bme_humidity)) {
-            humidity_values[humidity_count++] = bme_humidity;
-        }
-        if (!isnan(htu_humidity)) {
-            humidity_values[humidity_count++] = htu_humidity;
-        }
-        
-        float filtered_humidity = NAN;
-        if (humidity_count > 0) {
-            float raw_humidity;
-            if (humidity_count == 1) {
-                raw_humidity = humidity_values[0];
-            } else {
-                // Усредняем доступные значения
-                float sum = 0;
-                for (int i = 0; i < humidity_count; i++) {
-                    sum += humidity_values[i];
-                }
-                raw_humidity = sum / humidity_count;
-            }
-            
-            // Применяем фильтры: сначала медианный, затем EMA
-            float median_filtered = humidityMedianFilter.apply(raw_humidity);
-            filtered_humidity = humidityEmaFilter.apply(median_filtered);
-        }
-        
-        // Вывод результатов в лог
-        Serial.print("Sensor Poll - ");
-        Serial.print("Time: "); Serial.print(currentTime);
-        Serial.print("ms, ");
-        
-        if (bmeAvailable) {
-            Serial.print("BME280: T="); Serial.print(bme_temp, 2); Serial.print("C, H="); Serial.print(bme_humidity, 1); Serial.print("%, ");
-        } else {
-            Serial.print("BME280: N/A, ");
-        }
-        
-        if (htuAvailable) {
-            Serial.print("HTU21DF: T="); Serial.print(htu_temp, 2); Serial.print("C, H="); Serial.print(htu_humidity, 1); Serial.print("%, ");
-        } else {
-            Serial.print("HTU21DF: N/A, ");
-        }
-        
-        if (dsAvailable) {
-            Serial.print("DS18B20: T="); Serial.print(ds_temp, 2); Serial.print("C, ");
-        } else {
-            Serial.print("DS18B20: N/A, ");
-        }
-        
-        if (!isnan(filtered_temp)) {
-            Serial.print("Filtered T="); Serial.print(filtered_temp, 2); Serial.print("C, ");
-        }
-        
-        if (!isnan(filtered_humidity)) {
-            Serial.print("Filtered H="); Serial.print(filtered_humidity, 1); Serial.print("%");
-        }
-        
-        Serial.println();
-        
-        return true;
+const SensorFilteredData& SensorBase::getFilteredData() const
+{
+    return _filtered;
+}
+
+void SensorBase::setError()
+{
+    _state = SensorState::ERROR;
+}
+
+void SensorBase::applyOffsets(SensorRawData& data)
+{
+    data.temperature += _tempOffset;
+
+    if (data.hasHumidity) {
+        data.humidity += _humOffset;
     }
-    
+}
+
+bool SensorBase::validate(const SensorRawData& data)
+{
+    if (isnan(data.temperature)) {
+        return false;
+    }
+
+    if (data.temperature < -40.0f || data.temperature > 85.0f) {
+        return false;
+    }
+
+    if (data.hasHumidity) {
+        if (isnan(data.humidity)) {
+            return false;
+        }
+
+        if (data.humidity < 0.0f || data.humidity > 100.0f) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/* ============================================================
+ * SensorBME280
+ * ============================================================ */
+
+SensorBME280::SensorBME280()
+    : SensorBase(SensorType::BME280_IN, true)
+{
+}
+
+bool SensorBME280::begin()
+{
+    if (!g_bme280.begin(0x76)) {
+        setError();
+        return false;
+    }
+
+    _state = SensorState::OK;
+    return true;
+}
+
+bool SensorBME280::readOnce()
+{
+    SensorRawData data;
+    data.hasHumidity = true;
+
+    data.temperature = g_bme280.readTemperature();
+    data.humidity    = g_bme280.readHumidity();
+
+    applyOffsets(data);
+
+    if (!validate(data)) {
+        return false;
+    }
+
+    _raw = data;
+    _filtered.temperature = data.temperature;
+    _filtered.humidity    = data.humidity;
+
+    return true;
+}
+
+bool SensorBME280::read()
+{
+    for (uint8_t i = 0; i < SENSOR_READ_RETRIES; i++) {
+        if (readOnce()) {
+            _state = SensorState::OK;
+            return true;
+        }
+    }
+
+    setError();
     return false;
+}
+
+/* ============================================================
+ * SensorHTU21D
+ * ============================================================ */
+
+SensorHTU21D::SensorHTU21D()
+    : SensorBase(SensorType::HTU21D_OUT, true)
+{
+}
+
+bool SensorHTU21D::begin()
+{
+    if (!g_htu21d.begin()) {
+        setError();
+        return false;
+    }
+
+    _state = SensorState::OK;
+    return true;
+}
+
+bool SensorHTU21D::readOnce()
+{
+    SensorRawData data;
+    data.hasHumidity = true;
+
+    data.temperature = g_htu21d.readTemperature();
+    data.humidity    = g_htu21d.readHumidity();
+
+    applyOffsets(data);
+
+    if (!validate(data)) {
+        return false;
+    }
+
+    _raw = data;
+    _filtered.temperature = data.temperature;
+    _filtered.humidity    = data.humidity;
+
+    return true;
+}
+
+bool SensorHTU21D::read()
+{
+    for (uint8_t i = 0; i < SENSOR_READ_RETRIES; i++) {
+        if (readOnce()) {
+            _state = SensorState::OK;
+            return true;
+        }
+    }
+
+    setError();
+    return false;
+}
+
+/* ============================================================
+ * SensorDS18B20
+ * ============================================================ */
+
+SensorDS18B20::SensorDS18B20(uint8_t oneWirePin)
+    : SensorBase(SensorType::DS18B20_CTRL, false),
+      _pin(oneWirePin)
+{
+}
+
+bool SensorDS18B20::begin()
+{
+    g_oneWire = new OneWire(_pin);
+    g_ds18b20 = new DallasTemperature(g_oneWire);
+
+    g_ds18b20->begin();
+
+    if (g_ds18b20->getDeviceCount() == 0) {
+        setError();
+        return false;
+    }
+
+    _state = SensorState::OK;
+    return true;
+}
+
+bool SensorDS18B20::readOnce()
+{
+    g_ds18b20->requestTemperatures();
+    float temp = g_ds18b20->getTempCByIndex(0);
+
+    SensorRawData data;
+    data.hasHumidity = false;
+    data.temperature = temp;
+    data.humidity = NAN;
+
+    applyOffsets(data);
+
+    if (!validate(data)) {
+        return false;
+    }
+
+    _raw = data;
+    _filtered.temperature = data.temperature;
+
+    return true;
+}
+
+bool SensorDS18B20::read()
+{
+    for (uint8_t i = 0; i < SENSOR_READ_RETRIES; i++) {
+        if (readOnce()) {
+            _state = SensorState::OK;
+            return true;
+        }
+    }
+
+    setError();
+    return false;
+}
+
+/* ============================================================
+ * SensorsManager
+ * ============================================================ */
+
+SensorsManager::SensorsManager()
+    : _lastPollMs(0),
+      _bme280(),
+      _htu21d(),
+      _ds18b20(DS18B20_PIN)
+{
+}
+
+bool SensorsManager::begin()
+{
+    bool ok = true;
+
+    ok &= _bme280.begin();
+    ok &= _htu21d.begin();
+    ok &= _ds18b20.begin();
+
+    _lastPollMs = millis();
+
+    return ok;
+}
+
+void SensorsManager::update()
+{
+    unsigned long now = millis();
+
+    if (now - _lastPollMs < SENSOR_POLL_INTERVAL_MS) {
+        return;
+    }
+
+    _lastPollMs = now;
+
+    _bme280.read();
+    _htu21d.read();
+    _ds18b20.read();
+}
+
+bool SensorsManager::hasError() const
+{
+    return (_bme280.getState() == SensorState::ERROR ||
+            _htu21d.getState() == SensorState::ERROR ||
+            _ds18b20.getState() == SensorState::ERROR);
+}
+
+SensorBME280& SensorsManager::bme()
+{
+    return _bme280;
+}
+
+SensorHTU21D& SensorsManager::htu()
+{
+    return _htu21d;
+}
+
+SensorDS18B20& SensorsManager::ds18()
+{
+    return _ds18b20;
 }
