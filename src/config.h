@@ -19,8 +19,7 @@
 #define TEMP_MAX 15
 #define HUMIDITY_MIN 70
 #define HUMIDITY_MAX 85
-#define OZONE_MIN 0.05
-#define OZONE_MAX 0.20
+
 
 // Тайминги
 #define OZONE_INTERVAL 3600000  // 1 час в миллисекундах
