@@ -22,7 +22,6 @@
 
 ### Структура класса SensorManager
 
-```cpp
 class SensorManager {
 private:
     // Флаги инициализации датчиков
