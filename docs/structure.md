@@ -1,0 +1,10 @@
+BasementClimate/
+├── Mane.cpp  (Основной цикл, инициализация, WDT)
+├── Config.h             (Пины, константы, макросы)
+├── Types.h              (Enums, структуры данных)
+├── MathUtils.h / .cpp   (Математика и фильтры)
+├── SensorManager.h/.cpp (Датчики)
+├── TimeManager.h / .cpp (RTC)
+├── RelayManager.h/ .cpp (Реле)
+├── DisplayUI.h / .cpp   (Экран и кнопки)
+└── Controller.h / .cpp  (FSM)
