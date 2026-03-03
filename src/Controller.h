@@ -55,6 +55,7 @@ public:
     // Геттеры для UI
     SystemState getState() const { return currentState; }
     ErrorCode getError() const { return currentError; }
+    RelayManager* getRelayManager() const { return relays; }
 };
 
 #endif
