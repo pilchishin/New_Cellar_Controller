@@ -23,7 +23,8 @@ private:
     DisplayUI* ui;
 
     // Переменные логики
-    unsigned long stateTimer;        // Таймер для фаз озонирования и ручных режимов
+    unsigned long stateTimer;        // Timer for ozone phases and manual modes
+    uint16_t manualTimer;            // Manual mode duration in minutes
     unsigned long retryOzoneTimer;   // Таймер для повтора при запрете (30 мин)
     bool ozoneInhibitedToday;        // Флаг, что сегодня попытка уже была
 
