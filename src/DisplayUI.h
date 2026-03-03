@@ -11,7 +11,7 @@
 enum class MenuPage {
     STATUS_IN,      // Датчики внутри
     STATUS_OUT,     // Датчики снаружи
-    RELAY_STATE,    // Состояние реле и FSM
+    STATUS_RELAY,   // Состояние реле и FSM
     SET_TEMP,       // Установка целевой T
     SET_HUM,        // Установка целевой RH
     MANUAL_MODES,   // Ручной запуск FAN/OZONE
