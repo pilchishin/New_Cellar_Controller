@@ -7,6 +7,7 @@ Controller::Controller(SensorManager* s, RelayManager* r, TimeManager* t)
     currentError = ErrorCode::NONE;
     ozoneInhibitedToday = false;
     stateTimer = 0;
+    manualTimer = 0;
     retryOzoneTimer = 0;
 }
 
