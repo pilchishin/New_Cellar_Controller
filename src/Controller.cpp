@@ -33,6 +33,11 @@ void Controller::tick() {
             if (rtc->isOzoneTimeScheduled()) {
                 changeState(SystemState::OZONE_START);
             }
+            // Проверка повторной попытки через 30 минут (если был запрет)
+            else if (retryOzoneTimer != 0 && (millis() - retryOzoneTimer >= OZONE_RETRY_SHORT)) {
+                retryOzoneTimer = 0; // Сбрасываем таймер
+                changeState(SystemState::OZONE_START);
+            }
             break;
 
         case SystemState::OZONE_START:
@@ -93,6 +98,8 @@ void Controller::handleOzoneCycle() {
             Serial.println(F("Ozone Inhibited: Wait 30m"));
             #endif
             retryOzoneTimer = millis();
+            // rtc->resetOzoneTrigger() не требуется, так как повторный вход
+            // через 30 минут управляется таймером retryOzoneTimer в tick()
             changeState(SystemState::AUTO_CLIMATE);
             return;
         }
