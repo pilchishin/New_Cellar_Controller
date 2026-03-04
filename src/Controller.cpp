@@ -7,6 +7,7 @@ Controller::Controller(SensorManager* s, RelayManager* r, TimeManager* t)
     currentError = ErrorCode::NONE;
     targetTemp = DEFAULT_TARGET_TEMP;
     targetRh = DEFAULT_TARGET_RH;
+    calib = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
     ozoneInhibitedToday = false;
     stateTimer = 0;
     manualTimer = 0;

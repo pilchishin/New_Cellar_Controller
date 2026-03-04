@@ -38,6 +38,9 @@ private:
     bool htuValid;
     bool dsValid;
 
+    // Калибровочные коэффициенты
+    CalibrationData calib;
+
 public:
     // Конструктор: инициализируем OneWire пином из Config.h
     SensorManager();
@@ -55,6 +58,8 @@ public:
     SensorData getInside() const { return insideData; }
     SensorData getOutside() const { return outsideData; }
     float getControlTemp() const { return controlTemp; }
+
+    void setCalibration(const CalibrationData& data) { calib = data; }
 };
 
 #endif

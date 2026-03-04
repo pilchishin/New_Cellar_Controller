@@ -33,4 +33,12 @@ struct SensorData {
     bool valid;
 };
 
+struct CalibrationData {
+    float bmeTempOffset;
+    float bmeHumOffset;
+    float htuTempOffset;
+    float htuHumOffset;
+    float dsTempOffset;
+};
+
 #endif

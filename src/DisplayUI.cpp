@@ -70,36 +70,61 @@ void DisplayUI::handleButtons() {
 
     // Кнопки UP/DOWN для навигации или изменения параметров
     if (up && !menuBtnPressed) {
+        CalibrationData c = controller->getCalibration();
         switch (currentPage) {
             case MenuPage::SET_TEMP:
-                controller->setTargetTemp(controller->getTargetTemp() + 0.1f);
-                break;
+                controller->setTargetTemp(controller->getTargetTemp() + 0.1f); break;
             case MenuPage::SET_HUM:
                 controller->setTargetRh(controller->getTargetRh() + 1.0f);
-                if (controller->getTargetRh() > 100.0f) controller->setTargetRh(100.0f);
-                break;
+                if (controller->getTargetRh() > 100.0f) controller->setTargetRh(100.0f); break;
             case MenuPage::MANUAL_MODES:
-                controller->startManualFan(30); // Запуск на 30 мин
-                break;
+                controller->startManualFan(30); break;
+            case MenuPage::CALIB_BME_T:
+                c.bmeTempOffset += 0.1f; if (c.bmeTempOffset > 5.0f) c.bmeTempOffset = 5.0f;
+                controller->setCalibration(c); break;
+            case MenuPage::CALIB_BME_H:
+                c.bmeHumOffset += 0.1f; if (c.bmeHumOffset > 5.0f) c.bmeHumOffset = 5.0f;
+                controller->setCalibration(c); break;
+            case MenuPage::CALIB_HTU_T:
+                c.htuTempOffset += 0.1f; if (c.htuTempOffset > 5.0f) c.htuTempOffset = 5.0f;
+                controller->setCalibration(c); break;
+            case MenuPage::CALIB_HTU_H:
+                c.htuHumOffset += 0.1f; if (c.htuHumOffset > 5.0f) c.htuHumOffset = 5.0f;
+                controller->setCalibration(c); break;
+            case MenuPage::CALIB_DS_T:
+                c.dsTempOffset += 0.1f; if (c.dsTempOffset > 5.0f) c.dsTempOffset = 5.0f;
+                controller->setCalibration(c); break;
             case MenuPage::ERROR_LOG:
-                controller->resetError();
-                break;
+                controller->resetError(); break;
             default: break;
         }
-        delay(100); // Небольшая задержка для удобства настройки
+        delay(100);
     }
     if (down && !menuBtnPressed) {
+        CalibrationData c = controller->getCalibration();
         switch (currentPage) {
             case MenuPage::SET_TEMP:
-                controller->setTargetTemp(controller->getTargetTemp() - 0.1f);
-                break;
+                controller->setTargetTemp(controller->getTargetTemp() - 0.1f); break;
             case MenuPage::SET_HUM:
                 controller->setTargetRh(controller->getTargetRh() - 1.0f);
-                if (controller->getTargetRh() < 0.0f) controller->setTargetRh(0.0f);
-                break;
+                if (controller->getTargetRh() < 0.0f) controller->setTargetRh(0.0f); break;
             case MenuPage::MANUAL_MODES:
-                controller->startManualOzone(15); // Запуск на 15 мин
-                break;
+                controller->startManualOzone(15); break;
+            case MenuPage::CALIB_BME_T:
+                c.bmeTempOffset -= 0.1f; if (c.bmeTempOffset < -5.0f) c.bmeTempOffset = -5.0f;
+                controller->setCalibration(c); break;
+            case MenuPage::CALIB_BME_H:
+                c.bmeHumOffset -= 0.1f; if (c.bmeHumOffset < -5.0f) c.bmeHumOffset = -5.0f;
+                controller->setCalibration(c); break;
+            case MenuPage::CALIB_HTU_T:
+                c.htuTempOffset -= 0.1f; if (c.htuTempOffset < -5.0f) c.htuTempOffset = -5.0f;
+                controller->setCalibration(c); break;
+            case MenuPage::CALIB_HTU_H:
+                c.htuHumOffset -= 0.1f; if (c.htuHumOffset < -5.0f) c.htuHumOffset = -5.0f;
+                controller->setCalibration(c); break;
+            case MenuPage::CALIB_DS_T:
+                c.dsTempOffset -= 0.1f; if (c.dsTempOffset < -5.0f) c.dsTempOffset = -5.0f;
+                controller->setCalibration(c); break;
             default: break;
         }
         delay(100);
@@ -118,6 +143,7 @@ void DisplayUI::updateBacklight() {
 }
 
 void DisplayUI::drawPage() {
+    CalibrationData c = controller->getCalibration();
     switch (currentPage) {
         case MenuPage::STATUS_IN:    drawStatusIn(); break;
         case MenuPage::STATUS_OUT:   drawStatusOut(); break;
@@ -125,6 +151,11 @@ void DisplayUI::drawPage() {
         case MenuPage::SET_TEMP:     drawSetTemp(); break;
         case MenuPage::SET_HUM:      drawSetHum(); break;
         case MenuPage::MANUAL_MODES: drawManualModes(); break;
+        case MenuPage::CALIB_BME_T:  drawCalibPage("BME TEMP", c.bmeTempOffset, true); break;
+        case MenuPage::CALIB_BME_H:  drawCalibPage("BME HUM", c.bmeHumOffset, false); break;
+        case MenuPage::CALIB_HTU_T:  drawCalibPage("HTU TEMP", c.htuTempOffset, true); break;
+        case MenuPage::CALIB_HTU_H:  drawCalibPage("HTU HUM", c.htuHumOffset, false); break;
+        case MenuPage::CALIB_DS_T:   drawCalibPage("DS TEMP", c.dsTempOffset, true); break;
         case MenuPage::ERROR_LOG:    drawErrorLog(); break;
     }
 }
@@ -197,6 +228,17 @@ void DisplayUI::drawManualModes() {
     lcd.print(F("MANUAL START:"));
     lcd.setCursor(0, 1);
     lcd.print(F("UP:FAN  DN:OZONE"));
+}
+
+void DisplayUI::drawCalibPage(const char* label, float value, bool isTemp) {
+    lcd.setCursor(0, 0);
+    lcd.print(F("CALIB: "));
+    lcd.print(label);
+    lcd.setCursor(0, 1);
+    lcd.print(F("OFFSET: "));
+    if (value >= 0) lcd.print(F("+"));
+    lcd.print(value, 1);
+    lcd.print(isTemp ? F("C") : F("%"));
 }
 
 void DisplayUI::drawErrorLog() {

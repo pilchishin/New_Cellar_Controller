@@ -8,6 +8,7 @@ SensorManager::SensorManager()
     // Начальные значения структур сбрасываем в нули/false
     insideData = {0, 0, 0, 0, false};
     outsideData = {0, 0, 0, 0, false};
+    calib = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
 }
 
 void SensorManager::init() {
@@ -72,8 +73,8 @@ void SensorManager::update() {
             insideData.valid = false;
         } else {
             // Пропускаем сырые данные через фильтры (Медиана -> EMA)
-            insideData.temp = filterBmeTemp.update(rawTemp);
-            insideData.rh   = filterBmeHum.update(rawHum);
+            insideData.temp = filterBmeTemp.update(rawTemp) + calib.bmeTempOffset;
+            insideData.rh   = filterBmeHum.update(rawHum) + calib.bmeHumOffset;
             
             // Абсолютная влажность и точка росы считаются ТОЛЬКО по отфильтрованным данным
             insideData.ah       = ClimateMath::calculateAH(insideData.temp, insideData.rh);
@@ -91,8 +92,8 @@ void SensorManager::update() {
             htuValid = false;
             outsideData.valid = false;
         } else {
-            outsideData.temp = filterHtuTemp.update(rawTemp);
-            outsideData.rh   = filterHtuHum.update(rawHum);
+            outsideData.temp = filterHtuTemp.update(rawTemp) + calib.htuTempOffset;
+            outsideData.rh   = filterHtuHum.update(rawHum) + calib.htuHumOffset;
             
             outsideData.ah       = ClimateMath::calculateAH(outsideData.temp, outsideData.rh);
             outsideData.dewpoint = ClimateMath::calculateDewPoint(outsideData.temp, outsideData.rh);
@@ -108,7 +109,7 @@ void SensorManager::update() {
         if (rawDsTemp == DEVICE_DISCONNECTED_C) {
             dsValid = false;
         } else {
-            controlTemp = filterDsTemp.update(rawDsTemp);
+            controlTemp = filterDsTemp.update(rawDsTemp) + calib.dsTempOffset;
         }
         
         // Сразу запрашиваем новую конверсию для следующего цикла опроса (через 10 сек)

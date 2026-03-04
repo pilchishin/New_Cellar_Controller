@@ -15,6 +15,11 @@ enum class MenuPage {
     SET_TEMP,       // Установка целевой T
     SET_HUM,        // Установка целевой RH
     MANUAL_MODES,   // Ручной запуск FAN/OZONE
+    CALIB_BME_T,    // Калибровка BME T
+    CALIB_BME_H,    // Калибровка BME H
+    CALIB_HTU_T,    // Калибровка HTU T
+    CALIB_HTU_H,    // Калибровка HTU H
+    CALIB_DS_T,     // Калибровка DS T
     ERROR_LOG       // Просмотр ошибок
 };
 
@@ -47,6 +52,7 @@ private:
     void drawSetTemp();
     void drawSetHum();
     void drawManualModes();
+    void drawCalibPage(const char* label, float value, bool isTemp);
     void drawErrorLog();
 
 public:

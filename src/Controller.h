@@ -19,6 +19,9 @@ private:
     // Уставки климата
     float targetTemp;
     float targetRh;
+
+    // Калибровочные данные
+    CalibrationData calib;
     
     // Ссылки на модули
     SensorManager* sensors;
@@ -65,6 +68,12 @@ public:
     float getTargetRh() const { return targetRh; }
     void setTargetTemp(float t) { targetTemp = t; }
     void setTargetRh(float h) { targetRh = h; }
+
+    CalibrationData getCalibration() const { return calib; }
+    void setCalibration(const CalibrationData& data) {
+        calib = data;
+        sensors->setCalibration(calib);
+    }
 };
 
 #endif
