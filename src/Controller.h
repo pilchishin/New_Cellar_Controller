@@ -15,6 +15,10 @@ class Controller {
 private:
     SystemState currentState;
     ErrorCode currentError;
+
+    // Уставки климата
+    float targetTemp;
+    float targetRh;
     
     // Ссылки на модули
     SensorManager* sensors;
@@ -56,6 +60,11 @@ public:
     SystemState getState() const { return currentState; }
     ErrorCode getError() const { return currentError; }
     RelayManager* getRelayManager() const { return relays; }
+
+    float getTargetTemp() const { return targetTemp; }
+    float getTargetRh() const { return targetRh; }
+    void setTargetTemp(float t) { targetTemp = t; }
+    void setTargetRh(float h) { targetRh = h; }
 };
 
 #endif

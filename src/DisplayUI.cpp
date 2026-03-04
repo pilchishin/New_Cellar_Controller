@@ -70,10 +70,39 @@ void DisplayUI::handleButtons() {
 
     // Кнопки UP/DOWN для навигации или изменения параметров
     if (up && !menuBtnPressed) {
-        // Логика инкремента параметров
+        switch (currentPage) {
+            case MenuPage::SET_TEMP:
+                controller->setTargetTemp(controller->getTargetTemp() + 0.1f);
+                break;
+            case MenuPage::SET_HUM:
+                controller->setTargetRh(controller->getTargetRh() + 1.0f);
+                if (controller->getTargetRh() > 100.0f) controller->setTargetRh(100.0f);
+                break;
+            case MenuPage::MANUAL_MODES:
+                controller->startManualFan(30); // Запуск на 30 мин
+                break;
+            case MenuPage::ERROR_LOG:
+                controller->resetError();
+                break;
+            default: break;
+        }
+        delay(100); // Небольшая задержка для удобства настройки
     }
     if (down && !menuBtnPressed) {
-        // Логика декремента параметров
+        switch (currentPage) {
+            case MenuPage::SET_TEMP:
+                controller->setTargetTemp(controller->getTargetTemp() - 0.1f);
+                break;
+            case MenuPage::SET_HUM:
+                controller->setTargetRh(controller->getTargetRh() - 1.0f);
+                if (controller->getTargetRh() < 0.0f) controller->setTargetRh(0.0f);
+                break;
+            case MenuPage::MANUAL_MODES:
+                controller->startManualOzone(15); // Запуск на 15 мин
+                break;
+            default: break;
+        }
+        delay(100);
     }
 }
 
@@ -93,7 +122,10 @@ void DisplayUI::drawPage() {
         case MenuPage::STATUS_IN:    drawStatusIn(); break;
         case MenuPage::STATUS_OUT:   drawStatusOut(); break;
         case MenuPage::STATUS_RELAY: drawRelayState(); break;
-        // ... остальные страницы
+        case MenuPage::SET_TEMP:     drawSetTemp(); break;
+        case MenuPage::SET_HUM:      drawSetHum(); break;
+        case MenuPage::MANUAL_MODES: drawManualModes(); break;
+        case MenuPage::ERROR_LOG:    drawErrorLog(); break;
     }
 }
 
@@ -139,6 +171,44 @@ void DisplayUI::drawRelayState() {
 
     lcd.setCursor(0, 1);
     lcd.print(F("MODE:"));
-    // Тут можно вывести сокращенное название из SystemState
     lcd.print((int)controller->getState()); 
+}
+
+void DisplayUI::drawSetTemp() {
+    lcd.setCursor(0, 0);
+    lcd.print(F("SET TARGET TEMP"));
+    lcd.setCursor(0, 1);
+    lcd.print(F("TEMP: "));
+    lcd.print(controller->getTargetTemp(), 1);
+    lcd.print(F("C"));
+}
+
+void DisplayUI::drawSetHum() {
+    lcd.setCursor(0, 0);
+    lcd.print(F("SET TARGET HUM"));
+    lcd.setCursor(0, 1);
+    lcd.print(F("HUM:  "));
+    lcd.print(controller->getTargetRh(), 0);
+    lcd.print(F("%"));
+}
+
+void DisplayUI::drawManualModes() {
+    lcd.setCursor(0, 0);
+    lcd.print(F("MANUAL START:"));
+    lcd.setCursor(0, 1);
+    lcd.print(F("UP:FAN  DN:OZONE"));
+}
+
+void DisplayUI::drawErrorLog() {
+    lcd.setCursor(0, 0);
+    lcd.print(F("ERROR STATUS:"));
+    lcd.setCursor(0, 1);
+    ErrorCode err = controller->getError();
+    if (err == ErrorCode::NONE) {
+        lcd.print(F("SYSTEM OK"));
+    } else {
+        lcd.print(F("ERR CODE: "));
+        lcd.print((int)err);
+        lcd.print(F("  UP:RES"));
+    }
 }

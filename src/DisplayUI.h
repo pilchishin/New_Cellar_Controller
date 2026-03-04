@@ -44,6 +44,10 @@ private:
     void drawStatusIn();
     void drawStatusOut();
     void drawRelayState();
+    void drawSetTemp();
+    void drawSetHum();
+    void drawManualModes();
+    void drawErrorLog();
 
 public:
     DisplayUI(Controller* c, SensorManager* s, TimeManager* t);

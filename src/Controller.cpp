@@ -5,6 +5,8 @@ Controller::Controller(SensorManager* s, RelayManager* r, TimeManager* t)
     : sensors(s), relays(r), rtc(t), ui(nullptr) {
     currentState = SystemState::IDLE;
     currentError = ErrorCode::NONE;
+    targetTemp = DEFAULT_TARGET_TEMP;
+    targetRh = DEFAULT_TARGET_RH;
     ozoneInhibitedToday = false;
     stateTimer = 0;
     manualTimer = 0;
@@ -70,8 +72,8 @@ void Controller::handleAutoClimate() {
     SensorData out = sensors->getOutside();
 
     // Алгоритм (Вариант С) из ТЗ
-    bool needsAction = (in.temp > (TARGET_TEMP + HYSTERESIS_TEMP)) || 
-                       (in.rh > (TARGET_RH + HYSTERESIS_RH));
+    bool needsAction = (in.temp > (targetTemp + HYSTERESIS_TEMP)) ||
+                       (in.rh > (targetRh + HYSTERESIS_RH));
     
     bool airIsBetter = (out.ah + MARGIN_AH) < in.ah;
     
