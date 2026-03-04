@@ -31,6 +31,9 @@ private:
 
     // EEPROM
     AppEEPROM storage;
+    bool needsPersistentSave;
+    unsigned long lastPersistentChangeTime;
+    const unsigned long DEFERRED_SAVE_DELAY = 5000UL;
     
     // Ссылки на модули
     SensorManager* sensors;

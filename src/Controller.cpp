@@ -19,6 +19,8 @@ Controller::Controller(SensorManager* s, RelayManager* r, TimeManager* t)
 
     lastStatsUpdate = millis();
     lastEEPROMSave = millis();
+    needsPersistentSave = false;
+    lastPersistentChangeTime = 0;
     ozoneInhibitedToday = false;
     stateTimer = 0;
     manualTimer = 0;
@@ -43,6 +45,13 @@ void Controller::tick() {
     // 0.1 Сохранение статистики в EEPROM (раз в 30 минут)
     if (now - lastEEPROMSave >= 1800000UL) {
         lastEEPROMSave = now;
+        needsPersistentSave = true;
+        lastPersistentChangeTime = now - DEFERRED_SAVE_DELAY; // Принудительное сохранение без задержки
+    }
+
+    // 0.2 Отложенное сохранение в EEPROM
+    if (needsPersistentSave && (now - lastPersistentChangeTime >= DEFERRED_SAVE_DELAY)) {
+        needsPersistentSave = false;
         PersistentData data = { targetTemp, targetRh, calib, stats, 0 };
         storage.save(data);
     }
@@ -242,25 +251,25 @@ void Controller::startManualOzone(uint16_t minutes) {
 
 void Controller::setTargetTemp(float t) {
     targetTemp = t;
-    PersistentData data = { targetTemp, targetRh, calib, stats, 0 };
-    storage.save(data);
+    needsPersistentSave = true;
+    lastPersistentChangeTime = millis();
 }
 
 void Controller::setTargetRh(float h) {
     targetRh = h;
-    PersistentData data = { targetTemp, targetRh, calib, stats, 0 };
-    storage.save(data);
+    needsPersistentSave = true;
+    lastPersistentChangeTime = millis();
 }
 
 void Controller::setCalibration(const CalibrationData& data) {
     calib = data;
     sensors->setCalibration(calib);
-    PersistentData pData = { targetTemp, targetRh, calib, stats, 0 };
-    storage.save(pData);
+    needsPersistentSave = true;
+    lastPersistentChangeTime = millis();
 }
 
 void Controller::resetStats() {
     stats = {0, 0, 0};
-    PersistentData data = { targetTemp, targetRh, calib, stats, 0 };
-    storage.save(data);
+    needsPersistentSave = true;
+    lastPersistentChangeTime = millis();
 }

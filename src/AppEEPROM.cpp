@@ -1,5 +1,6 @@
 #include "AppEEPROM.h"
 #include <EEPROM.h>
+#include "Config.h"
 
 AppEEPROM::AppEEPROM() {}
 
@@ -38,8 +39,8 @@ void AppEEPROM::load(PersistentData& data) {
     } else {
         // Если данных нет, инициализируем нулями (или дефолтами)
         memset(&data, 0, sizeof(PersistentData));
-        data.targetTemp = 4.0f;
-        data.targetRh = 85.0f;
+        data.targetTemp = DEFAULT_TARGET_TEMP;
+        data.targetRh = DEFAULT_TARGET_RH;
         #ifdef DEBUG
         Serial.println(F("EEPROM: No valid data found. Defaults loaded."));
         #endif
