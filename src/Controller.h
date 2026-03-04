@@ -7,6 +7,7 @@
 #include "SensorManager.h"
 #include "RelayManager.h"
 #include "TimeManager.h"
+#include "AppEEPROM.h"
 
 // Предварительное объявление, чтобы избежать циклической зависимости
 class DisplayUI; 
@@ -26,6 +27,10 @@ private:
     // Статистика
     SystemStatistics stats;
     unsigned long lastStatsUpdate;
+    unsigned long lastEEPROMSave;
+
+    // EEPROM
+    AppEEPROM storage;
     
     // Ссылки на модули
     SensorManager* sensors;
@@ -70,14 +75,11 @@ public:
 
     float getTargetTemp() const { return targetTemp; }
     float getTargetRh() const { return targetRh; }
-    void setTargetTemp(float t) { targetTemp = t; }
-    void setTargetRh(float h) { targetRh = h; }
+    void setTargetTemp(float t);
+    void setTargetRh(float h);
 
     CalibrationData getCalibration() const { return calib; }
-    void setCalibration(const CalibrationData& data) {
-        calib = data;
-        sensors->setCalibration(calib);
-    }
+    void setCalibration(const CalibrationData& data);
 
     SystemStatistics getStats() const { return stats; }
     void resetStats();

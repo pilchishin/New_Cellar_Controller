@@ -5,11 +5,20 @@ Controller::Controller(SensorManager* s, RelayManager* r, TimeManager* t)
     : sensors(s), relays(r), rtc(t), ui(nullptr) {
     currentState = SystemState::IDLE;
     currentError = ErrorCode::NONE;
-    targetTemp = DEFAULT_TARGET_TEMP;
-    targetRh = DEFAULT_TARGET_RH;
-    calib = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-    stats = {0, 0, 0};
+
+    // Загрузка данных из EEPROM
+    PersistentData data;
+    storage.load(data);
+
+    targetTemp = data.targetTemp;
+    targetRh = data.targetRh;
+    calib = data.calibration;
+    stats = data.stats;
+
+    sensors->setCalibration(calib);
+
     lastStatsUpdate = millis();
+    lastEEPROMSave = millis();
     ozoneInhibitedToday = false;
     stateTimer = 0;
     manualTimer = 0;
@@ -21,12 +30,21 @@ void Controller::init() {
 }
 
 void Controller::tick() {
+    unsigned long now = millis();
+
     // 0. Обновление статистики (раз в минуту)
-    if (millis() - lastStatsUpdate >= 60000UL) {
-        lastStatsUpdate = millis();
+    if (now - lastStatsUpdate >= 60000UL) {
+        lastStatsUpdate = now;
         stats.uptimeMinutes++;
         if (relays->getFanState()) stats.fanMinutes++;
         if (relays->getOzoneState()) stats.ozoneMinutes++;
+    }
+
+    // 0.1 Сохранение статистики в EEPROM (раз в 30 минут)
+    if (now - lastEEPROMSave >= 1800000UL) {
+        lastEEPROMSave = now;
+        PersistentData data = { targetTemp, targetRh, calib, stats, 0 };
+        storage.save(data);
     }
 
     // 1. Постоянная проверка критических ошибок
@@ -222,6 +240,27 @@ void Controller::startManualOzone(uint16_t minutes) {
     changeState(SystemState::MANUAL_OZONE);
 }
 
+void Controller::setTargetTemp(float t) {
+    targetTemp = t;
+    PersistentData data = { targetTemp, targetRh, calib, stats, 0 };
+    storage.save(data);
+}
+
+void Controller::setTargetRh(float h) {
+    targetRh = h;
+    PersistentData data = { targetTemp, targetRh, calib, stats, 0 };
+    storage.save(data);
+}
+
+void Controller::setCalibration(const CalibrationData& data) {
+    calib = data;
+    sensors->setCalibration(calib);
+    PersistentData pData = { targetTemp, targetRh, calib, stats, 0 };
+    storage.save(pData);
+}
+
 void Controller::resetStats() {
     stats = {0, 0, 0};
+    PersistentData data = { targetTemp, targetRh, calib, stats, 0 };
+    storage.save(data);
 }
