@@ -20,6 +20,7 @@ enum class MenuPage {
     CALIB_HTU_T,    // Калибровка HTU T
     CALIB_HTU_H,    // Калибровка HTU H
     CALIB_DS_T,     // Калибровка DS T
+    STATS,          // Статистика
     ERROR_LOG       // Просмотр ошибок
 };
 
@@ -53,6 +54,7 @@ private:
     void drawSetHum();
     void drawManualModes();
     void drawCalibPage(const char* label, float value, bool isTemp);
+    void drawStats();
     void drawErrorLog();
 
 public:

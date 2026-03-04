@@ -41,4 +41,10 @@ struct CalibrationData {
     float dsTempOffset;
 };
 
+struct SystemStatistics {
+    uint32_t uptimeMinutes;
+    uint32_t fanMinutes;
+    uint32_t ozoneMinutes;
+};
+
 #endif

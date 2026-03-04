@@ -61,8 +61,13 @@ void DisplayUI::handleButtons() {
                 currentPage = (MenuPage)next;
                 lcd.clear();
             } else {
-                // Длинное нажатие: например, сброс ошибки
-                // controller->resetError(); 
+                // Длинное нажатие
+                if (currentPage == MenuPage::STATS) {
+                    controller->resetStats();
+                    lcd.clear();
+                    lcd.print(F("STATS RESET"));
+                    delay(1000);
+                }
             }
             menuBtnPressed = false;
         }
@@ -156,6 +161,7 @@ void DisplayUI::drawPage() {
         case MenuPage::CALIB_HTU_T:  drawCalibPage("HTU TEMP", c.htuTempOffset, true); break;
         case MenuPage::CALIB_HTU_H:  drawCalibPage("HTU HUM", c.htuHumOffset, false); break;
         case MenuPage::CALIB_DS_T:   drawCalibPage("DS TEMP", c.dsTempOffset, true); break;
+        case MenuPage::STATS:        drawStats(); break;
         case MenuPage::ERROR_LOG:    drawErrorLog(); break;
     }
 }
@@ -239,6 +245,17 @@ void DisplayUI::drawCalibPage(const char* label, float value, bool isTemp) {
     if (value >= 0) lcd.print(F("+"));
     lcd.print(value, 1);
     lcd.print(isTemp ? F("C") : F("%"));
+}
+
+void DisplayUI::drawStats() {
+    SystemStatistics s = controller->getStats();
+    lcd.setCursor(0, 0);
+    lcd.print(F("UP:")); lcd.print(s.uptimeMinutes / 60); lcd.print(F("h"));
+    lcd.print(F(" F:")); lcd.print(s.fanMinutes / 60); lcd.print(F("h"));
+
+    lcd.setCursor(0, 1);
+    lcd.print(F("O3:")); lcd.print(s.ozoneMinutes); lcd.print(F("m"));
+    lcd.print(F(" HOLD MENU:RST"));
 }
 
 void DisplayUI::drawErrorLog() {

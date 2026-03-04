@@ -22,6 +22,10 @@ private:
 
     // Калибровочные данные
     CalibrationData calib;
+
+    // Статистика
+    SystemStatistics stats;
+    unsigned long lastStatsUpdate;
     
     // Ссылки на модули
     SensorManager* sensors;
@@ -74,6 +78,9 @@ public:
         calib = data;
         sensors->setCalibration(calib);
     }
+
+    SystemStatistics getStats() const { return stats; }
+    void resetStats();
 };
 
 #endif

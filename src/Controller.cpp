@@ -8,6 +8,8 @@ Controller::Controller(SensorManager* s, RelayManager* r, TimeManager* t)
     targetTemp = DEFAULT_TARGET_TEMP;
     targetRh = DEFAULT_TARGET_RH;
     calib = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+    stats = {0, 0, 0};
+    lastStatsUpdate = millis();
     ozoneInhibitedToday = false;
     stateTimer = 0;
     manualTimer = 0;
@@ -19,6 +21,14 @@ void Controller::init() {
 }
 
 void Controller::tick() {
+    // 0. Обновление статистики (раз в минуту)
+    if (millis() - lastStatsUpdate >= 60000UL) {
+        lastStatsUpdate = millis();
+        stats.uptimeMinutes++;
+        if (relays->getFanState()) stats.fanMinutes++;
+        if (relays->getOzoneState()) stats.ozoneMinutes++;
+    }
+
     // 1. Постоянная проверка критических ошибок
     checkCriticalErrors();
 
@@ -210,4 +220,8 @@ void Controller::startManualOzone(uint16_t minutes) {
     stateTimer = millis();
     relays->setOzone(true);
     changeState(SystemState::MANUAL_OZONE);
+}
+
+void Controller::resetStats() {
+    stats = {0, 0, 0};
 }
