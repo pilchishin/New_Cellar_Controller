@@ -254,7 +254,7 @@ void DisplayUI::drawStats() {
     lcd.print(F(" F:")); lcd.print(s.fanMinutes / 60); lcd.print(F("h"));
 
     lcd.setCursor(0, 1);
-    lcd.print(F("O3:")); lcd.print(s.ozoneMinutes); lcd.print(F("m"));
+    lcd.print(F("O3:")); lcd.print(s.ozoneMinutes / 60); lcd.print(F("h"));
     lcd.print(F(" HOLD MENU:RST"));
 }
 
