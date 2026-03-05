@@ -35,8 +35,13 @@ private:
     
     // Переменные для кнопок
     unsigned long lastBtnCheck;
+    unsigned long lastBtnAction; // Таймер повтора для UP/DOWN
     unsigned long menuBtnTimer;
     bool menuBtnPressed;
+
+    // Временные сообщения на экране
+    unsigned long messageTimer;
+    const char* tempMessage;
     
     // Таймер подсветки
     unsigned long lastActivityTime;
