@@ -4,6 +4,8 @@
 SensorManager::SensorManager() 
     : oneWire(ONE_WIRE_BUS), dsSensor(&oneWire),
       bmeValid(false), htuValid(false), dsValid(false),
+      bmeRetries(0), htuRetries(0), dsRetries(0),
+      lastBmeRetry(0), lastHtuRetry(0), lastDsRetry(0),
       i2cErrorCount(0), controlTemp(0.0f) {
     // Начальные значения структур сбрасываем в нули/false
     insideData = {0, 0, 0, 0, false};
@@ -16,55 +18,81 @@ void SensorManager::init() {
     Serial.println(F("Init Sensors..."));
     #endif
 
-    // Инициализация BME280 (внутренний климат). Адрес может быть 0x76 или 0x77
-    if (!bme.begin(0x76)) {
-        #ifdef DEBUG
-        Serial.println(F("BME280 Init Failed!"));
-        #endif
-        bmeValid = false;
-    } else {
+    initBme();
+    initHtu();
+    initDs();
+}
+
+void SensorManager::initBme() {
+    if (bme.begin(0x76)) {
         bmeValid = true;
-        // Настройка BME280 для метеостанции (рекомендации из даташита)
+        bmeRetries = 0;
         bme.setSampling(Adafruit_BME280::MODE_NORMAL,
-                        Adafruit_BME280::SAMPLING_X1,  // Температура
-                        Adafruit_BME280::SAMPLING_X1,  // Давление (не используем, но нужно для работы)
-                        Adafruit_BME280::SAMPLING_X1,  // Влажность
+                        Adafruit_BME280::SAMPLING_X1,
+                        Adafruit_BME280::SAMPLING_X1,
+                        Adafruit_BME280::SAMPLING_X1,
                         Adafruit_BME280::FILTER_OFF);
-    }
-
-    // Инициализация HTU21D (улица)
-    if (!htu.begin()) {
         #ifdef DEBUG
-        Serial.println(F("HTU21D Init Failed!"));
+        Serial.println(F("BME280 Init OK"));
         #endif
-        htuValid = false;
     } else {
+        bmeValid = false;
+        #ifdef DEBUG
+        Serial.println(F("BME280 Init FAIL"));
+        #endif
+    }
+}
+
+void SensorManager::initHtu() {
+    if (htu.begin()) {
         htuValid = true;
-    }
-
-    // Инициализация DS18B20 (контрольный датчик)
-    dsSensor.begin();
-    // Проверяем, найден ли хотя бы один датчик на шине
-    if (dsSensor.getDeviceCount() == 0) {
+        htuRetries = 0;
         #ifdef DEBUG
-        Serial.println(F("DS18B20 Init Failed!"));
+        Serial.println(F("HTU21D Init OK"));
         #endif
-        dsValid = false;
     } else {
-        // Устанавливаем разрешение 12 бит (0.0625°C) для высокой точности
-        dsSensor.setResolution(12);
-        // Отключаем ожидание конверсии, чтобы не блокировать цикл (non-blocking mode)
-        dsSensor.setWaitForConversion(false);
+        htuValid = false;
+        #ifdef DEBUG
+        Serial.println(F("HTU21D Init FAIL"));
+        #endif
+    }
+}
+
+void SensorManager::initDs() {
+    dsSensor.begin();
+    if (dsSensor.getDeviceCount() > 0) {
         dsValid = true;
-        // Отправляем первую команду на замер температуры
-        dsSensor.requestTemperatures(); 
+        dsRetries = 0;
+        dsSensor.setResolution(12);
+        dsSensor.setWaitForConversion(false);
+        dsSensor.requestTemperatures();
+        #ifdef DEBUG
+        Serial.println(F("DS18B20 Init OK"));
+        #endif
+    } else {
+        dsValid = false;
+        #ifdef DEBUG
+        Serial.println(F("DS18B20 Init FAIL"));
+        #endif
     }
 }
 
 void SensorManager::update() {
     bool i2cSuccess = false;
+    unsigned long now = millis();
 
     // 1. ОПРОС И ФИЛЬТРАЦИЯ BME280 (ПОМЕЩЕНИЕ)
+    if (!bmeValid && bmeRetries < MAX_RETRIES) {
+        if (now - lastBmeRetry >= RETRY_INTERVAL) {
+            lastBmeRetry = now;
+            bmeRetries++;
+            #ifdef DEBUG
+            Serial.print(F("BME280 Retry ")); Serial.println(bmeRetries);
+            #endif
+            initBme();
+        }
+    }
+
     if (bmeValid) {
         float rawTemp = bme.readTemperature();
         float rawHum = bme.readHumidity();
@@ -87,6 +115,17 @@ void SensorManager::update() {
     }
 
     // 2. ОПРОС И ФИЛЬТРАЦИЯ HTU21D (УЛИЦА)
+    if (!htuValid && htuRetries < MAX_RETRIES) {
+        if (now - lastHtuRetry >= RETRY_INTERVAL) {
+            lastHtuRetry = now;
+            htuRetries++;
+            #ifdef DEBUG
+            Serial.print(F("HTU21D Retry ")); Serial.println(htuRetries);
+            #endif
+            initHtu();
+        }
+    }
+
     if (htuValid) {
         float rawTemp = htu.readTemperature();
         float rawHum = htu.readHumidity();
@@ -117,6 +156,17 @@ void SensorManager::update() {
     }
 
     // 3. ОПРОС И ФИЛЬТРАЦИЯ DS18B20 (КОНТРОЛЬ ПОДВАЛА)
+    if (!dsValid && dsRetries < MAX_RETRIES) {
+        if (now - lastDsRetry >= RETRY_INTERVAL) {
+            lastDsRetry = now;
+            dsRetries++;
+            #ifdef DEBUG
+            Serial.print(F("DS18B20 Retry ")); Serial.println(dsRetries);
+            #endif
+            initDs();
+        }
+    }
+
     if (dsValid) {
         // Читаем значение из памяти датчика (результат предыдущего запроса)
         float rawDsTemp = dsSensor.getTempCByIndex(0);

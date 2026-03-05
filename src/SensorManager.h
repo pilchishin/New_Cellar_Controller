@@ -38,6 +38,21 @@ private:
     bool htuValid;
     bool dsValid;
 
+    // Параметры повторных попыток
+    uint8_t bmeRetries;
+    uint8_t htuRetries;
+    uint8_t dsRetries;
+    unsigned long lastBmeRetry;
+    unsigned long lastHtuRetry;
+    unsigned long lastDsRetry;
+    const uint8_t MAX_RETRIES = 3;
+    const uint32_t RETRY_INTERVAL = 60000UL;
+
+    // Методы инициализации конкретных датчиков
+    void initBme();
+    void initHtu();
+    void initDs();
+
     // Счетчики ошибок для I2C устройств
     uint8_t i2cErrorCount;
     const uint8_t I2C_MAX_ERRORS = 3;
