@@ -1,9 +1,13 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+/**
+ * @enum SystemState
+ * @brief Возможные состояния конечного автомата (FSM) системы.
+ */
 enum class SystemState {
-    IDLE,
-    AUTO_CLIMATE,
+    IDLE,               // Режим ожидания
+    AUTO_CLIMATE,       // Автоматический климат-контроль (поддержание T и H)
     OZONE_START,
     OZONE_ACTIVE,
     OZONE_HOLD,
@@ -14,9 +18,13 @@ enum class SystemState {
     ERROR_STATE
 };
 
+/**
+ * @enum ErrorCode
+ * @brief Коды ошибок системы для диагностики.
+ */
 enum class ErrorCode {
-    NONE = 0,
-    SENSOR_BME_FAIL,
+    NONE = 0,           // Ошибок нет
+    SENSOR_BME_FAIL,    // Отказ датчика BME280 (внутренний)
     SENSOR_HTU_FAIL,
     SENSOR_DS_FAIL,
     RTC_FAIL,
@@ -25,12 +33,16 @@ enum class ErrorCode {
     TEMP_TOO_LOW        // T <= 2C
 };
 
+/**
+ * @struct SensorData
+ * @brief Структура для хранения обработанных данных с одного датчика климата.
+ */
 struct SensorData {
-    float temp;
-    float rh;
-    float ah;
-    float dewpoint;
-    bool valid;
+    float temp;         // Температура (°C)
+    float rh;           // Относительная влажность (%)
+    float ah;           // Абсолютная влажность (г/м³)
+    float dewpoint;     // Точка росы (°C)
+    bool valid;         // Флаг валидности данных (удачное чтение и инициализация)
 };
 
 struct CalibrationData {

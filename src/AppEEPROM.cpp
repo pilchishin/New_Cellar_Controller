@@ -18,6 +18,11 @@ uint16_t AppEEPROM::calculateCRC(const PersistentData& data) {
     return crc;
 }
 
+/**
+ * @brief Поиск последнего валидного слота с данными.
+ * Перебирает все слоты и проверяет контрольную сумму (CRC) каждого.
+ * Возвращает индекс первого найденного валидного слота.
+ */
 int AppEEPROM::findActiveSlot() {
     for (int i = 0; i < SLOTS_COUNT; i++) {
         PersistentData temp;
@@ -26,7 +31,7 @@ int AppEEPROM::findActiveSlot() {
             return i;
         }
     }
-    return -1; // Валидных данных нет
+    return -1; // Ни один слот не прошел проверку CRC
 }
 
 void AppEEPROM::load(PersistentData& data) {
@@ -47,14 +52,19 @@ void AppEEPROM::load(PersistentData& data) {
     }
 }
 
+/**
+ * @brief Сохранение данных с использованием алгоритма выравнивания износа (Wear Leveling).
+ * Вместо перезаписи одного и того же адреса, данные пишутся в следующий слот по кругу.
+ * Это продлевает срок службы EEPROM в 10 раз.
+ */
 void AppEEPROM::save(const PersistentData& data) {
     PersistentData copy = data;
-    copy.crc = calculateCRC(copy);
+    copy.crc = calculateCRC(copy); // Вычисление CRC для обеспечения целостности
 
     int currentSlot = findActiveSlot();
     int nextSlot = (currentSlot + 1) % SLOTS_COUNT;
 
-    // Записываем в следующий слот (Wear Leveling)
+    // Записываем новые данные в следующий по порядку слот
     EEPROM.put(nextSlot * SLOT_SIZE, copy);
 
     // Стираем CRC в старом слоте, чтобы пометить его неактивным (опционально для ускорения поиска)

@@ -49,20 +49,26 @@ void DisplayUI::update() {
     }
 }
 
+/**
+ * @brief Опрос кнопок и обработка нажатий (UP, DOWN, MENU).
+ * Использует неблокирующий антидребезг и таймеры повтора.
+ */
 void DisplayUI::handleButtons() {
-    if (millis() - lastBtnCheck < 50) return; // Простейший антидребезг
+    if (millis() - lastBtnCheck < 50) return; // Базовая задержка антидребезга
     lastBtnCheck = millis();
 
+    // Считывание состояний кнопок (инвертировано из-за INPUT_PULLUP)
     bool up = !digitalRead(BT_UP);
     bool down = !digitalRead(BT_DOWN);
     bool menu = !digitalRead(BT_MENU);
 
+    // Сброс таймера гашения подсветки при любой активности
     if (up || down || menu) {
-        lastActivityTime = millis(); // Сброс таймера подсветки
+        lastActivityTime = millis();
         if (!backlightOn) {
             lcd.backlight();
             backlightOn = true;
-            return; // Первое нажатие только включает свет
+            return; // Первое нажатие при выключенном экране только включает свет
         }
     }
 
@@ -93,8 +99,9 @@ void DisplayUI::handleButtons() {
         }
     }
 
-    // Кнопки UP/DOWN для навигации или изменения параметров (неблокирующая обработка)
+    // Логика кнопок изменения значений (UP/DOWN)
     if ((up || down) && !menuBtnPressed) {
+        // Ограничение скорости изменения значений (150мс между шагами)
         if (millis() - lastBtnAction >= 150) {
             lastBtnAction = millis();
             CalibrationData c = controller->getCalibration();

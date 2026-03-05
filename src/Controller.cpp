@@ -116,30 +116,41 @@ void Controller::tick() {
     }
 }
 
+/**
+ * @brief Алгоритм автоматического климат-контроля.
+ * Решает, нужно ли включать вентиляцию, основываясь на разнице
+ * абсолютной влажности (AH), температуре и риске конденсата.
+ */
 void Controller::handleAutoClimate() {
     SensorData in = sensors->getInside();
     SensorData out = sensors->getOutside();
 
-    // Алгоритм (Вариант С) из ТЗ
+    // Логика активации: если превышен порог температуры или влажности
     bool needsAction = (in.temp > (targetTemp + HYSTERESIS_TEMP)) ||
                        (in.rh > (targetRh + HYSTERESIS_RH));
     
+    // Проверка, что на улице воздух действительно суше, чем внутри
     bool airIsBetter = (out.ah + MARGIN_AH) < in.ah;
     
+    // Проверка безопасности: не допустить охлаждения поверхностей ниже точки росы
     bool condensationSafe = (in.dewpoint + MARGIN_COND_SAFETY) < in.temp;
 
-    // Условие включения вентилятора
+    // Итоговое решение по вентилятору
     if (needsAction && airIsBetter && condensationSafe) {
         relays->setFan(true); 
     } else {
-        relays->setFan(false);
+        relays->setFan(false); // Включается гистерезис и защита двигателя в RelayManager
     }
 }
 
+/**
+ * @brief Управление многофазным циклом озонирования.
+ * Фазы: Ожидание -> Озонирование (15м) -> Экспозиция (2ч) -> Проветривание (15м).
+ */
 void Controller::handleOzoneCycle() {
     SensorData out = sensors->getOutside();
     
-    // Проверка условий запрета (только для автоматического старта)
+    // Проверка условий блокировки (только в момент старта)
     if (currentState == SystemState::OZONE_START) {
         bool tempInhibited = (out.temp < 0.0f);
         bool uiInhibited = (ui != nullptr && ui->isBacklightOn());
@@ -162,7 +173,7 @@ void Controller::handleOzoneCycle() {
         changeState(SystemState::OZONE_ACTIVE);
     }
 
-    // Фаза 1: Озонирование (15 мин)
+    // Фаза 1: Активная работа озонатора (генерация озона)
     if (currentState == SystemState::OZONE_ACTIVE) {
         if (millis() - stateTimer >= OZONE_WORK_TIME) {
             relays->setOzone(false);
@@ -171,7 +182,7 @@ void Controller::handleOzoneCycle() {
         }
     }
 
-    // Фаза 2: Пауза (2 часа)
+    // Фаза 2: Пауза (ожидание распада озона)
     if (currentState == SystemState::OZONE_HOLD) {
         if (millis() - stateTimer >= OZONE_HOLD_TIME) {
             stateTimer = millis();
@@ -179,7 +190,7 @@ void Controller::handleOzoneCycle() {
         }
     }
 
-    // Фаза 3: Проветривание (15 мин)
+    // Фаза 3: Принудительное проветривание после обработки
     if (currentState == SystemState::OZONE_VENT) {
         // Проветривание разрешено только если на улице не мороз
         if (out.temp > 0.0f) {
