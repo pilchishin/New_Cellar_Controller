@@ -230,7 +230,9 @@ void DisplayUI::drawRelayState() {
 
     lcd.setCursor(0, 1);
     lcd.print(F("MODE:"));
-    lcd.print((int)controller->getState()); 
+    lcd.print(F("            ")); // Очистка старого текста
+    lcd.setCursor(5, 1);
+    lcd.print(stateToString(controller->getState()));
 }
 
 void DisplayUI::drawSetTemp() {
@@ -286,10 +288,9 @@ void DisplayUI::drawErrorLog() {
     lcd.setCursor(0, 1);
     ErrorCode err = controller->getError();
     if (err == ErrorCode::NONE) {
-        lcd.print(F("SYSTEM OK"));
+        lcd.print(F("SYSTEM OK       "));
     } else {
-        lcd.print(F("ERR CODE: "));
-        lcd.print((int)err);
-        lcd.print(F("  UP:RES"));
+        lcd.print(errorToString(err));
+        lcd.print(F("  UP:RESET "));
     }
 }

@@ -47,4 +47,35 @@ struct SystemStatistics {
     uint32_t ozoneMinutes;
 };
 
+// Вспомогательные функции для текстового представления (для LCD)
+inline const char* stateToString(SystemState s) {
+    switch (s) {
+        case SystemState::IDLE:         return "IDLE";
+        case SystemState::AUTO_CLIMATE: return "AUTO";
+        case SystemState::OZONE_START:  return "O3 START";
+        case SystemState::OZONE_ACTIVE: return "O3 WORK";
+        case SystemState::OZONE_HOLD:   return "O3 HOLD";
+        case SystemState::OZONE_VENT:   return "O3 VENT";
+        case SystemState::OZONE_ABORT:  return "O3 ABORT";
+        case SystemState::MANUAL_FAN:   return "MAN FAN";
+        case SystemState::MANUAL_OZONE: return "MAN O3";
+        case SystemState::ERROR_STATE:  return "ERROR";
+        default:                        return "UNKNOWN";
+    }
+}
+
+inline const char* errorToString(ErrorCode e) {
+    switch (e) {
+        case ErrorCode::NONE:              return "OK";
+        case ErrorCode::SENSOR_BME_FAIL:   return "BME FAIL";
+        case ErrorCode::SENSOR_HTU_FAIL:   return "HTU FAIL";
+        case ErrorCode::SENSOR_DS_FAIL:    return "DS FAIL";
+        case ErrorCode::RTC_FAIL:          return "RTC FAIL";
+        case ErrorCode::TEMP_MISMATCH:     return "T MISMATCH";
+        case ErrorCode::CONDENSATION_RISK: return "COND RISK";
+        case ErrorCode::TEMP_TOO_LOW:      return "FROST ERR";
+        default:                           return "ERR";
+    }
+}
+
 #endif
