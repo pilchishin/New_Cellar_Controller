@@ -79,3 +79,53 @@ float ClimateMath::calculateDewPoint(float temp, float rh) {
     
     return dewPoint;
 }
+
+// ==========================================================
+// I2C UTILS
+// ==========================================================
+#include <Wire.h>
+
+void I2CUtils::recoverBus(uint8_t sdaPin, uint8_t sclPin) {
+    #ifdef DEBUG
+    Serial.println(F("I2C: Recovery procedure started..."));
+    #endif
+
+    // 1. Освобождаем шину (отключаем аппаратный I2C)
+    Wire.end();
+
+    // 2. Настраиваем пины на вывод
+    pinMode(sdaPin, INPUT_PULLUP);
+    pinMode(sclPin, OUTPUT);
+    digitalWrite(sclPin, HIGH);
+
+    // 3. Отправляем 9 импульсов SCL
+    // Это заставит любое устройство, зависшее в ожидании ACK, освободить SDA
+    for (int i = 0; i < 9; i++) {
+        digitalWrite(sclPin, LOW);
+        delayMicroseconds(5);
+        digitalWrite(sclPin, HIGH);
+        delayMicroseconds(5);
+
+        // Если SDA освободился (стал HIGH), можно закончить раньше
+        if (digitalRead(sdaPin) == HIGH && i > 0) {
+            #ifdef DEBUG
+            Serial.print(F("I2C: Bus released at cycle ")); Serial.println(i);
+            #endif
+            break;
+        }
+    }
+
+    // 4. Формируем сигнал STOP: SDA low->high пока SCL high
+    pinMode(sdaPin, OUTPUT);
+    digitalWrite(sdaPin, LOW);
+    delayMicroseconds(5);
+    digitalWrite(sdaPin, HIGH);
+    delayMicroseconds(5);
+
+    // 5. Возвращаем аппаратный I2C
+    Wire.begin();
+
+    #ifdef DEBUG
+    Serial.println(F("I2C: Recovery complete."));
+    #endif
+}

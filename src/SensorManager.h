@@ -38,6 +38,10 @@ private:
     bool htuValid;
     bool dsValid;
 
+    // Счетчики ошибок для I2C устройств
+    uint8_t i2cErrorCount;
+    const uint8_t I2C_MAX_ERRORS = 3;
+
     // Калибровочные коэффициенты
     CalibrationData calib;
 
@@ -54,10 +58,14 @@ public:
     // Возвращает код ошибки, если что-то пошло не так
     ErrorCode checkErrors();
 
+    // Попытка восстановления после сбоя I2C
+    void recover();
+
     // Геттеры для получения актуальных данных контроллером
     SensorData getInside() const { return insideData; }
     SensorData getOutside() const { return outsideData; }
     float getControlTemp() const { return controlTemp; }
+    bool isI2CFailing() const { return i2cErrorCount >= I2C_MAX_ERRORS; }
 
     void setCalibration(const CalibrationData& data) { calib = data; }
 };

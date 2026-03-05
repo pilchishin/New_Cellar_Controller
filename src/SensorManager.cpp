@@ -4,7 +4,7 @@
 SensorManager::SensorManager() 
     : oneWire(ONE_WIRE_BUS), dsSensor(&oneWire),
       bmeValid(false), htuValid(false), dsValid(false),
-      controlTemp(0.0f) {
+      i2cErrorCount(0), controlTemp(0.0f) {
     // Начальные значения структур сбрасываем в нули/false
     insideData = {0, 0, 0, 0, false};
     outsideData = {0, 0, 0, 0, false};
@@ -62,6 +62,8 @@ void SensorManager::init() {
 }
 
 void SensorManager::update() {
+    bool i2cSuccess = false;
+
     // 1. ОПРОС И ФИЛЬТРАЦИЯ BME280 (ПОМЕЩЕНИЕ)
     if (bmeValid) {
         float rawTemp = bme.readTemperature();
@@ -80,6 +82,7 @@ void SensorManager::update() {
             insideData.ah       = ClimateMath::calculateAH(insideData.temp, insideData.rh);
             insideData.dewpoint = ClimateMath::calculateDewPoint(insideData.temp, insideData.rh);
             insideData.valid    = true;
+            i2cSuccess = true;
         }
     }
 
@@ -98,7 +101,19 @@ void SensorManager::update() {
             outsideData.ah       = ClimateMath::calculateAH(outsideData.temp, outsideData.rh);
             outsideData.dewpoint = ClimateMath::calculateDewPoint(outsideData.temp, outsideData.rh);
             outsideData.valid    = true;
+            i2cSuccess = true;
         }
+    }
+
+    // Обработка ошибок I2C
+    if (i2cSuccess) {
+        i2cErrorCount = 0; // Сброс при успешном чтении хотя бы одного датчика
+    } else if (bmeValid || htuValid) {
+        // Если датчики должны работать, но чтение не удалось
+        i2cErrorCount++;
+        #ifdef DEBUG
+        Serial.print(F("I2C Error Count: ")); Serial.println(i2cErrorCount);
+        #endif
     }
 
     // 3. ОПРОС И ФИЛЬТРАЦИЯ DS18B20 (КОНТРОЛЬ ПОДВАЛА)
@@ -136,4 +151,11 @@ ErrorCode SensorManager::checkErrors() {
 
     // Ошибок датчиков не обнаружено
     return ErrorCode::NONE;
+}
+
+void SensorManager::recover() {
+    // Выполняем программный сброс шины (A4=SDA, A5=SCL на Arduino Nano)
+    I2CUtils::recoverBus(A4, A5);
+    // Пробуем инициализировать датчики заново
+    init();
 }

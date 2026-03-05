@@ -60,6 +60,7 @@ private:
 public:
     DisplayUI(Controller* c, SensorManager* s, TimeManager* t);
     void init();
+    void reinit(); // Повторная инициализация LCD после сбоя I2C
     void update(); // Вызывается в основном loop()
     
     bool isBacklightOn() const { return backlightOn; }

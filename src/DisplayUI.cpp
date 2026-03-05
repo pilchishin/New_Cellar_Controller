@@ -16,6 +16,12 @@ void DisplayUI::init() {
     lastActivityTime = millis();
 }
 
+void DisplayUI::reinit() {
+    lcd.init();
+    if (backlightOn) lcd.backlight();
+    else lcd.noBacklight();
+}
+
 void DisplayUI::update() {
     handleButtons();   // Опрос кнопок
     updateBacklight(); // Управление светом

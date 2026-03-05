@@ -56,6 +56,17 @@ void Controller::tick() {
         storage.save(data);
     }
 
+    // 0.3 Проверка зависания шины I2C
+    if (sensors->isI2CFailing()) {
+        #ifdef DEBUG
+        Serial.println(F("I2C Fail detected. Recovering..."));
+        #endif
+
+        sensors->recover(); // Сброс шины + переинициализация датчиков
+        rtc->init();        // Переинициализация RTC
+        ui->reinit();       // Переинициализация LCD
+    }
+
     // 1. Постоянная проверка критических ошибок
     checkCriticalErrors();
 

@@ -34,4 +34,10 @@ namespace ClimateMath {
     float calculateDewPoint(float temp, float rh);
 }
 
+// Утилиты для работы с шиной I2C
+namespace I2CUtils {
+    // Программный сброс зависшей шины I2C (9 тактов SCL)
+    void recoverBus(uint8_t sdaPin, uint8_t sclPin);
+}
+
 #endif
