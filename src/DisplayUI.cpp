@@ -4,7 +4,7 @@
 // Конструктор: адрес 0x27 и размер 16x2
 DisplayUI::DisplayUI(Controller* c, SensorManager* s, TimeManager* t) 
     : lcd(0x27, 16, 2), controller(c), sensors(s), rtc(t),
-      currentPage(MenuPage::STATUS_IN), lastBtnCheck(0), lastBtnAction(0),
+      currentPage(MenuPage::HOME_SCREEN), lastBtnCheck(0), lastBtnAction(0),
       menuBtnPressed(false), messageTimer(0), tempMessage(nullptr), backlightOn(true) {}
 
 void DisplayUI::init() {
@@ -84,7 +84,7 @@ void DisplayUI::handleButtons() {
             if (pressDuration < 600) {
                 // Короткое нажатие: листаем страницы вперед
                 int next = (int)currentPage + 1;
-                if (next > (int)MenuPage::ERROR_LOG) next = 0;
+                if (next > (int)MenuPage::CALIB_DS_T) next = 0;
                 currentPage = (MenuPage)next;
                 lcd.clear();
             } else {
@@ -179,9 +179,9 @@ void DisplayUI::updateBacklight() {
 void DisplayUI::drawPage() {
     CalibrationData c = controller->getCalibration();
     switch (currentPage) {
+        case MenuPage::HOME_SCREEN:  drawHomeScreen(); break;
         case MenuPage::STATUS_IN:    drawStatusIn(); break;
         case MenuPage::STATUS_OUT:   drawStatusOut(); break;
-        case MenuPage::STATUS_RELAY: drawRelayState(); break;
         case MenuPage::SET_TEMP:     drawSetTemp(); break;
         case MenuPage::SET_HUM:      drawSetHum(); break;
         case MenuPage::MANUAL_MODES: drawManualModes(); break;
@@ -193,6 +193,36 @@ void DisplayUI::drawPage() {
         case MenuPage::STATS:        drawStats(); break;
         case MenuPage::ERROR_LOG:    drawErrorLog(); break;
     }
+}
+
+void DisplayUI::drawHomeScreen() {
+    SensorData in = sensors->getInside();
+    lcd.setCursor(0, 0);
+    lcd.print(F("IN:"));
+    lcd.print(in.temp, 1);
+    lcd.print(F("C "));
+    lcd.print(in.rh, 0);
+    lcd.print(F("%"));
+
+    // Состояние реле (F - Fan, O - Ozone)
+    lcd.setCursor(14, 0);
+    lcd.print(controller->getRelayManager()->getFanState() ? F("F") : F("."));
+    lcd.print(controller->getRelayManager()->getOzoneState() ? F("O") : F("."));
+
+    lcd.setCursor(0, 1);
+    lcd.print(F("SET:"));
+    lcd.print(controller->getTargetTemp(), 1);
+    lcd.print(F("C "));
+    lcd.print(controller->getTargetRh(), 0);
+    lcd.print(F("% "));
+
+    // Короткое имя текущего режима
+    lcd.setCursor(12, 1);
+    SystemState state = controller->getState();
+    if (state == SystemState::AUTO_CLIMATE) lcd.print(F("AUTO"));
+    else if (state == SystemState::OZONE_ACTIVE) lcd.print(F("OZN!"));
+    else if (state == SystemState::ERROR_STATE) lcd.print(F("ERR!"));
+    else lcd.print(F("MAN "));
 }
 
 void DisplayUI::drawStatusIn() {
@@ -226,21 +256,6 @@ void DisplayUI::drawStatusOut() {
     if (out.temp < 0) lcd.print(F(" FROST"));
 }
 
-void DisplayUI::drawRelayState() {
-    lcd.setCursor(0, 0);
-    lcd.print(F("FAN:"));
-    lcd.print(controller->getRelayManager()->getFanState() ? F("ON ") : F("OFF"));
-    
-    lcd.setCursor(9, 0);
-    lcd.print(F("O3:"));
-    lcd.print(controller->getRelayManager()->getOzoneState() ? F("ON ") : F("OFF"));
-
-    lcd.setCursor(0, 1);
-    lcd.print(F("MODE:"));
-    lcd.print(F("            ")); // Очистка старого текста
-    lcd.setCursor(5, 1);
-    lcd.print(stateToString(controller->getState()));
-}
 
 void DisplayUI::drawSetTemp() {
     lcd.setCursor(0, 0);

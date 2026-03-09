@@ -9,19 +9,19 @@
 
 // Состояния меню
 enum class MenuPage {
-    STATUS_IN,      // Датчики внутри
-    STATUS_OUT,     // Датчики снаружи
-    STATUS_RELAY,   // Состояние реле и FSM
+    HOME_SCREEN,    // Главная: T/H, цели и статусы реле
+    STATUS_IN,      // Датчики внутри (детально: AH, точка росы)
+    STATUS_OUT,     // Датчики снаружи (детально: AH)
     SET_TEMP,       // Установка целевой T
     SET_HUM,        // Установка целевой RH
     MANUAL_MODES,   // Ручной запуск FAN/OZONE
+    ERROR_LOG,      // Просмотр и сброс ошибок
+    STATS,          // Статистика работы
     CALIB_BME_T,    // Калибровка BME T
     CALIB_BME_H,    // Калибровка BME H
     CALIB_HTU_T,    // Калибровка HTU T
     CALIB_HTU_H,    // Калибровка HTU H
-    CALIB_DS_T,     // Калибровка DS T
-    STATS,          // Статистика
-    ERROR_LOG       // Просмотр ошибок
+    CALIB_DS_T      // Калибровка DS T
 };
 
 class DisplayUI {
@@ -52,9 +52,9 @@ private:
     void updateBacklight();
 
     // Вспомогательные методы отрисовки
+    void drawHomeScreen();
     void drawStatusIn();
     void drawStatusOut();
-    void drawRelayState();
     void drawSetTemp();
     void drawSetHum();
     void drawManualModes();
