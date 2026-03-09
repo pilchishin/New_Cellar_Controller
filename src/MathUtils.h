@@ -6,38 +6,36 @@
 // Класс для фильтрации сырых данных с датчиков
 // Комбинирует медианный фильтр (окно 3) и экспоненциальное сглаживание (EMA)
 class Filter {
-private:
-    float history[3];      // Буфер для последних 3-х измерений (для медианы)
-    float emaValue;        // Текущее значение EMA
-    float alpha;           // Коэффициент сглаживания EMA (обычно 0.2)
-    bool isInitialized;    // Флаг первоначального заполнения буфера
+ private:
+  float history_[3];     // Буфер для последних 3-х измерений (для медианы)
+  float ema_value_;      // Текущее значение EMA
+  float alpha_;          // Коэффициент сглаживания EMA (обычно 0.2)
+  bool is_initialized_;  // Флаг первоначального заполнения буфера
 
-    // Приватный метод для быстрого поиска медианы из 3-х чисел
-    float getMedian(float a, float b, float c);
+  // Приватный метод для быстрого поиска медианы из 3-х чисел
+  float GetMedian(float a, float b, float c);
 
-public:
-    // Конструктор. По ТЗ коэффициент альфа для EMA равен 0.2
-    Filter(float alpha = 0.2f);
+ public:
+  // Конструктор. По ТЗ коэффициент альфа для EMA равен 0.2
+  Filter(float alpha = 0.2f);
 
-    // Главный метод: принимает новое сырое значение, возвращает отфильтрованное
-    float update(float newValue);
+  // Главный метод: принимает новое сырое значение, возвращает отфильтрованное
+  float Update(float new_value);
 };
 
-// Пространство имен для климатических формул (вынесено отдельно, чтобы не создавать объекты)
-namespace ClimateMath {
-    // Расчет абсолютной влажности (г/м³)
-    // Вход: температура (°C), относительная влажность (%)
-    float calculateAH(float temp, float rh);
+// Пространство имен для климатических формул
+namespace climate_math {
+// Расчет абсолютной влажности (г/м³)
+float CalculateAH(float temp, float rh);
 
-    // Расчет точки росы (°C) - температуры, при которой начнется конденсат
-    // Вход: температура (°C), относительная влажность (%)
-    float calculateDewPoint(float temp, float rh);
-}
+// Расчет точки росы (°C)
+float CalculateDewPoint(float temp, float rh);
+}  // namespace climate_math
 
 // Утилиты для работы с шиной I2C
-namespace I2CUtils {
-    // Программный сброс зависшей шины I2C (9 тактов SCL)
-    void recoverBus(uint8_t sdaPin, uint8_t sclPin);
-}
+namespace i2c_utils {
+// Программный сброс зависшей шины I2C (9 тактов SCL)
+void RecoverBus(uint8_t sda_pin, uint8_t scl_pin);
+}  // namespace i2c_utils
 
 #endif

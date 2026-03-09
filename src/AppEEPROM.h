@@ -14,18 +14,18 @@ struct PersistentData {
 };
 
 class AppEEPROM {
-private:
-    static const uint16_t EEPROM_SIZE = 1024; // Для ATmega328P
-    static const uint8_t SLOTS_COUNT = 10;    // Количество слотов для wear leveling
-    static const uint16_t SLOT_SIZE = sizeof(PersistentData);
+ private:
+  static const uint16_t kEepromSize = 1024;   // Для ATmega328P
+  static const uint8_t kSlotsCount = 10;      // Количество слотов для wear leveling
+  static const uint16_t kSlotSize = sizeof(PersistentData);
 
-    uint16_t calculateCRC(const PersistentData& data);
-    int findActiveSlot();
+  uint16_t CalculateCrc(const PersistentData& data);
+  int FindActiveSlot();
 
-public:
-    AppEEPROM();
-    void load(PersistentData& data);
-    void save(const PersistentData& data);
+ public:
+  AppEEPROM();
+  void Load(PersistentData& data);
+  void Save(const PersistentData& data);
 };
 
 #endif

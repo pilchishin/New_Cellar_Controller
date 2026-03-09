@@ -4,76 +4,77 @@
 
 AppEEPROM::AppEEPROM() {}
 
-uint16_t AppEEPROM::calculateCRC(const PersistentData& data) {
-    uint16_t crc = 0xFFFF;
-    const uint8_t* bytes = (const uint8_t*)&data;
-    // Считаем CRC для всей структуры, кроме самого поля crc (последние 2 байта)
-    for (uint16_t i = 0; i < sizeof(PersistentData) - 2; i++) {
-        crc ^= bytes[i];
-        for (uint8_t j = 0; j < 8; j++) {
-            if (crc & 1) crc = (crc >> 1) ^ 0xA001;
-            else crc >>= 1;
-        }
+uint16_t AppEEPROM::CalculateCrc(const PersistentData& data) {
+  uint16_t crc = 0xFFFF;
+  const uint8_t* bytes = (const uint8_t*)&data;
+  // Считаем CRC для всей структуры, кроме самого поля crc (последние 2 байта)
+  for (uint16_t i = 0; i < sizeof(PersistentData) - 2; i++) {
+    crc ^= bytes[i];
+    for (uint8_t j = 0; j < 8; j++) {
+      if (crc & 1)
+        crc = (crc >> 1) ^ 0xA001;
+      else
+        crc >>= 1;
     }
-    return crc;
+  }
+  return crc;
 }
 
 /**
  * @brief Поиск последнего валидного слота с данными.
- * Перебирает все слоты и проверяет контрольную сумму (CRC) каждого.
- * Возвращает индекс первого найденного валидного слота.
  */
-int AppEEPROM::findActiveSlot() {
-    for (int i = 0; i < SLOTS_COUNT; i++) {
-        PersistentData temp;
-        EEPROM.get(i * SLOT_SIZE, temp);
-        if (temp.crc == calculateCRC(temp)) {
-            return i;
-        }
+int AppEEPROM::FindActiveSlot() {
+  for (int i = 0; i < kSlotsCount; i++) {
+    PersistentData temp;
+    EEPROM.get(i * kSlotSize, temp);
+    if (temp.crc == CalculateCrc(temp)) {
+      return i;
     }
-    return -1; // Ни один слот не прошел проверку CRC
+  }
+  return -1;  // Ни один слот не прошел проверку CRC
 }
 
-void AppEEPROM::load(PersistentData& data) {
-    int slot = findActiveSlot();
-    if (slot != -1) {
-        EEPROM.get(slot * SLOT_SIZE, data);
-        #ifdef DEBUG
-        Serial.print(F("EEPROM: Loaded from slot ")); Serial.println(slot);
-        #endif
-    } else {
-        // Если данных нет, инициализируем нулями (или дефолтами)
-        memset(&data, 0, sizeof(PersistentData));
-        data.targetTemp = DEFAULT_TARGET_TEMP;
-        data.targetRh = DEFAULT_TARGET_RH;
-        #ifdef DEBUG
-        Serial.println(F("EEPROM: No valid data found. Defaults loaded."));
-        #endif
-    }
+void AppEEPROM::Load(PersistentData& data) {
+  int slot = FindActiveSlot();
+  if (slot != -1) {
+    EEPROM.get(slot * kSlotSize, data);
+#ifdef DEBUG
+    Serial.print(F("EEPROM: Loaded from slot "));
+    Serial.println(slot);
+#endif
+  } else {
+    // Если данных нет, инициализируем нулями (или дефолтами)
+    memset(&data, 0, sizeof(PersistentData));
+    data.targetTemp = kDefaultTargetTemp;
+    data.targetRh = kDefaultTargetRh;
+#ifdef DEBUG
+    Serial.println(F("EEPROM: No valid data found. Defaults loaded."));
+#endif
+  }
 }
 
 /**
- * @brief Сохранение данных с использованием алгоритма выравнивания износа (Wear Leveling).
- * Вместо перезаписи одного и того же адреса, данные пишутся в следующий слот по кругу.
- * Это продлевает срок службы EEPROM в 10 раз.
+ * @brief Сохранение данных с использованием алгоритма выравнивания износа.
  */
-void AppEEPROM::save(const PersistentData& data) {
-    PersistentData copy = data;
-    copy.crc = calculateCRC(copy); // Вычисление CRC для обеспечения целостности
+void AppEEPROM::Save(const PersistentData& data) {
+  PersistentData copy = data;
+  copy.crc = CalculateCrc(copy);  // Вычисление CRC для обеспечения целостности
 
-    int currentSlot = findActiveSlot();
-    int nextSlot = (currentSlot + 1) % SLOTS_COUNT;
+  int current_slot = FindActiveSlot();
+  int next_slot = (current_slot + 1) % kSlotsCount;
 
-    // Записываем новые данные в следующий по порядку слот
-    EEPROM.put(nextSlot * SLOT_SIZE, copy);
+  // Записываем новые данные в следующий по порядку слот
+  EEPROM.put(next_slot * kSlotSize, copy);
 
-    // Стираем CRC в старом слоте, чтобы пометить его неактивным (опционально для ускорения поиска)
-    if (currentSlot != -1 && currentSlot != nextSlot) {
-        uint16_t invalidCrc = 0;
-        EEPROM.put(currentSlot * SLOT_SIZE + offsetof(PersistentData, crc), invalidCrc);
-    }
+  // Стираем CRC в старом слоте
+  if (current_slot != -1 && current_slot != next_slot) {
+    uint16_t invalid_crc = 0;
+    EEPROM.put(current_slot * kSlotSize + offsetof(PersistentData, crc),
+               invalid_crc);
+  }
 
-    #ifdef DEBUG
-    Serial.print(F("EEPROM: Saved to slot ")); Serial.println(nextSlot);
-    #endif
+#ifdef DEBUG
+  Serial.print(F("EEPROM: Saved to slot "));
+  Serial.println(next_slot);
+#endif
 }

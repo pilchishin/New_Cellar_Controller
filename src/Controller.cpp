@@ -1,119 +1,121 @@
 #include "Controller.h"
 #include "DisplayUI.h"
 
-Controller::Controller(SensorManager* s, RelayManager* r, TimeManager* t) 
-    : sensors(s), relays(r), rtc(t), ui(nullptr) {
-    currentState = SystemState::IDLE;
-    currentError = ErrorCode::NONE;
+Controller::Controller(SensorManager* s, RelayManager* r, TimeManager* t)
+    : sensors_(s), relays_(r), rtc_(t), ui_(nullptr) {
+  current_state_ = SystemState::kIdle;
+  current_error_ = ErrorCode::kNone;
 
-    // Загрузка данных из EEPROM
-    PersistentData data;
-    storage.load(data);
+  // Загрузка данных из EEPROM
+  PersistentData data;
+  storage_.load(data);
 
-    targetTemp = data.targetTemp;
-    targetRh = data.targetRh;
-    calib = data.calibration;
-    stats = data.stats;
+  target_temp_ = data.targetTemp;
+  target_rh_ = data.targetRh;
+  calib_ = data.calibration;
+  stats_ = data.stats;
 
-    sensors->setCalibration(calib);
+  sensors_->SetCalibration(calib_);
 
-    lastStatsUpdate = millis();
-    lastEEPROMSave = millis();
-    needsPersistentSave = false;
-    lastPersistentChangeTime = 0;
-    ozoneInhibitedToday = false;
-    stateTimer = 0;
-    manualTimer = 0;
-    retryOzoneTimer = 0;
+  last_stats_update_ = millis();
+  last_eeprom_save_ = millis();
+  needs_persistent_save_ = false;
+  last_persistent_change_time_ = 0;
+  ozone_inhibited_today_ = false;
+  state_timer_ = 0;
+  manual_timer_ = 0;
+  retry_ozone_timer_ = 0;
 }
 
-void Controller::init() {
-    changeState(SystemState::AUTO_CLIMATE);
-}
+void Controller::Init() { ChangeState(SystemState::kAutoClimate); }
 
-void Controller::tick() {
-    unsigned long now = millis();
+void Controller::Tick() {
+  unsigned long now = millis();
 
-    // 0. Обновление статистики (раз в минуту)
-    if (now - lastStatsUpdate >= 60000UL) {
-        lastStatsUpdate = now;
-        stats.uptimeMinutes++;
-        if (relays->getFanState()) stats.fanMinutes++;
-        if (relays->getOzoneState()) stats.ozoneMinutes++;
-    }
+  // 0. Обновление статистики (раз в минуту)
+  if (now - last_stats_update_ >= 60000UL) {
+    last_stats_update_ = now;
+    stats_.uptimeMinutes++;
+    if (relays_->GetFanState()) stats_.fanMinutes++;
+    if (relays_->GetOzoneState()) stats_.ozoneMinutes++;
+  }
 
-    // 0.1 Сохранение статистики в EEPROM (раз в 30 минут)
-    if (now - lastEEPROMSave >= 1800000UL) {
-        lastEEPROMSave = now;
-        needsPersistentSave = true;
-        lastPersistentChangeTime = now - DEFERRED_SAVE_DELAY; // Принудительное сохранение без задержки
-    }
+  // 0.1 Сохранение статистики в EEPROM (раз в 30 минут)
+  if (now - last_eeprom_save_ >= 1800000UL) {
+    last_eeprom_save_ = now;
+    needs_persistent_save_ = true;
+    last_persistent_change_time_ =
+        now - kDeferredSaveDelay;  // Принудительное сохранение без задержки
+  }
 
-    // 0.2 Отложенное сохранение в EEPROM
-    if (needsPersistentSave && (now - lastPersistentChangeTime >= DEFERRED_SAVE_DELAY)) {
-        needsPersistentSave = false;
-        PersistentData data = { targetTemp, targetRh, calib, stats, 0 };
-        storage.save(data);
-    }
+  // 0.2 Отложенное сохранение в EEPROM
+  if (needs_persistent_save_ &&
+      (now - last_persistent_change_time_ >= kDeferredSaveDelay)) {
+    needs_persistent_save_ = false;
+    PersistentData data = {target_temp_, target_rh_, calib_, stats_, 0};
+    storage_.save(data);
+  }
 
-    // 0.3 Проверка зависания шины I2C
-    if (sensors->isI2CFailing()) {
-        #ifdef DEBUG
-        Serial.println(F("I2C Fail detected. Recovering..."));
-        #endif
+  // 0.3 Проверка зависания шины I2C
+  if (sensors_->IsI2cFailing()) {
+#ifdef DEBUG
+    Serial.println(F("I2C Fail detected. Recovering..."));
+#endif
 
-        sensors->recover(); // Сброс шины + переинициализация датчиков
-        rtc->init();        // Переинициализация RTC
-        ui->reinit();       // Переинициализация LCD
-    }
+    sensors_->Recover();  // Сброс шины + переинициализация датчиков
+    rtc_->Init();         // Переинициализация RTC
+    ui_->reinit();        // Переинициализация LCD
+  }
 
-    // 1. Постоянная проверка критических ошибок
-    checkCriticalErrors();
+  // 1. Постоянная проверка критических ошибок
+  CheckCriticalErrors();
 
-    // 2. Если есть критическая ошибка — принудительный переход в ERROR_STATE
-    if (currentError != ErrorCode::NONE && currentState != SystemState::ERROR_STATE) {
-        changeState(SystemState::ERROR_STATE);
-    }
+  // 2. Если есть критическая ошибка — принудительный переход в ERROR_STATE
+  if (current_error_ != ErrorCode::kNone &&
+      current_state_ != SystemState::kErrorState) {
+    ChangeState(SystemState::kErrorState);
+  }
 
-    // 3. Обработка состояний (FSM)
-    switch (currentState) {
-        case SystemState::AUTO_CLIMATE:
-            handleAutoClimate();
-            
-            // Проверка запуска озонирования по расписанию
-            if (rtc->isOzoneTimeScheduled()) {
-                changeState(SystemState::OZONE_START);
-            }
-            // Проверка повторной попытки через 30 минут (если был запрет)
-            else if (retryOzoneTimer != 0 && (millis() - retryOzoneTimer >= OZONE_RETRY_SHORT)) {
-                retryOzoneTimer = 0; // Сбрасываем таймер
-                changeState(SystemState::OZONE_START);
-            }
-            break;
+  // 3. Обработка состояний (FSM)
+  switch (current_state_) {
+    case SystemState::kAutoClimate:
+      HandleAutoClimate();
 
-        case SystemState::OZONE_START:
-            handleOzoneCycle(); // Проверка условий запуска (T_out и подсветка)
-            break;
+      // Проверка запуска озонирования по расписанию
+      if (rtc_->IsOzoneTimeScheduled()) {
+        ChangeState(SystemState::kOzoneStart);
+      }
+      // Проверка повторной попытки через 30 минут (если был запрет)
+      else if (retry_ozone_timer_ != 0 &&
+               (millis() - retry_ozone_timer_ >= kOzoneRetryShort)) {
+        retry_ozone_timer_ = 0;  // Сбрасываем таймер
+        ChangeState(SystemState::kOzoneStart);
+      }
+      break;
 
-        case SystemState::OZONE_ACTIVE:
-        case SystemState::OZONE_HOLD:
-        case SystemState::OZONE_VENT:
-            handleOzoneCycle(); // Логика фаз
-            break;
+    case SystemState::kOzoneStart:
+      HandleOzoneCycle();  // Проверка условий запуска (T_out и подсветка)
+      break;
 
-        case SystemState::MANUAL_FAN:
-        case SystemState::MANUAL_OZONE:
-            handleManualModes();
-            break;
+    case SystemState::kOzoneActive:
+    case SystemState::kOzoneHold:
+    case SystemState::kOzoneVent:
+      HandleOzoneCycle();  // Логика фаз
+      break;
 
-        case SystemState::ERROR_STATE:
-            relays->setFan(false, true);   // Выключить всё немедленно
-            relays->setOzone(false);
-            break;
+    case SystemState::kManualFan:
+    case SystemState::kManualOzone:
+      HandleManualModes();
+      break;
 
-        default:
-            break;
-    }
+    case SystemState::kErrorState:
+      relays_->SetFan(false, true);  // Выключить всё немедленно
+      relays_->SetOzone(false);
+      break;
+
+    default:
+      break;
+  }
 }
 
 /**
@@ -121,177 +123,176 @@ void Controller::tick() {
  * Решает, нужно ли включать вентиляцию, основываясь на разнице
  * абсолютной влажности (AH), температуре и риске конденсата.
  */
-void Controller::handleAutoClimate() {
-    SensorData in = sensors->getInside();
-    SensorData out = sensors->getOutside();
+void Controller::HandleAutoClimate() {
+  SensorData in = sensors_->GetInside();
+  SensorData out = sensors_->GetOutside();
 
-    // Логика активации: если превышен порог температуры или влажности
-    bool needsAction = (in.temp > (targetTemp + HYSTERESIS_TEMP)) ||
-                       (in.rh > (targetRh + HYSTERESIS_RH));
-    
-    // Проверка, что на улице воздух действительно суше, чем внутри
-    bool airIsBetter = (out.ah + MARGIN_AH) < in.ah;
-    
-    // Проверка безопасности: не допустить охлаждения поверхностей ниже точки росы
-    bool condensationSafe = (in.dewpoint + MARGIN_COND_SAFETY) < in.temp;
+  // Логика активации: если превышен порог температуры или влажности
+  bool needs_action = (in.temp > (target_temp_ + kHysteresisTemp)) ||
+                      (in.rh > (target_rh_ + kHysteresisRh));
 
-    // Итоговое решение по вентилятору
-    if (needsAction && airIsBetter && condensationSafe) {
-        relays->setFan(true); 
-    } else {
-        relays->setFan(false); // Включается гистерезис и защита двигателя в RelayManager
-    }
+  // Проверка, что на улице воздух действительно суше, чем внутри
+  bool air_is_better = (out.ah + kMarginAh) < in.ah;
+
+  // Проверка безопасности: не допустить охлаждения поверхностей ниже точки росы
+  bool condensation_safe = (in.dewpoint + kMarginCondSafety) < in.temp;
+
+  // Итоговое решение по вентилятору
+  if (needs_action && air_is_better && condensation_safe) {
+    relays_->SetFan(true);
+  } else {
+    relays_->SetFan(false);  // Включается гистерезис и защита двигателя в RelayManager
+  }
 }
 
 /**
  * @brief Управление многофазным циклом озонирования.
  * Фазы: Ожидание -> Озонирование (15м) -> Экспозиция (2ч) -> Проветривание (15м).
  */
-void Controller::handleOzoneCycle() {
-    SensorData out = sensors->getOutside();
-    
-    // Проверка условий блокировки (только в момент старта)
-    if (currentState == SystemState::OZONE_START) {
-        bool tempInhibited = (out.temp < 0.0f);
-        bool uiInhibited = (ui != nullptr && ui->isBacklightOn());
+void Controller::HandleOzoneCycle() {
+  SensorData out = sensors_->GetOutside();
 
-        if (tempInhibited || uiInhibited) {
-            #ifdef DEBUG
-            Serial.println(F("Ozone Inhibited: Wait 30m"));
-            #endif
-            retryOzoneTimer = millis();
-            // rtc->resetOzoneTrigger() не требуется, так как повторный вход
-            // через 30 минут управляется таймером retryOzoneTimer в tick()
-            changeState(SystemState::AUTO_CLIMATE);
-            return;
-        }
-        
-        // Если всё ок — включаем озон
-        relays->setFan(false, true);
-        relays->setOzone(true);
-        stateTimer = millis();
-        changeState(SystemState::OZONE_ACTIVE);
+  // Проверка условий блокировки (только в момент старта)
+  if (current_state_ == SystemState::kOzoneStart) {
+    bool temp_inhibited = (out.temp < 0.0f);
+    bool ui_inhibited = (ui_ != nullptr && ui_->isBacklightOn());
+
+    if (temp_inhibited || ui_inhibited) {
+#ifdef DEBUG
+      Serial.println(F("Ozone Inhibited: Wait 30m"));
+#endif
+      retry_ozone_timer_ = millis();
+      ChangeState(SystemState::kAutoClimate);
+      return;
     }
 
-    // Фаза 1: Активная работа озонатора (генерация озона)
-    if (currentState == SystemState::OZONE_ACTIVE) {
-        if (millis() - stateTimer >= OZONE_WORK_TIME) {
-            relays->setOzone(false);
-            stateTimer = millis();
-            changeState(SystemState::OZONE_HOLD);
-        }
+    // Если всё ок — включаем озон
+    relays_->SetFan(false, true);
+    relays_->SetOzone(true);
+    state_timer_ = millis();
+    ChangeState(SystemState::kOzoneActive);
+  }
+
+  // Фаза 1: Активная работа озонатора (генерация озона)
+  if (current_state_ == SystemState::kOzoneActive) {
+    if (millis() - state_timer_ >= kOzoneWorkTime) {
+      relays_->SetOzone(false);
+      state_timer_ = millis();
+      ChangeState(SystemState::kOzoneHold);
     }
+  }
 
-    // Фаза 2: Пауза (ожидание распада озона)
-    if (currentState == SystemState::OZONE_HOLD) {
-        if (millis() - stateTimer >= OZONE_HOLD_TIME) {
-            stateTimer = millis();
-            changeState(SystemState::OZONE_VENT);
-        }
+  // Фаза 2: Пауза (ожидание распада озона)
+  if (current_state_ == SystemState::kOzoneHold) {
+    if (millis() - state_timer_ >= kOzoneHoldTime) {
+      state_timer_ = millis();
+      ChangeState(SystemState::kOzoneVent);
     }
+  }
 
-    // Фаза 3: Принудительное проветривание после обработки
-    if (currentState == SystemState::OZONE_VENT) {
-        // Проветривание разрешено только если на улице не мороз
-        if (out.temp > 0.0f) {
-            relays->setFan(true);
-            if (millis() - stateTimer >= OZONE_VENT_TIME) {
-                relays->setFan(false);
-                changeState(SystemState::AUTO_CLIMATE);
-            }
-        } else {
-            // Если мороз — принудительно выходим
-            relays->setFan(false);
-            changeState(SystemState::AUTO_CLIMATE);
-        }
+  // Фаза 3: Принудительное проветривание после обработки
+  if (current_state_ == SystemState::kOzoneVent) {
+    // Проветривание разрешено только если на улице не мороз
+    if (out.temp > 0.0f) {
+      relays_->SetFan(true);
+      if (millis() - state_timer_ >= kOzoneVentTime) {
+        relays_->SetFan(false);
+        ChangeState(SystemState::kAutoClimate);
+      }
+    } else {
+      // Если мороз — принудительно выходим
+      relays_->SetFan(false);
+      ChangeState(SystemState::kAutoClimate);
     }
+  }
 }
 
-void Controller::handleManualModes() {
-    if (millis() - stateTimer >= (manualTimer * 60000UL)) {
-        relays->setFan(false);
-        relays->setOzone(false);
-        changeState(SystemState::AUTO_CLIMATE);
-    }
+void Controller::HandleManualModes() {
+  if (millis() - state_timer_ >= (manual_timer_ * 60000UL)) {
+    relays_->SetFan(false);
+    relays_->SetOzone(false);
+    ChangeState(SystemState::kAutoClimate);
+  }
 }
 
-void Controller::checkCriticalErrors() {
-    // 1. Ошибки от SensorManager (Hardware + Mismatch)
-    ErrorCode sErr = sensors->checkErrors();
-    if (sErr != ErrorCode::NONE) {
-        currentError = sErr;
-        return;
-    }
+void Controller::CheckCriticalErrors() {
+  // 1. Ошибки от SensorManager (Hardware + Mismatch)
+  ErrorCode sErr = sensors_->CheckErrors();
+  if (sErr != ErrorCode::kNone) {
+    current_error_ = sErr;
+    return;
+  }
 
-    // 2. Ошибки от TimeManager
-    ErrorCode tErr = rtc->checkErrors();
-    if (tErr != ErrorCode::NONE) {
-        currentError = tErr;
-        return;
-    }
+  // 2. Ошибки от TimeManager
+  ErrorCode tErr = rtc_->CheckErrors();
+  if (tErr != ErrorCode::kNone) {
+    current_error_ = tErr;
+    return;
+  }
 
-    // 3. Проверка параметров климата
-    SensorData in = sensors->getInside();
-    if (in.temp <= TEMP_CRITICAL_MIN) {
-        currentError = ErrorCode::TEMP_TOO_LOW;
-    }
-    else if (in.dewpoint >= (in.temp - CONDENSATION_ERR_DIFF)) {
-        currentError = ErrorCode::CONDENSATION_RISK;
-    }
+  // 3. Проверка параметров климата
+  SensorData in = sensors_->GetInside();
+  if (in.temp <= kTempCriticalMin) {
+    current_error_ = ErrorCode::kTempTooLow;
+  } else if (in.dewpoint >= (in.temp - kCondensationErrDiff)) {
+    current_error_ = ErrorCode::kCondensationRisk;
+  }
 }
 
-void Controller::changeState(SystemState newState) {
-    #ifdef DEBUG
-    Serial.print(F("FSM: ")); Serial.print((int)currentState);
-    Serial.print(F(" -> ")); Serial.println((int)newState);
-    #endif
-    currentState = newState;
+void Controller::ChangeState(SystemState new_state) {
+#ifdef DEBUG
+  Serial.print(F("FSM: "));
+  Serial.print((int)current_state_);
+  Serial.print(F(" -> "));
+  Serial.println((int)new_state);
+#endif
+  current_state_ = new_state;
 }
 
-void Controller::resetError() {
-    // Ручной сброс ошибки возможен только если физическая причина устранена
-    currentError = ErrorCode::NONE;
-    changeState(SystemState::IDLE);
-    init(); // Пробуем запуститься снова
+void Controller::ResetError() {
+  // Ручной сброс ошибки возможен только если физическая причина устранена
+  current_error_ = ErrorCode::kNone;
+  ChangeState(SystemState::kIdle);
+  Init();  // Пробуем запуститься снова
 }
 
-void Controller::startManualFan(uint16_t minutes) {
-    if (currentState == SystemState::ERROR_STATE) return;
-    manualTimer = minutes;
-    stateTimer = millis();
-    relays->setFan(true, true);
-    changeState(SystemState::MANUAL_FAN);
+void Controller::StartManualFan(uint16_t minutes) {
+  if (current_state_ == SystemState::kErrorState) return;
+  manual_timer_ = minutes;
+  state_timer_ = millis();
+  relays_->SetFan(true, true);
+  ChangeState(SystemState::kManualFan);
 }
 
-void Controller::startManualOzone(uint16_t minutes) {
-    if (currentState == SystemState::ERROR_STATE) return;
-    manualTimer = minutes;
-    stateTimer = millis();
-    relays->setOzone(true);
-    changeState(SystemState::MANUAL_OZONE);
+void Controller::StartManualOzone(uint16_t minutes) {
+  if (current_state_ == SystemState::kErrorState) return;
+  manual_timer_ = minutes;
+  state_timer_ = millis();
+  relays_->SetOzone(true);
+  ChangeState(SystemState::kManualOzone);
 }
 
-void Controller::setTargetTemp(float t) {
-    targetTemp = t;
-    needsPersistentSave = true;
-    lastPersistentChangeTime = millis();
+void Controller::SetTargetTemp(float t) {
+  target_temp_ = t;
+  needs_persistent_save_ = true;
+  last_persistent_change_time_ = millis();
 }
 
-void Controller::setTargetRh(float h) {
-    targetRh = h;
-    needsPersistentSave = true;
-    lastPersistentChangeTime = millis();
+void Controller::SetTargetRh(float h) {
+  target_rh_ = h;
+  needs_persistent_save_ = true;
+  last_persistent_change_time_ = millis();
 }
 
-void Controller::setCalibration(const CalibrationData& data) {
-    calib = data;
-    sensors->setCalibration(calib);
-    needsPersistentSave = true;
-    lastPersistentChangeTime = millis();
+void Controller::SetCalibration(const CalibrationData& data) {
+  calib_ = data;
+  sensors_->SetCalibration(calib_);
+  needs_persistent_save_ = true;
+  last_persistent_change_time_ = millis();
 }
 
-void Controller::resetStats() {
-    stats = {0, 0, 0};
-    needsPersistentSave = true;
-    lastPersistentChangeTime = millis();
+void Controller::ResetStats() {
+  stats_ = {0, 0, 0};
+  needs_persistent_save_ = true;
+  last_persistent_change_time_ = millis();
 }

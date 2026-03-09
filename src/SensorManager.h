@@ -13,76 +13,74 @@
 #include "MathUtils.h"
 
 class SensorManager {
-private:
-    // Объекты библиотек для работы с датчиками
-    Adafruit_BME280 bme;
-    Adafruit_HTU21DF htu;
-    OneWire oneWire;
-    DallasTemperature dsSensor;
+ private:
+  // Объекты библиотек для работы с датчиками
+  Adafruit_BME280 bme_;
+  Adafruit_HTU21DF htu_;
+  OneWire one_wire_;
+  DallasTemperature ds_sensor_;
 
-    // Структуры для хранения финальных (отфильтрованных) данных
-    SensorData insideData;  // Данные внутри (BME280)
-    SensorData outsideData; // Данные снаружи (HTU21D)
-    float controlTemp;      // Контрольная температура подвала (DS18B20)
+  // Структуры для хранения финальных (отфильтрованных) данных
+  SensorData inside_data_;   // Данные внутри (BME280)
+  SensorData outside_data_;  // Данные снаружи (HTU21D)
+  float control_temp_;       // Контрольная температура подвала (DS18B20)
 
-    // Объекты фильтров (Медиана N=3 + EMA alpha=0.2)
-    // Создаем отдельный фильтр для каждого физического параметра
-    Filter filterBmeTemp;
-    Filter filterBmeHum;
-    Filter filterHtuTemp;
-    Filter filterHtuHum;
-    Filter filterDsTemp;
+  // Объекты фильтров (Медиана N=3 + EMA alpha=0.2)
+  Filter filter_bme_temp_;
+  Filter filter_bme_hum_;
+  Filter filter_htu_temp_;
+  Filter filter_htu_hum_;
+  Filter filter_ds_temp_;
 
-    // Флаги состояния датчиков (исправен/неисправен)
-    bool bmeValid;
-    bool htuValid;
-    bool dsValid;
+  // Флаги состояния датчиков (исправен/неисправен)
+  bool bme_valid_;
+  bool htu_valid_;
+  bool ds_valid_;
 
-    // Параметры повторных попыток
-    uint8_t bmeRetries;
-    uint8_t htuRetries;
-    uint8_t dsRetries;
-    unsigned long lastBmeRetry;
-    unsigned long lastHtuRetry;
-    unsigned long lastDsRetry;
-    const uint8_t MAX_RETRIES = 3;
-    const uint32_t RETRY_INTERVAL = 60000UL;
+  // Параметры повторных попыток
+  uint8_t bme_retries_;
+  uint8_t htu_retries_;
+  uint8_t ds_retries_;
+  unsigned long last_bme_retry_;
+  unsigned long last_htu_retry_;
+  unsigned long last_ds_retry_;
+  const uint8_t kMaxRetries = 3;
+  const uint32_t kRetryInterval = 60000UL;
 
-    // Методы инициализации конкретных датчиков
-    void initBme();
-    void initHtu();
-    void initDs();
+  // Методы инициализации конкретных датчиков
+  void InitBme();
+  void InitHtu();
+  void InitDs();
 
-    // Счетчики ошибок для I2C устройств
-    uint8_t i2cErrorCount;
-    const uint8_t I2C_MAX_ERRORS = 3;
+  // Счетчики ошибок для I2C устройств
+  uint8_t i2c_error_count_;
+  const uint8_t kI2cMaxErrors = 3;
 
-    // Калибровочные коэффициенты
-    CalibrationData calib;
+  // Калибровочные коэффициенты
+  CalibrationData calib_;
 
-public:
-    // Конструктор: инициализируем OneWire пином из Config.h
-    SensorManager();
+ public:
+  SensorManager();
 
-    // Инициализация шин и самих датчиков
-    void init();
+  // Инициализация шин и самих датчиков
+  void Init();
 
-    // Главный метод опроса, вызывается каждые 10 секунд из loop()
-    void update();
+  // Главный метод опроса
+  void Update();
 
-    // Возвращает код ошибки, если что-то пошло не так
-    ErrorCode checkErrors();
+  // Возвращает код ошибки
+  ErrorCode CheckErrors();
 
-    // Попытка восстановления после сбоя I2C
-    void recover();
+  // Попытка восстановления после сбоя I2C
+  void Recover();
 
-    // Геттеры для получения актуальных данных контроллером
-    SensorData getInside() const { return insideData; }
-    SensorData getOutside() const { return outsideData; }
-    float getControlTemp() const { return controlTemp; }
-    bool isI2CFailing() const { return i2cErrorCount >= I2C_MAX_ERRORS; }
+  // Геттеры для получения актуальных данных контроллером
+  SensorData GetInside() const { return inside_data_; }
+  SensorData GetOutside() const { return outside_data_; }
+  float GetControlTemp() const { return control_temp_; }
+  bool IsI2cFailing() const { return i2c_error_count_ >= kI2cMaxErrors; }
 
-    void setCalibration(const CalibrationData& data) { calib = data; }
+  void SetCalibration(const CalibrationData& data) { calib_ = data; }
 };
 
 #endif

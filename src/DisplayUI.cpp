@@ -2,320 +2,400 @@
 #include "Config.h"
 
 // Конструктор: адрес 0x27 и размер 16x2
-DisplayUI::DisplayUI(Controller* c, SensorManager* s, TimeManager* t) 
-    : lcd(0x27, 16, 2), controller(c), sensors(s), rtc(t),
-      currentPage(MenuPage::HOME_SCREEN), lastBtnCheck(0), lastBtnAction(0),
-      menuBtnPressed(false), messageTimer(0), tempMessage(nullptr), backlightOn(true) {}
+DisplayUI::DisplayUI(Controller* c, SensorManager* s, TimeManager* t)
+    : lcd_(0x27, 16, 2),
+      controller_(c),
+      sensors_(s),
+      rtc_(t),
+      current_page_(MenuPage::HOME_SCREEN),
+      last_btn_check_(0),
+      last_btn_action_(0),
+      menu_btn_pressed_(false),
+      message_timer_(0),
+      temp_message_(nullptr),
+      backlight_on_(true) {}
 
-void DisplayUI::init() {
-    lcd.init();
-    lcd.backlight();
-    pinMode(BT_UP, INPUT_PULLUP);
-    pinMode(BT_DOWN, INPUT_PULLUP);
-    pinMode(BT_MENU, INPUT_PULLUP);
-    lastActivityTime = millis();
+void DisplayUI::Init() {
+  lcd_.init();
+  lcd_.backlight();
+  pinMode(BT_UP, INPUT_PULLUP);
+  pinMode(BT_DOWN, INPUT_PULLUP);
+  pinMode(BT_MENU, INPUT_PULLUP);
+  last_activity_time_ = millis();
 }
 
-void DisplayUI::reinit() {
-    lcd.init();
-    if (backlightOn) lcd.backlight();
-    else lcd.noBacklight();
+void DisplayUI::Reinit() {
+  lcd_.init();
+  if (backlight_on_)
+    lcd_.backlight();
+  else
+    lcd_.noBacklight();
 }
 
-void DisplayUI::update() {
-    handleButtons();   // Опрос кнопок
-    updateBacklight(); // Управление светом
-    
-    // Обновляем экран раз в 500мс, чтобы не мерцал
-    static unsigned long lastDraw = 0;
-    if (millis() - lastDraw >= 500) {
-        lastDraw = millis();
+void DisplayUI::Update() {
+  HandleButtons();    // Опрос кнопок
+  UpdateBacklight();  // Управление светом
 
-        // Если отображается временное сообщение, ничего другого не рисуем
-        if (tempMessage != nullptr && millis() - messageTimer < 2000) {
-            lcd.setCursor(0, 0);
-            lcd.print(F("                "));
-            lcd.setCursor(0, 0);
-            lcd.print(tempMessage);
-            lcd.setCursor(0, 1);
-            lcd.print(F("                "));
-        } else {
-            if (tempMessage != nullptr) {
-                tempMessage = nullptr; // Сброс сообщения по истечении времени
-                lcd.clear();
-            }
-            drawPage();
-        }
+  // Обновляем экран раз в 500мс, чтобы не мерцал
+  static unsigned long last_draw = 0;
+  if (millis() - last_draw >= 500) {
+    last_draw = millis();
+
+    // Если отображается временное сообщение, ничего другого не рисуем
+    if (temp_message_ != nullptr && millis() - message_timer_ < 2000) {
+      lcd_.setCursor(0, 0);
+      lcd_.print(F("                "));
+      lcd_.setCursor(0, 0);
+      lcd_.print(temp_message_);
+      lcd_.setCursor(0, 1);
+      lcd_.print(F("                "));
+    } else {
+      if (temp_message_ != nullptr) {
+        temp_message_ = nullptr;  // Сброс сообщения по истечении времени
+        lcd_.clear();
+      }
+      DrawPage();
     }
+  }
 }
 
 /**
  * @brief Опрос кнопок и обработка нажатий (UP, DOWN, MENU).
  * Использует неблокирующий антидребезг и таймеры повтора.
  */
-void DisplayUI::handleButtons() {
-    if (millis() - lastBtnCheck < 50) return; // Базовая задержка антидребезга
-    lastBtnCheck = millis();
+void DisplayUI::HandleButtons() {
+  if (millis() - last_btn_check_ < 50) return;  // Базовая задержка антидребезга
+  last_btn_check_ = millis();
 
-    // Считывание состояний кнопок (инвертировано из-за INPUT_PULLUP)
-    bool up = !digitalRead(BT_UP);
-    bool down = !digitalRead(BT_DOWN);
-    bool menu = !digitalRead(BT_MENU);
+  // Считывание состояний кнопок (инвертировано из-за INPUT_PULLUP)
+  bool up = !digitalRead(BT_UP);
+  bool down = !digitalRead(BT_DOWN);
+  bool menu = !digitalRead(BT_MENU);
 
-    // Сброс таймера гашения подсветки при любой активности
-    if (up || down || menu) {
-        lastActivityTime = millis();
-        if (!backlightOn) {
-            lcd.backlight();
-            backlightOn = true;
-            return; // Первое нажатие при выключенном экране только включает свет
+  // Сброс таймера гашения подсветки при любой активности
+  if (up || down || menu) {
+    last_activity_time_ = millis();
+    if (!backlight_on_) {
+      lcd_.backlight();
+      backlight_on_ = true;
+      return;  // Первое нажатие при выключенном экране только включает свет
+    }
+  }
+
+  // Логика кнопки MENU (переключение страниц и длинное нажатие)
+  if (menu) {
+    if (!menu_btn_pressed_) {
+      menu_btn_pressed_ = true;
+      menu_btn_timer_ = millis();
+    }
+  } else {
+    if (menu_btn_pressed_) {
+      unsigned long press_duration = millis() - menu_btn_timer_;
+      if (press_duration < 600) {
+        // Короткое нажатие: листаем страницы вперед
+        int next = (int)current_page_ + 1;
+        if (next > (int)MenuPage::CALIB_DS_T) next = 0;
+        current_page_ = (MenuPage)next;
+        lcd_.clear();
+      } else {
+        // Длинное нажатие
+        if (current_page_ == MenuPage::STATS) {
+          controller_->ResetStats();
+          temp_message_ = "STATS RESET";
+          message_timer_ = millis();
         }
+      }
+      menu_btn_pressed_ = false;
     }
+  }
 
-    // Логика кнопки MENU (переключение страниц и длинное нажатие)
-    if (menu) {
-        if (!menuBtnPressed) {
-            menuBtnPressed = true;
-            menuBtnTimer = millis();
+  // Логика кнопок изменения значений (UP/DOWN)
+  if ((up || down) && !menu_btn_pressed_) {
+    // Ограничение скорости изменения значений (150мс между шагами)
+    if (millis() - last_btn_action_ >= 150) {
+      last_btn_action_ = millis();
+      CalibrationData c = controller_->GetCalibration();
+
+      if (up) {
+        switch (current_page_) {
+          case MenuPage::SET_TEMP:
+            controller_->SetTargetTemp(controller_->GetTargetTemp() + 0.1f);
+            break;
+          case MenuPage::SET_HUM:
+            controller_->SetTargetRh(controller_->GetTargetRh() + 1.0f);
+            if (controller_->GetTargetRh() > 100.0f)
+              controller_->SetTargetRh(100.0f);
+            break;
+          case MenuPage::MANUAL_MODES:
+            controller_->StartManualFan(30);
+            temp_message_ = "FAN STARTED";
+            message_timer_ = millis();
+            break;
+          case MenuPage::CALIB_BME_T:
+            c.bmeTempOffset += 0.1f;
+            if (c.bmeTempOffset > 5.0f) c.bmeTempOffset = 5.0f;
+            controller_->SetCalibration(c);
+            break;
+          case MenuPage::CALIB_BME_H:
+            c.bmeHumOffset += 0.1f;
+            if (c.bmeHumOffset > 5.0f) c.bmeHumOffset = 5.0f;
+            controller_->SetCalibration(c);
+            break;
+          case MenuPage::CALIB_HTU_T:
+            c.htuTempOffset += 0.1f;
+            if (c.htuTempOffset > 5.0f) c.htuTempOffset = 5.0f;
+            controller_->SetCalibration(c);
+            break;
+          case MenuPage::CALIB_HTU_H:
+            c.htuHumOffset += 0.1f;
+            if (c.htuHumOffset > 5.0f) c.htuHumOffset = 5.0f;
+            controller_->SetCalibration(c);
+            break;
+          case MenuPage::CALIB_DS_T:
+            c.dsTempOffset += 0.1f;
+            if (c.dsTempOffset > 5.0f) c.dsTempOffset = 5.0f;
+            controller_->SetCalibration(c);
+            break;
+          case MenuPage::ERROR_LOG:
+            controller_->ResetError();
+            break;
+          default:
+            break;
         }
-    } else {
-        if (menuBtnPressed) {
-            unsigned long pressDuration = millis() - menuBtnTimer;
-            if (pressDuration < 600) {
-                // Короткое нажатие: листаем страницы вперед
-                int next = (int)currentPage + 1;
-                if (next > (int)MenuPage::CALIB_DS_T) next = 0;
-                currentPage = (MenuPage)next;
-                lcd.clear();
-            } else {
-                // Длинное нажатие
-                if (currentPage == MenuPage::STATS) {
-                    controller->resetStats();
-                    tempMessage = "STATS RESET";
-                    messageTimer = millis();
-                }
-            }
-            menuBtnPressed = false;
+      } else if (down) {
+        switch (current_page_) {
+          case MenuPage::SET_TEMP:
+            controller_->SetTargetTemp(controller_->GetTargetTemp() - 0.1f);
+            break;
+          case MenuPage::SET_HUM:
+            controller_->SetTargetRh(controller_->GetTargetRh() - 1.0f);
+            if (controller_->GetTargetRh() < 0.0f)
+              controller_->SetTargetRh(0.0f);
+            break;
+          case MenuPage::MANUAL_MODES:
+            controller_->StartManualOzone(15);
+            temp_message_ = "OZONE STARTED";
+            message_timer_ = millis();
+            break;
+          case MenuPage::CALIB_BME_T:
+            c.bmeTempOffset -= 0.1f;
+            if (c.bmeTempOffset < -5.0f) c.bmeTempOffset = -5.0f;
+            controller_->SetCalibration(c);
+            break;
+          case MenuPage::CALIB_BME_H:
+            c.bmeHumOffset -= 0.1f;
+            if (c.bmeHumOffset < -5.0f) c.bmeHumOffset = -5.0f;
+            controller_->SetCalibration(c);
+            break;
+          case MenuPage::CALIB_HTU_T:
+            c.htuTempOffset -= 0.1f;
+            if (c.htuTempOffset < -5.0f) c.htuTempOffset = -5.0f;
+            controller_->SetCalibration(c);
+            break;
+          case MenuPage::CALIB_HTU_H:
+            c.htuHumOffset -= 0.1f;
+            if (c.htuHumOffset < -5.0f) c.htuHumOffset = -5.0f;
+            controller_->SetCalibration(c);
+            break;
+          case MenuPage::CALIB_DS_T:
+            c.dsTempOffset -= 0.1f;
+            if (c.dsTempOffset < -5.0f) c.dsTempOffset = -5.0f;
+            controller_->SetCalibration(c);
+            break;
+          default:
+            break;
         }
+      }
     }
+  }
+}
 
-    // Логика кнопок изменения значений (UP/DOWN)
-    if ((up || down) && !menuBtnPressed) {
-        // Ограничение скорости изменения значений (150мс между шагами)
-        if (millis() - lastBtnAction >= 150) {
-            lastBtnAction = millis();
-            CalibrationData c = controller->getCalibration();
-
-            if (up) {
-                switch (currentPage) {
-                    case MenuPage::SET_TEMP:
-                        controller->setTargetTemp(controller->getTargetTemp() + 0.1f); break;
-                    case MenuPage::SET_HUM:
-                        controller->setTargetRh(controller->getTargetRh() + 1.0f);
-                        if (controller->getTargetRh() > 100.0f) controller->setTargetRh(100.0f); break;
-                    case MenuPage::MANUAL_MODES:
-                        controller->startManualFan(30); tempMessage = "FAN STARTED"; messageTimer = millis(); break;
-                    case MenuPage::CALIB_BME_T:
-                        c.bmeTempOffset += 0.1f; if (c.bmeTempOffset > 5.0f) c.bmeTempOffset = 5.0f;
-                        controller->setCalibration(c); break;
-                    case MenuPage::CALIB_BME_H:
-                        c.bmeHumOffset += 0.1f; if (c.bmeHumOffset > 5.0f) c.bmeHumOffset = 5.0f;
-                        controller->setCalibration(c); break;
-                    case MenuPage::CALIB_HTU_T:
-                        c.htuTempOffset += 0.1f; if (c.htuTempOffset > 5.0f) c.htuTempOffset = 5.0f;
-                        controller->setCalibration(c); break;
-                    case MenuPage::CALIB_HTU_H:
-                        c.htuHumOffset += 0.1f; if (c.htuHumOffset > 5.0f) c.htuHumOffset = 5.0f;
-                        controller->setCalibration(c); break;
-                    case MenuPage::CALIB_DS_T:
-                        c.dsTempOffset += 0.1f; if (c.dsTempOffset > 5.0f) c.dsTempOffset = 5.0f;
-                        controller->setCalibration(c); break;
-                    case MenuPage::ERROR_LOG:
-                        controller->resetError(); break;
-                    default: break;
-                }
-            } else if (down) {
-                switch (currentPage) {
-                    case MenuPage::SET_TEMP:
-                        controller->setTargetTemp(controller->getTargetTemp() - 0.1f); break;
-                    case MenuPage::SET_HUM:
-                        controller->setTargetRh(controller->getTargetRh() - 1.0f);
-                        if (controller->getTargetRh() < 0.0f) controller->setTargetRh(0.0f); break;
-                    case MenuPage::MANUAL_MODES:
-                        controller->startManualOzone(15); tempMessage = "OZONE STARTED"; messageTimer = millis(); break;
-                    case MenuPage::CALIB_BME_T:
-                        c.bmeTempOffset -= 0.1f; if (c.bmeTempOffset < -5.0f) c.bmeTempOffset = -5.0f;
-                        controller->setCalibration(c); break;
-                    case MenuPage::CALIB_BME_H:
-                        c.bmeHumOffset -= 0.1f; if (c.bmeHumOffset < -5.0f) c.bmeHumOffset = -5.0f;
-                        controller->setCalibration(c); break;
-                    case MenuPage::CALIB_HTU_T:
-                        c.htuTempOffset -= 0.1f; if (c.htuTempOffset < -5.0f) c.htuTempOffset = -5.0f;
-                        controller->setCalibration(c); break;
-                    case MenuPage::CALIB_HTU_H:
-                        c.htuHumOffset -= 0.1f; if (c.htuHumOffset < -5.0f) c.htuHumOffset = -5.0f;
-                        controller->setCalibration(c); break;
-                    case MenuPage::CALIB_DS_T:
-                        c.dsTempOffset -= 0.1f; if (c.dsTempOffset < -5.0f) c.dsTempOffset = -5.0f;
-                        controller->setCalibration(c); break;
-                    default: break;
-                }
-            }
-        }
+void DisplayUI::UpdateBacklight() {
+  // Если прошло более 30 секунд бездействия - гасим свет
+  // ИСКЛЮЧЕНИЕ: Manual Ozone (по ТЗ в ручном режиме подсветка может игнорироваться)
+  if (backlight_on_ && (millis() - last_activity_time_ > 30000UL)) {
+    if (controller_->GetState() != SystemState::kManualOzone) {
+      lcd_.noBacklight();
+      backlight_on_ = false;
     }
+  }
 }
 
-void DisplayUI::updateBacklight() {
-    // Если прошло более 30 секунд бездействия - гасим свет
-    // ИСКЛЮЧЕНИЕ: Manual Ozone (по ТЗ в ручном режиме подсветка может игнорироваться)
-    if (backlightOn && (millis() - lastActivityTime > 30000UL)) {
-        if (controller->getState() != SystemState::MANUAL_OZONE) {
-            lcd.noBacklight();
-            backlightOn = false;
-        }
-    }
+void DisplayUI::DrawPage() {
+  CalibrationData c = controller_->GetCalibration();
+  switch (current_page_) {
+    case MenuPage::HOME_SCREEN:
+      DrawHomeScreen();
+      break;
+    case MenuPage::STATUS_IN:
+      DrawStatusIn();
+      break;
+    case MenuPage::STATUS_OUT:
+      DrawStatusOut();
+      break;
+    case MenuPage::SET_TEMP:
+      DrawSetTemp();
+      break;
+    case MenuPage::SET_HUM:
+      DrawSetHum();
+      break;
+    case MenuPage::MANUAL_MODES:
+      DrawManualModes();
+      break;
+    case MenuPage::CALIB_BME_T:
+      DrawCalibPage("BME TEMP", c.bmeTempOffset, true);
+      break;
+    case MenuPage::CALIB_BME_H:
+      DrawCalibPage("BME HUM", c.bmeHumOffset, false);
+      break;
+    case MenuPage::CALIB_HTU_T:
+      DrawCalibPage("HTU TEMP", c.htuTempOffset, true);
+      break;
+    case MenuPage::CALIB_HTU_H:
+      DrawCalibPage("HTU HUM", c.htuHumOffset, false);
+      break;
+    case MenuPage::CALIB_DS_T:
+      DrawCalibPage("DS TEMP", c.dsTempOffset, true);
+      break;
+    case MenuPage::STATS:
+      DrawStats();
+      break;
+    case MenuPage::ERROR_LOG:
+      DrawErrorLog();
+      break;
+  }
 }
 
-void DisplayUI::drawPage() {
-    CalibrationData c = controller->getCalibration();
-    switch (currentPage) {
-        case MenuPage::HOME_SCREEN:  drawHomeScreen(); break;
-        case MenuPage::STATUS_IN:    drawStatusIn(); break;
-        case MenuPage::STATUS_OUT:   drawStatusOut(); break;
-        case MenuPage::SET_TEMP:     drawSetTemp(); break;
-        case MenuPage::SET_HUM:      drawSetHum(); break;
-        case MenuPage::MANUAL_MODES: drawManualModes(); break;
-        case MenuPage::CALIB_BME_T:  drawCalibPage("BME TEMP", c.bmeTempOffset, true); break;
-        case MenuPage::CALIB_BME_H:  drawCalibPage("BME HUM", c.bmeHumOffset, false); break;
-        case MenuPage::CALIB_HTU_T:  drawCalibPage("HTU TEMP", c.htuTempOffset, true); break;
-        case MenuPage::CALIB_HTU_H:  drawCalibPage("HTU HUM", c.htuHumOffset, false); break;
-        case MenuPage::CALIB_DS_T:   drawCalibPage("DS TEMP", c.dsTempOffset, true); break;
-        case MenuPage::STATS:        drawStats(); break;
-        case MenuPage::ERROR_LOG:    drawErrorLog(); break;
-    }
+void DisplayUI::DrawHomeScreen() {
+  SensorData in = sensors_->GetInside();
+  lcd_.setCursor(0, 0);
+  lcd_.print(F("IN:"));
+  lcd_.print(in.temp, 1);
+  lcd_.print(F("C "));
+  lcd_.print(in.rh, 0);
+  lcd_.print(F("%"));
+
+  // Состояние реле (F - Fan, O - Ozone)
+  lcd_.setCursor(14, 0);
+  lcd_.print(controller_->GetRelayManager()->GetFanState() ? F("F") : F("."));
+  lcd_.print(controller_->GetRelayManager()->GetOzoneState() ? F("O") : F("."));
+
+  lcd_.setCursor(0, 1);
+  lcd_.print(F("SET:"));
+  lcd_.print(controller_->GetTargetTemp(), 1);
+  lcd_.print(F("C "));
+  lcd_.print(controller_->GetTargetRh(), 0);
+  lcd_.print(F("% "));
+
+  // Короткое имя текущего режима
+  lcd_.setCursor(12, 1);
+  SystemState state = controller_->GetState();
+  if (state == SystemState::kAutoClimate)
+    lcd_.print(F("AUTO"));
+  else if (state == SystemState::kOzoneActive)
+    lcd_.print(F("OZN!"));
+  else if (state == SystemState::kErrorState)
+    lcd_.print(F("ERR!"));
+  else
+    lcd_.print(F("MAN "));
 }
 
-void DisplayUI::drawHomeScreen() {
-    SensorData in = sensors->getInside();
-    lcd.setCursor(0, 0);
-    lcd.print(F("IN:"));
-    lcd.print(in.temp, 1);
-    lcd.print(F("C "));
-    lcd.print(in.rh, 0);
-    lcd.print(F("%"));
+void DisplayUI::DrawStatusIn() {
+  SensorData in = sensors_->GetInside();
+  lcd_.setCursor(0, 0);
+  lcd_.print(F("IN: "));
+  lcd_.print(in.temp, 1);
+  lcd_.print(F("C "));
+  lcd_.print(in.rh, 0);
+  lcd_.print(F("%  "));
 
-    // Состояние реле (F - Fan, O - Ozone)
-    lcd.setCursor(14, 0);
-    lcd.print(controller->getRelayManager()->getFanState() ? F("F") : F("."));
-    lcd.print(controller->getRelayManager()->getOzoneState() ? F("O") : F("."));
-
-    lcd.setCursor(0, 1);
-    lcd.print(F("SET:"));
-    lcd.print(controller->getTargetTemp(), 1);
-    lcd.print(F("C "));
-    lcd.print(controller->getTargetRh(), 0);
-    lcd.print(F("% "));
-
-    // Короткое имя текущего режима
-    lcd.setCursor(12, 1);
-    SystemState state = controller->getState();
-    if (state == SystemState::AUTO_CLIMATE) lcd.print(F("AUTO"));
-    else if (state == SystemState::OZONE_ACTIVE) lcd.print(F("OZN!"));
-    else if (state == SystemState::ERROR_STATE) lcd.print(F("ERR!"));
-    else lcd.print(F("MAN "));
+  lcd_.setCursor(0, 1);
+  lcd_.print(F("AH:"));
+  lcd_.print(in.ah, 2);
+  lcd_.print(F(" DP:"));
+  lcd_.print(in.dewpoint, 1);
 }
 
-void DisplayUI::drawStatusIn() {
-    SensorData in = sensors->getInside();
-    lcd.setCursor(0, 0);
-    lcd.print(F("IN: "));
-    lcd.print(in.temp, 1);
-    lcd.print(F("C "));
-    lcd.print(in.rh, 0);
-    lcd.print(F("%  "));
+void DisplayUI::DrawStatusOut() {
+  SensorData out = sensors_->GetOutside();
+  lcd_.setCursor(0, 0);
+  lcd_.print(F("OUT:"));
+  lcd_.print(out.temp, 1);
+  lcd_.print(F("C "));
+  lcd_.print(out.rh, 0);
+  lcd_.print(F("% "));
 
-    lcd.setCursor(0, 1);
-    lcd.print(F("AH:"));
-    lcd.print(in.ah, 2);
-    lcd.print(F(" DP:"));
-    lcd.print(in.dewpoint, 1);
+  lcd_.setCursor(0, 1);
+  lcd_.print(F("AH:"));
+  lcd_.print(out.ah, 2);
+  if (out.temp < 0) lcd_.print(F(" FROST"));
 }
 
-void DisplayUI::drawStatusOut() {
-    SensorData out = sensors->getOutside();
-    lcd.setCursor(0, 0);
-    lcd.print(F("OUT:"));
-    lcd.print(out.temp, 1);
-    lcd.print(F("C "));
-    lcd.print(out.rh, 0);
-    lcd.print(F("% "));
-
-    lcd.setCursor(0, 1);
-    lcd.print(F("AH:"));
-    lcd.print(out.ah, 2);
-    if (out.temp < 0) lcd.print(F(" FROST"));
+void DisplayUI::DrawSetTemp() {
+  lcd_.setCursor(0, 0);
+  lcd_.print(F("SET TARGET TEMP"));
+  lcd_.setCursor(0, 1);
+  lcd_.print(F("TEMP: "));
+  lcd_.print(controller_->GetTargetTemp(), 1);
+  lcd_.print(F("C"));
 }
 
-
-void DisplayUI::drawSetTemp() {
-    lcd.setCursor(0, 0);
-    lcd.print(F("SET TARGET TEMP"));
-    lcd.setCursor(0, 1);
-    lcd.print(F("TEMP: "));
-    lcd.print(controller->getTargetTemp(), 1);
-    lcd.print(F("C"));
+void DisplayUI::DrawSetHum() {
+  lcd_.setCursor(0, 0);
+  lcd_.print(F("SET TARGET HUM"));
+  lcd_.setCursor(0, 1);
+  lcd_.print(F("HUM:  "));
+  lcd_.print(controller_->GetTargetRh(), 0);
+  lcd_.print(F("%"));
 }
 
-void DisplayUI::drawSetHum() {
-    lcd.setCursor(0, 0);
-    lcd.print(F("SET TARGET HUM"));
-    lcd.setCursor(0, 1);
-    lcd.print(F("HUM:  "));
-    lcd.print(controller->getTargetRh(), 0);
-    lcd.print(F("%"));
+void DisplayUI::DrawManualModes() {
+  lcd_.setCursor(0, 0);
+  lcd_.print(F("MANUAL START:"));
+  lcd_.setCursor(0, 1);
+  lcd_.print(F("UP:FAN  DN:OZONE"));
 }
 
-void DisplayUI::drawManualModes() {
-    lcd.setCursor(0, 0);
-    lcd.print(F("MANUAL START:"));
-    lcd.setCursor(0, 1);
-    lcd.print(F("UP:FAN  DN:OZONE"));
+void DisplayUI::DrawCalibPage(const char* label, float value, bool is_temp) {
+  lcd_.setCursor(0, 0);
+  lcd_.print(F("CAL:"));
+  lcd_.print(label);
+  lcd_.print(F("        "));  // Очистка остатка строки
+  lcd_.setCursor(0, 1);
+  lcd_.print(F("OFFS:"));
+  if (value >= 0) lcd_.print(F("+"));
+  lcd_.print(value, 1);
+  lcd_.print(is_temp ? F("C") : F("% "));
+  lcd_.print(F("      "));  // Очистка
 }
 
-void DisplayUI::drawCalibPage(const char* label, float value, bool isTemp) {
-    lcd.setCursor(0, 0);
-    lcd.print(F("CAL:"));
-    lcd.print(label);
-    lcd.print(F("        ")); // Очистка остатка строки
-    lcd.setCursor(0, 1);
-    lcd.print(F("OFFS:"));
-    if (value >= 0) lcd.print(F("+"));
-    lcd.print(value, 1);
-    lcd.print(isTemp ? F("C") : F("% "));
-    lcd.print(F("      ")); // Очистка
+void DisplayUI::DrawStats() {
+  SystemStatistics s = controller_->GetStats();
+  lcd_.setCursor(0, 0);
+  lcd_.print(F("U:"));
+  lcd_.print(s.uptimeMinutes / 60);
+  lcd_.print(F("h "));
+  lcd_.print(F("F:"));
+  lcd_.print(s.fanMinutes / 60);
+  lcd_.print(F("h    "));
+
+  lcd_.setCursor(0, 1);
+  lcd_.print(F("O3:"));
+  lcd_.print(s.ozoneMinutes / 60);
+  lcd_.print(F("h "));
+  lcd_.print(F("M:RESET "));
 }
 
-void DisplayUI::drawStats() {
-    SystemStatistics s = controller->getStats();
-    lcd.setCursor(0, 0);
-    lcd.print(F("U:")); lcd.print(s.uptimeMinutes / 60); lcd.print(F("h "));
-    lcd.print(F("F:")); lcd.print(s.fanMinutes / 60); lcd.print(F("h    "));
-
-    lcd.setCursor(0, 1);
-    lcd.print(F("O3:")); lcd.print(s.ozoneMinutes / 60); lcd.print(F("h "));
-    lcd.print(F("M:RESET "));
-}
-
-void DisplayUI::drawErrorLog() {
-    lcd.setCursor(0, 0);
-    lcd.print(F("LAST ERROR:     "));
-    lcd.setCursor(0, 1);
-    ErrorCode err = controller->getError();
-    if (err == ErrorCode::NONE) {
-        lcd.print(F("SYSTEM OK       "));
-    } else {
-        lcd.print(errorToString(err));
-        lcd.setCursor(10, 1);
-        lcd.print(F("UP:RST"));
-    }
+void DisplayUI::DrawErrorLog() {
+  lcd_.setCursor(0, 0);
+  lcd_.print(F("LAST ERROR:     "));
+  lcd_.setCursor(0, 1);
+  ErrorCode err = controller_->GetError();
+  if (err == ErrorCode::kNone) {
+    lcd_.print(F("SYSTEM OK       "));
+  } else {
+    lcd_.print(ErrorToString(err));
+    lcd_.setCursor(10, 1);
+    lcd_.print(F("UP:RST"));
+  }
 }

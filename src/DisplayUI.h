@@ -25,50 +25,50 @@ enum class MenuPage {
 };
 
 class DisplayUI {
-private:
-    LiquidCrystal_I2C lcd;
-    Controller* controller;
-    SensorManager* sensors;
-    TimeManager* rtc;
+ private:
+  LiquidCrystal_I2C lcd_;
+  Controller* controller_;
+  SensorManager* sensors_;
+  TimeManager* rtc_;
 
-    MenuPage currentPage;
-    
-    // Переменные для кнопок
-    unsigned long lastBtnCheck;
-    unsigned long lastBtnAction; // Таймер повтора для UP/DOWN
-    unsigned long menuBtnTimer;
-    bool menuBtnPressed;
+  MenuPage current_page_;
 
-    // Временные сообщения на экране
-    unsigned long messageTimer;
-    const char* tempMessage;
-    
-    // Таймер подсветки
-    unsigned long lastActivityTime;
-    bool backlightOn;
+  // Переменные для кнопок
+  unsigned long last_btn_check_;
+  unsigned long last_btn_action_;  // Таймер повтора для UP/DOWN
+  unsigned long menu_btn_timer_;
+  bool menu_btn_pressed_;
 
-    void handleButtons();
-    void drawPage();
-    void updateBacklight();
+  // Временные сообщения на экране
+  unsigned long message_timer_;
+  const char* temp_message_;
 
-    // Вспомогательные методы отрисовки
-    void drawHomeScreen();
-    void drawStatusIn();
-    void drawStatusOut();
-    void drawSetTemp();
-    void drawSetHum();
-    void drawManualModes();
-    void drawCalibPage(const char* label, float value, bool isTemp);
-    void drawStats();
-    void drawErrorLog();
+  // Таймер подсветки
+  unsigned long last_activity_time_;
+  bool backlight_on_;
 
-public:
-    DisplayUI(Controller* c, SensorManager* s, TimeManager* t);
-    void init();
-    void reinit(); // Повторная инициализация LCD после сбоя I2C
-    void update(); // Вызывается в основном loop()
-    
-    bool isBacklightOn() const { return backlightOn; }
+  void HandleButtons();
+  void DrawPage();
+  void UpdateBacklight();
+
+  // Вспомогательные методы отрисовки
+  void DrawHomeScreen();
+  void DrawStatusIn();
+  void DrawStatusOut();
+  void DrawSetTemp();
+  void DrawSetHum();
+  void DrawManualModes();
+  void DrawCalibPage(const char* label, float value, bool is_temp);
+  void DrawStats();
+  void DrawErrorLog();
+
+ public:
+  DisplayUI(Controller* c, SensorManager* s, TimeManager* t);
+  void Init();
+  void Reinit();  // Повторная инициализация LCD после сбоя I2C
+  void Update();  // Вызывается в основном loop()
+
+  bool IsBacklightOn() const { return backlight_on_; }
 };
 
 #endif
