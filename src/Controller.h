@@ -58,6 +58,12 @@ class Controller {
   // Переход между состояниями
   void ChangeState(SystemState new_state);
 
+  // Методы декомпозиции Tick()
+  void UpdateStatistics();     // Обновление счетчиков времени работы
+  void HandleStorage();        // Управление планированием записи в EEPROM
+  void CheckSystemHealth();    // Мониторинг датчиков и шины I2C
+  void ProcessStateMachine();  // Логика переключения состояний (FSM)
+
  public:
   Controller(SensorManager* s, RelayManager* r, TimeManager* t);
 

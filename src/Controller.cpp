@@ -30,16 +30,25 @@ Controller::Controller(SensorManager* s, RelayManager* r, TimeManager* t)
 void Controller::Init() { ChangeState(SystemState::kAutoClimate); }
 
 void Controller::Tick() {
-  unsigned long now = millis();
+  UpdateStatistics();
+  HandleStorage();
+  CheckSystemHealth();
+  ProcessStateMachine();
+}
 
-  // 0. Обновление статистики (раз в минуту)
+void Controller::UpdateStatistics() {
+  unsigned long now = millis();
+  // Обновление статистики (раз в минуту)
   if (now - last_stats_update_ >= 60000UL) {
     last_stats_update_ = now;
     stats_.uptimeMinutes++;
     if (relays_->GetFanState()) stats_.fanMinutes++;
     if (relays_->GetOzoneState()) stats_.ozoneMinutes++;
   }
+}
 
+void Controller::HandleStorage() {
+  unsigned long now = millis();
   // 0.1 Сохранение статистики в EEPROM (раз в 30 минут)
   if (now - last_eeprom_save_ >= 1800000UL) {
     last_eeprom_save_ = now;
@@ -55,28 +64,31 @@ void Controller::Tick() {
     PersistentData data = {target_temp_, target_rh_, calib_, stats_, 0};
     storage_.save(data);
   }
+}
 
-  // 0.3 Проверка зависания шины I2C
+void Controller::CheckSystemHealth() {
+  // Проверка зависания шины I2C
   if (sensors_->IsI2cFailing()) {
 #ifdef DEBUG
     Serial.println(F("I2C Fail detected. Recovering..."));
 #endif
-
     sensors_->Recover();  // Сброс шины + переинициализация датчиков
     rtc_->Init();         // Переинициализация RTC
-    ui_->reinit();        // Переинициализация LCD
+    ui_->Reinit();        // Переинициализация LCD
   }
 
-  // 1. Постоянная проверка критических ошибок
+  // Постоянная проверка критических ошибок
   CheckCriticalErrors();
 
-  // 2. Если есть критическая ошибка — принудительный переход в ERROR_STATE
+  // Если есть критическая ошибка — принудительный переход в ERROR_STATE
   if (current_error_ != ErrorCode::kNone &&
       current_state_ != SystemState::kErrorState) {
     ChangeState(SystemState::kErrorState);
   }
+}
 
-  // 3. Обработка состояний (FSM)
+void Controller::ProcessStateMachine() {
+  // Обработка состояний (FSM)
   switch (current_state_) {
     case SystemState::kAutoClimate:
       HandleAutoClimate();
