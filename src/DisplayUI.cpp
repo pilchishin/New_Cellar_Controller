@@ -269,35 +269,38 @@ void DisplayUI::drawManualModes() {
 
 void DisplayUI::drawCalibPage(const char* label, float value, bool isTemp) {
     lcd.setCursor(0, 0);
-    lcd.print(F("CALIB: "));
+    lcd.print(F("CAL:"));
     lcd.print(label);
+    lcd.print(F("        ")); // Очистка остатка строки
     lcd.setCursor(0, 1);
-    lcd.print(F("OFFSET: "));
+    lcd.print(F("OFFS:"));
     if (value >= 0) lcd.print(F("+"));
     lcd.print(value, 1);
-    lcd.print(isTemp ? F("C") : F("%"));
+    lcd.print(isTemp ? F("C") : F("% "));
+    lcd.print(F("      ")); // Очистка
 }
 
 void DisplayUI::drawStats() {
     SystemStatistics s = controller->getStats();
     lcd.setCursor(0, 0);
-    lcd.print(F("UP:")); lcd.print(s.uptimeMinutes / 60); lcd.print(F("h"));
-    lcd.print(F(" F:")); lcd.print(s.fanMinutes / 60); lcd.print(F("h"));
+    lcd.print(F("U:")); lcd.print(s.uptimeMinutes / 60); lcd.print(F("h "));
+    lcd.print(F("F:")); lcd.print(s.fanMinutes / 60); lcd.print(F("h    "));
 
     lcd.setCursor(0, 1);
-    lcd.print(F("O3:")); lcd.print(s.ozoneMinutes / 60); lcd.print(F("h"));
-    lcd.print(F(" HOLD MENU:RST"));
+    lcd.print(F("O3:")); lcd.print(s.ozoneMinutes / 60); lcd.print(F("h "));
+    lcd.print(F("M:RESET "));
 }
 
 void DisplayUI::drawErrorLog() {
     lcd.setCursor(0, 0);
-    lcd.print(F("ERROR STATUS:"));
+    lcd.print(F("LAST ERROR:     "));
     lcd.setCursor(0, 1);
     ErrorCode err = controller->getError();
     if (err == ErrorCode::NONE) {
         lcd.print(F("SYSTEM OK       "));
     } else {
         lcd.print(errorToString(err));
-        lcd.print(F("  UP:RESET "));
+        lcd.setCursor(10, 1);
+        lcd.print(F("UP:RST"));
     }
 }
