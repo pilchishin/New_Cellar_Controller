@@ -107,12 +107,14 @@ void Controller::ProcessStateMachine() {
       break;
 
     case SystemState::kOzoneStart: {
-      // Проверка условий блокировки
+      // Проверка условий блокировки (присутствие людей или мороз)
       SensorData out = sensors_->GetOutside();
-      bool temp_inhibited = (out.temp < 0.0f);
-      bool ui_inhibited = (ui_ != nullptr && ui_->IsBacklightOn());
+      bool is_frost_outside = (out.temp < 0.0f);
+      bool is_ui_active = (ui_ != nullptr && ui_->IsBacklightOn());
 
-      if (temp_inhibited || ui_inhibited) {
+      bool is_ozone_inhibited = (is_frost_outside || is_ui_active);
+
+      if (is_ozone_inhibited) {
 #ifdef DEBUG
         Serial.println(F("Ozone Inhibited: Wait 30m"));
 #endif
@@ -145,8 +147,10 @@ void Controller::ProcessStateMachine() {
 
     case SystemState::kOzoneVent: {
       SensorData out = sensors_->GetOutside();
-      // Проветривание только при отсутствии мороза
-      if (out.temp > 0.0f) {
+      bool is_frost_outside = (out.temp <= 0.0f);
+
+      // Проветривание разрешено только при плюсовой температуре
+      if (!is_frost_outside) {
         relays_->SetFan(true);
         if (now - state_timer_ >= kOzoneVentTime) {
           relays_->SetFan(false);
@@ -193,21 +197,23 @@ void Controller::HandleAutoClimate() {
   SensorData in = sensors_->GetInside();
   SensorData out = sensors_->GetOutside();
 
-  // Логика активации: если превышен порог температуры или влажности
-  bool needs_action = (in.temp > (target_temp_ + kHysteresisTemp)) ||
-                      (in.rh > (target_rh_ + kHysteresisRh));
+  // 1. Физические условия для активации вентиляции
+  bool is_too_hot = (in.temp > (target_temp_ + kHysteresisTemp));
+  bool is_too_humid = (in.rh > (target_rh_ + kHysteresisRh));
 
-  // Проверка, что на улице воздух действительно суше, чем внутри
-  bool air_is_better = (out.ah + kMarginAh) < in.ah;
+  // 2. Эффективность: воздух снаружи должен содержать меньше влаги
+  bool ventilation_is_effective = (out.ah + kMarginAh) < in.ah;
 
-  // Проверка безопасности: не допустить охлаждения поверхностей ниже точки росы
-  bool condensation_safe = (in.dewpoint + kMarginCondSafety) < in.temp;
+  // 3. Безопасность: температура поверхностей должна быть выше точки росы
+  bool condensation_is_safe = (in.dewpoint + kMarginCondSafety) < in.temp;
 
-  // Итоговое решение по вентилятору
-  if (needs_action && air_is_better && condensation_safe) {
+  // Итоговая логика принятия решения
+  bool ventilation_needed = (is_too_hot || is_too_humid);
+
+  if (ventilation_needed && ventilation_is_effective && condensation_is_safe) {
     relays_->SetFan(true);
   } else {
-    relays_->SetFan(false);  // Включается гистерезис и защита двигателя в RelayManager
+    relays_->SetFan(false);  // Выключение (с учетом защиты в RelayManager)
   }
 }
 
