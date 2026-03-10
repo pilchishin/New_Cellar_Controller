@@ -2,7 +2,7 @@
 #include <EEPROM.h>
 #include "Config.h"
 
-AppEEPROM::AppEEPROM() {}
+AppEEPROM::AppEEPROM() : needs_save_(false), last_change_time_(0) {}
 
 uint16_t AppEEPROM::CalculateCrc(const PersistentData& data) {
   uint16_t crc = 0xFFFF;
@@ -77,4 +77,21 @@ void AppEEPROM::Save(const PersistentData& data) {
   Serial.print(F("EEPROM: Saved to slot "));
   Serial.println(next_slot);
 #endif
+}
+
+void AppEEPROM::ScheduleSave(const PersistentData& data, bool immediate) {
+  pending_data_ = data;
+  needs_save_ = true;
+  if (immediate) {
+    last_change_time_ = millis() - kDeferredSaveDelay;
+  } else {
+    last_change_time_ = millis();
+  }
+}
+
+void AppEEPROM::Update() {
+  if (needs_save_ && (millis() - last_change_time_ >= kDeferredSaveDelay)) {
+    Save(pending_data_);
+    needs_save_ = false;
+  }
 }

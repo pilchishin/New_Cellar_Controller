@@ -19,8 +19,6 @@ Controller::Controller(SensorManager* s, RelayManager* r, TimeManager* t)
 
   last_stats_update_ = millis();
   last_eeprom_save_ = millis();
-  needs_persistent_save_ = false;
-  last_persistent_change_time_ = 0;
   ozone_inhibited_today_ = false;
   is_user_present_ = false;
   last_user_activity_time_ = 0;
@@ -52,21 +50,15 @@ void Controller::UpdateStatistics() {
 
 void Controller::HandleStorage() {
   unsigned long now = millis();
-  // 0.1 Сохранение статистики в EEPROM (раз в 30 минут)
+  // Сохранение статистики в EEPROM (раз в 30 минут)
   if (now - last_eeprom_save_ >= 1800000UL) {
     last_eeprom_save_ = now;
-    needs_persistent_save_ = true;
-    last_persistent_change_time_ =
-        now - kDeferredSaveDelay;  // Принудительное сохранение без задержки
+    PersistentData data = {target_temp_, target_rh_, calib_, stats_, 0};
+    storage_.ScheduleSave(data, true);  // Принудительное (немедленное) сохранение
   }
 
-  // 0.2 Отложенное сохранение в EEPROM
-  if (needs_persistent_save_ &&
-      (now - last_persistent_change_time_ >= kDeferredSaveDelay)) {
-    needs_persistent_save_ = false;
-    PersistentData data = {target_temp_, target_rh_, calib_, stats_, 0};
-    storage_.save(data);
-  }
+  // Обслуживание очереди записи (проверка таймеров внутри)
+  storage_.Update();
 }
 
 void Controller::CheckSystemHealth() {
@@ -295,25 +287,25 @@ void Controller::NotifyUserActivity() {
 
 void Controller::SetTargetTemp(float t) {
   target_temp_ = t;
-  needs_persistent_save_ = true;
-  last_persistent_change_time_ = millis();
+  PersistentData data = {target_temp_, target_rh_, calib_, stats_, 0};
+  storage_.ScheduleSave(data);
 }
 
 void Controller::SetTargetRh(float h) {
   target_rh_ = h;
-  needs_persistent_save_ = true;
-  last_persistent_change_time_ = millis();
+  PersistentData data = {target_temp_, target_rh_, calib_, stats_, 0};
+  storage_.ScheduleSave(data);
 }
 
 void Controller::SetCalibration(const CalibrationData& data) {
   calib_ = data;
   sensors_->SetCalibration(calib_);
-  needs_persistent_save_ = true;
-  last_persistent_change_time_ = millis();
+  PersistentData d = {target_temp_, target_rh_, calib_, stats_, 0};
+  storage_.ScheduleSave(d);
 }
 
 void Controller::ResetStats() {
   stats_ = {0, 0, 0};
-  needs_persistent_save_ = true;
-  last_persistent_change_time_ = millis();
+  PersistentData data = {target_temp_, target_rh_, calib_, stats_, 0};
+  storage_.ScheduleSave(data);
 }

@@ -31,9 +31,6 @@ class Controller {
 
   // EEPROM
   AppEEPROM storage_;
-  bool needs_persistent_save_;
-  unsigned long last_persistent_change_time_;
-  const unsigned long kDeferredSaveDelay = 5000UL;
 
   // Ссылки на модули
   SensorManager* sensors_;
