@@ -49,8 +49,6 @@ class Controller {
 
   // Внутренние методы обработки состояний
   void HandleAutoClimate();
-  void HandleOzoneCycle();
-  void HandleManualModes();
 
   // Проверка критических условий
   void CheckCriticalErrors();

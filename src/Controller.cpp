@@ -88,36 +88,90 @@ void Controller::CheckSystemHealth() {
 }
 
 void Controller::ProcessStateMachine() {
+  unsigned long now = millis();
   // Обработка состояний (FSM)
   switch (current_state_) {
     case SystemState::kAutoClimate:
       HandleAutoClimate();
 
-      // Проверка запуска озонирования по расписанию
+      // Переход к озонированию по расписанию
       if (rtc_->IsOzoneTimeScheduled()) {
         ChangeState(SystemState::kOzoneStart);
       }
-      // Проверка повторной попытки через 30 минут (если был запрет)
+      // Повторная попытка озонирования по таймеру (после блокировки)
       else if (retry_ozone_timer_ != 0 &&
-               (millis() - retry_ozone_timer_ >= kOzoneRetryShort)) {
-        retry_ozone_timer_ = 0;  // Сбрасываем таймер
+               (now - retry_ozone_timer_ >= kOzoneRetryShort)) {
+        retry_ozone_timer_ = 0;
         ChangeState(SystemState::kOzoneStart);
       }
       break;
 
-    case SystemState::kOzoneStart:
-      HandleOzoneCycle();  // Проверка условий запуска (T_out и подсветка)
+    case SystemState::kOzoneStart: {
+      // Проверка условий блокировки
+      SensorData out = sensors_->GetOutside();
+      bool temp_inhibited = (out.temp < 0.0f);
+      bool ui_inhibited = (ui_ != nullptr && ui_->IsBacklightOn());
+
+      if (temp_inhibited || ui_inhibited) {
+#ifdef DEBUG
+        Serial.println(F("Ozone Inhibited: Wait 30m"));
+#endif
+        retry_ozone_timer_ = now;
+        ChangeState(SystemState::kAutoClimate);
+      } else {
+        // Условия в норме - запуск фазы генерации
+        relays_->SetFan(false, true);
+        relays_->SetOzone(true);
+        state_timer_ = now;
+        ChangeState(SystemState::kOzoneActive);
+      }
       break;
+    }
 
     case SystemState::kOzoneActive:
-    case SystemState::kOzoneHold:
-    case SystemState::kOzoneVent:
-      HandleOzoneCycle();  // Логика фаз
+      if (now - state_timer_ >= kOzoneWorkTime) {
+        relays_->SetOzone(false);
+        state_timer_ = now;
+        ChangeState(SystemState::kOzoneHold);
+      }
       break;
 
+    case SystemState::kOzoneHold:
+      if (now - state_timer_ >= kOzoneHoldTime) {
+        state_timer_ = now;
+        ChangeState(SystemState::kOzoneVent);
+      }
+      break;
+
+    case SystemState::kOzoneVent: {
+      SensorData out = sensors_->GetOutside();
+      // Проветривание только при отсутствии мороза
+      if (out.temp > 0.0f) {
+        relays_->SetFan(true);
+        if (now - state_timer_ >= kOzoneVentTime) {
+          relays_->SetFan(false);
+          ChangeState(SystemState::kAutoClimate);
+        }
+      } else {
+        // Прекращаем проветривание, если на улице похолодало
+        relays_->SetFan(false);
+        ChangeState(SystemState::kAutoClimate);
+      }
+      break;
+    }
+
     case SystemState::kManualFan:
+      if (now - state_timer_ >= (manual_timer_ * 60000UL)) {
+        relays_->SetFan(false);
+        ChangeState(SystemState::kAutoClimate);
+      }
+      break;
+
     case SystemState::kManualOzone:
-      HandleManualModes();
+      if (now - state_timer_ >= (manual_timer_ * 60000UL)) {
+        relays_->SetOzone(false);
+        ChangeState(SystemState::kAutoClimate);
+      }
       break;
 
     case SystemState::kErrorState:
@@ -157,75 +211,6 @@ void Controller::HandleAutoClimate() {
   }
 }
 
-/**
- * @brief Управление многофазным циклом озонирования.
- * Фазы: Ожидание -> Озонирование (15м) -> Экспозиция (2ч) -> Проветривание (15м).
- */
-void Controller::HandleOzoneCycle() {
-  SensorData out = sensors_->GetOutside();
-
-  // Проверка условий блокировки (только в момент старта)
-  if (current_state_ == SystemState::kOzoneStart) {
-    bool temp_inhibited = (out.temp < 0.0f);
-    bool ui_inhibited = (ui_ != nullptr && ui_->isBacklightOn());
-
-    if (temp_inhibited || ui_inhibited) {
-#ifdef DEBUG
-      Serial.println(F("Ozone Inhibited: Wait 30m"));
-#endif
-      retry_ozone_timer_ = millis();
-      ChangeState(SystemState::kAutoClimate);
-      return;
-    }
-
-    // Если всё ок — включаем озон
-    relays_->SetFan(false, true);
-    relays_->SetOzone(true);
-    state_timer_ = millis();
-    ChangeState(SystemState::kOzoneActive);
-  }
-
-  // Фаза 1: Активная работа озонатора (генерация озона)
-  if (current_state_ == SystemState::kOzoneActive) {
-    if (millis() - state_timer_ >= kOzoneWorkTime) {
-      relays_->SetOzone(false);
-      state_timer_ = millis();
-      ChangeState(SystemState::kOzoneHold);
-    }
-  }
-
-  // Фаза 2: Пауза (ожидание распада озона)
-  if (current_state_ == SystemState::kOzoneHold) {
-    if (millis() - state_timer_ >= kOzoneHoldTime) {
-      state_timer_ = millis();
-      ChangeState(SystemState::kOzoneVent);
-    }
-  }
-
-  // Фаза 3: Принудительное проветривание после обработки
-  if (current_state_ == SystemState::kOzoneVent) {
-    // Проветривание разрешено только если на улице не мороз
-    if (out.temp > 0.0f) {
-      relays_->SetFan(true);
-      if (millis() - state_timer_ >= kOzoneVentTime) {
-        relays_->SetFan(false);
-        ChangeState(SystemState::kAutoClimate);
-      }
-    } else {
-      // Если мороз — принудительно выходим
-      relays_->SetFan(false);
-      ChangeState(SystemState::kAutoClimate);
-    }
-  }
-}
-
-void Controller::HandleManualModes() {
-  if (millis() - state_timer_ >= (manual_timer_ * 60000UL)) {
-    relays_->SetFan(false);
-    relays_->SetOzone(false);
-    ChangeState(SystemState::kAutoClimate);
-  }
-}
 
 void Controller::CheckCriticalErrors() {
   // 1. Ошибки от SensorManager (Hardware + Mismatch)
