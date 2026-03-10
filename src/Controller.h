@@ -47,6 +47,11 @@ class Controller {
   unsigned long retry_ozone_timer_;  // Таймер для повтора при запрете (30 мин)
   bool ozone_inhibited_today_;       // Флаг, что сегодня попытка уже была
 
+  // Абстракция присутствия пользователя
+  bool is_user_present_;
+  unsigned long last_user_activity_time_;
+  const unsigned long kUserPresenceTimeout = 30000UL;
+
   // Внутренние методы обработки состояний
   void HandleAutoClimate();
 
@@ -60,6 +65,7 @@ class Controller {
   void UpdateStatistics();     // Обновление счетчиков времени работы
   void HandleStorage();        // Управление планированием записи в EEPROM
   void CheckSystemHealth();    // Мониторинг датчиков и шины I2C
+  void UpdateUserPresence();   // Управление флагом присутствия пользователя
   void ProcessStateMachine();  // Логика переключения состояний (FSM)
 
  public:
@@ -74,6 +80,7 @@ class Controller {
   void ResetError();
   void StartManualFan(uint16_t minutes);
   void StartManualOzone(uint16_t minutes);
+  void NotifyUserActivity();  // Сообщение от UI об активности (нажатие кнопок)
 
   // Геттеры для UI
   SystemState GetState() const { return current_state_; }

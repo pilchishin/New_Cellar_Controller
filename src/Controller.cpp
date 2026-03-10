@@ -22,6 +22,8 @@ Controller::Controller(SensorManager* s, RelayManager* r, TimeManager* t)
   needs_persistent_save_ = false;
   last_persistent_change_time_ = 0;
   ozone_inhibited_today_ = false;
+  is_user_present_ = false;
+  last_user_activity_time_ = 0;
   state_timer_ = 0;
   manual_timer_ = 0;
   retry_ozone_timer_ = 0;
@@ -33,6 +35,7 @@ void Controller::Tick() {
   UpdateStatistics();
   HandleStorage();
   CheckSystemHealth();
+  UpdateUserPresence();
   ProcessStateMachine();
 }
 
@@ -87,6 +90,16 @@ void Controller::CheckSystemHealth() {
   }
 }
 
+void Controller::UpdateUserPresence() {
+  if (is_user_present_ &&
+      (millis() - last_user_activity_time_ >= kUserPresenceTimeout)) {
+    is_user_present_ = false;
+#ifdef DEBUG
+    Serial.println(F("User Presence: Timed out"));
+#endif
+  }
+}
+
 void Controller::ProcessStateMachine() {
   unsigned long now = millis();
   // Обработка состояний (FSM)
@@ -110,9 +123,9 @@ void Controller::ProcessStateMachine() {
       // Проверка условий блокировки (присутствие людей или мороз)
       SensorData out = sensors_->GetOutside();
       bool is_frost_outside = (out.temp < 0.0f);
-      bool is_ui_active = (ui_ != nullptr && ui_->IsBacklightOn());
 
-      bool is_ozone_inhibited = (is_frost_outside || is_ui_active);
+      // Проверяем внутренний флаг присутствия вместо прямого обращения к UI
+      bool is_ozone_inhibited = (is_frost_outside || is_user_present_);
 
       if (is_ozone_inhibited) {
 #ifdef DEBUG
@@ -273,6 +286,11 @@ void Controller::StartManualOzone(uint16_t minutes) {
   state_timer_ = millis();
   relays_->SetOzone(true);
   ChangeState(SystemState::kManualOzone);
+}
+
+void Controller::NotifyUserActivity() {
+  is_user_present_ = true;
+  last_user_activity_time_ = millis();
 }
 
 void Controller::SetTargetTemp(float t) {

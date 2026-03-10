@@ -74,6 +74,7 @@ void DisplayUI::HandleButtons() {
 
   // Сброс таймера гашения подсветки при любой активности
   if (up || down || menu) {
+    controller_->NotifyUserActivity();  // Уведомляем контроллер о присутствии человека
     last_activity_time_ = millis();
     if (!backlight_on_) {
       lcd_.backlight();
