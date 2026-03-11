@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 #include "Types.h"
-#include "Config.h"
+#include "config.h"
 #include "SensorManager.h"
 #include "RelayManager.h"
 #include "TimeManager.h"

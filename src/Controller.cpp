@@ -8,7 +8,7 @@ Controller::Controller(SensorManager* s, RelayManager* r, TimeManager* t)
 
   // Загрузка данных из EEPROM
   PersistentData data;
-  storage_.load(data);
+  storage_.Load(data);
 
   target_temp_ = data.targetTemp;
   target_rh_ = data.targetRh;

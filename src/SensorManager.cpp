@@ -4,15 +4,9 @@
 SensorManager::SensorManager()
     : one_wire_(ONE_WIRE_BUS),
       ds_sensor_(&one_wire_),
-      bme_valid_(false),
-      htu_valid_(false),
-      ds_valid_(false),
-      bme_retries_(0),
-      htu_retries_(0),
-      ds_retries_(0),
-      last_bme_retry_(0),
-      last_htu_retry_(0),
-      last_ds_retry_(0),
+      bme_stat_({false, 0, 0}),
+      htu_stat_({false, 0, 0}),
+      ds_stat_({false, 0, 0}),
       i2c_error_count_(0),
       control_temp_(0.0f) {
   // Начальные значения структур сбрасываем в нули/false
@@ -33,8 +27,8 @@ void SensorManager::Init() {
 
 void SensorManager::InitBme() {
   if (bme_.begin(0x76)) {
-    bme_valid_ = true;
-    bme_retries_ = 0;
+    bme_stat_.valid = true;
+    bme_stat_.retries = 0;
     bme_.setSampling(Adafruit_BME280::MODE_NORMAL, Adafruit_BME280::SAMPLING_X1,
                      Adafruit_BME280::SAMPLING_X1, Adafruit_BME280::SAMPLING_X1,
                      Adafruit_BME280::FILTER_OFF);
@@ -42,7 +36,7 @@ void SensorManager::InitBme() {
     Serial.println(F("BME280 Init OK"));
 #endif
   } else {
-    bme_valid_ = false;
+    bme_stat_.valid = false;
 #ifdef DEBUG
     Serial.println(F("BME280 Init FAIL"));
 #endif
@@ -51,13 +45,13 @@ void SensorManager::InitBme() {
 
 void SensorManager::InitHtu() {
   if (htu_.begin()) {
-    htu_valid_ = true;
-    htu_retries_ = 0;
+    htu_stat_.valid = true;
+    htu_stat_.retries = 0;
 #ifdef DEBUG
     Serial.println(F("HTU21D Init OK"));
 #endif
   } else {
-    htu_valid_ = false;
+    htu_stat_.valid = false;
 #ifdef DEBUG
     Serial.println(F("HTU21D Init FAIL"));
 #endif
@@ -67,8 +61,8 @@ void SensorManager::InitHtu() {
 void SensorManager::InitDs() {
   ds_sensor_.begin();
   if (ds_sensor_.getDeviceCount() > 0) {
-    ds_valid_ = true;
-    ds_retries_ = 0;
+    ds_stat_.valid = true;
+    ds_stat_.retries = 0;
     ds_sensor_.setResolution(12);
     ds_sensor_.setWaitForConversion(false);
     ds_sensor_.requestTemperatures();
@@ -76,7 +70,7 @@ void SensorManager::InitDs() {
     Serial.println(F("DS18B20 Init OK"));
 #endif
   } else {
-    ds_valid_ = false;
+    ds_stat_.valid = false;
 #ifdef DEBUG
     Serial.println(F("DS18B20 Init FAIL"));
 #endif
@@ -90,80 +84,71 @@ void SensorManager::Update() {
   bool i2c_success = false;  // Флаг успешного чтения хотя бы одного I2C устройства
   unsigned long now = millis();
 
-  // 1. ОПРОС И ФИЛЬТРАЦИЯ BME280 (ПОМЕЩЕНИЕ)
-  if (!bme_valid_ && bme_retries_ < kMaxRetries) {
-    if (now - last_bme_retry_ >= kRetryInterval) {
-      last_bme_retry_ = now;
-      bme_retries_++;
+  // Вспомогательная лямбда для проверки ретраев (С++11)
+  auto check_retry = [&](SensorStatus& stat, void (SensorManager::*init_func)(),
+                         const char* name) {
+    if (!stat.valid && stat.retries < kMaxRetries) {
+      if (now - stat.lastRetry >= kRetryInterval) {
+        stat.lastRetry = now;
+        stat.retries++;
 #ifdef DEBUG
-      Serial.print(F("BME280 Retry "));
-      Serial.println(bme_retries_);
+        Serial.print(name);
+        Serial.print(F(" Retry "));
+        Serial.println(stat.retries);
 #endif
-      InitBme();
+        (this->*init_func)();
+      }
     }
-  }
+  };
 
-  if (bme_valid_) {
+  // 1. ПРОВЕРКА РЕТРАЕВ
+  check_retry(bme_stat_, &SensorManager::InitBme, "BME280");
+  check_retry(htu_stat_, &SensorManager::InitHtu, "HTU21D");
+  check_retry(ds_stat_, &SensorManager::InitDs, "DS18B20");
+
+  // 2. ОПРОС И ФИЛЬТРАЦИЯ BME280 (ПОМЕЩЕНИЕ)
+  if (bme_stat_.valid) {
     float raw_temp = bme_.readTemperature();
     float raw_hum = bme_.readHumidity();
 
-    // Проверка на NaN (ошибка чтения)
     if (isnan(raw_temp) || isnan(raw_hum)) {
-      bme_valid_ = false;
+      bme_stat_.valid = false;
       inside_data_.valid = false;
     } else {
-      // Пропускаем сырые данные через фильтры (Медиана -> EMA)
-      inside_data_.temp = filter_bme_temp_.update(raw_temp) + calib_.bmeTempOffset;
-      inside_data_.rh = filter_bme_hum_.update(raw_hum) + calib_.bmeHumOffset;
-
-      // Абсолютная влажность и точка росы считаются ТОЛЬКО по отфильтрованным данным
-      inside_data_.ah = ClimateMath::calculateAH(inside_data_.temp, inside_data_.rh);
+      inside_data_.temp = filter_bme_temp_.Update(raw_temp) + calib_.bmeTempOffset;
+      inside_data_.rh = filter_bme_hum_.Update(raw_hum) + calib_.bmeHumOffset;
+      inside_data_.ah = climate_math::CalculateAH(inside_data_.temp, inside_data_.rh);
       inside_data_.dewpoint =
-          ClimateMath::calculateDewPoint(inside_data_.temp, inside_data_.rh);
+          climate_math::CalculateDewPoint(inside_data_.temp, inside_data_.rh);
       inside_data_.valid = true;
       i2c_success = true;
     }
   }
 
-  // 2. ОПРОС И ФИЛЬТРАЦИЯ HTU21D (УЛИЦА)
-  if (!htu_valid_ && htu_retries_ < kMaxRetries) {
-    if (now - last_htu_retry_ >= kRetryInterval) {
-      last_htu_retry_ = now;
-      htu_retries_++;
-#ifdef DEBUG
-      Serial.print(F("HTU21D Retry "));
-      Serial.println(htu_retries_);
-#endif
-      InitHtu();
-    }
-  }
-
-  if (htu_valid_) {
+  // 3. ОПРОС И ФИЛЬТРАЦИЯ HTU21D (УЛИЦА)
+  if (htu_stat_.valid) {
     float raw_temp = htu_.readTemperature();
     float raw_hum = htu_.readHumidity();
 
-    if (isnan(raw_temp) || isnan(raw_hum) ||
-        raw_hum > 100.0f) {  // HTU иногда выдает >100% при ошибках
-      htu_valid_ = false;
+    if (isnan(raw_temp) || isnan(raw_hum) || raw_hum > 100.0f) {
+      htu_stat_.valid = false;
       outside_data_.valid = false;
     } else {
-      outside_data_.temp = filter_htu_temp_.update(raw_temp) + calib_.htuTempOffset;
-      outside_data_.rh = filter_htu_hum_.update(raw_hum) + calib_.htuHumOffset;
-
+      outside_data_.temp = filter_htu_temp_.Update(raw_temp) + calib_.htuTempOffset;
+      outside_data_.rh = filter_htu_hum_.Update(raw_hum) + calib_.htuHumOffset;
       outside_data_.ah =
-          ClimateMath::calculateAH(outside_data_.temp, outside_data_.rh);
+          climate_math::CalculateAH(outside_data_.temp, outside_data_.rh);
       outside_data_.dewpoint =
-          ClimateMath::calculateDewPoint(outside_data_.temp, outside_data_.rh);
+          climate_math::CalculateDewPoint(outside_data_.temp, outside_data_.rh);
       outside_data_.valid = true;
       i2c_success = true;
     }
   }
 
-  // Логика обнаружения полного отказа I2C-шины:
+  // Логика обнаружения полного отказа I2C-шины
   if (i2c_success) {
-    i2c_error_count_ = 0;  // Сброс счетчика при любом удачном чтении
-  } else if (bme_valid_ || htu_valid_) {
-    // Если датчики помечены как активные, но чтение не прошло
+    i2c_error_count_ = 0;
+  } else if (bme_stat_.valid || htu_stat_.valid) {
     i2c_error_count_++;
 #ifdef DEBUG
     Serial.print(F("I2C Error Count: "));
@@ -171,42 +156,24 @@ void SensorManager::Update() {
 #endif
   }
 
-  // 3. ОПРОС И ФИЛЬТРАЦИЯ DS18B20 (КОНТРОЛЬ ПОДВАЛА)
-  if (!ds_valid_ && ds_retries_ < kMaxRetries) {
-    if (now - last_ds_retry_ >= kRetryInterval) {
-      last_ds_retry_ = now;
-      ds_retries_++;
-#ifdef DEBUG
-      Serial.print(F("DS18B20 Retry "));
-      Serial.println(ds_retries_);
-#endif
-      InitDs();
-    }
-  }
-
-  if (ds_valid_) {
-    // Читаем значение из памяти датчика (результат предыдущего запроса)
+  // 4. ОПРОС И ФИЛЬТРАЦИЯ DS18B20 (КОНТРОЛЬ ПОДВАЛА)
+  if (ds_stat_.valid) {
     float raw_ds_temp = ds_sensor_.getTempCByIndex(0);
-
     if (raw_ds_temp == DEVICE_DISCONNECTED_C) {
-      ds_valid_ = false;
+      ds_stat_.valid = false;
     } else {
-      control_temp_ = filter_ds_temp_.update(raw_ds_temp) + calib_.dsTempOffset;
+      control_temp_ = filter_ds_temp_.Update(raw_ds_temp) + calib_.dsTempOffset;
     }
-
-    // Сразу запрашиваем новую конверсию для следующего цикла опроса (через 10 сек)
     ds_sensor_.requestTemperatures();
   }
 }
 
 ErrorCode SensorManager::CheckErrors() {
-  // Проверка отказов самих модулей (железная ошибка)
-  if (!bme_valid_) return ErrorCode::kSensorBmeFail;
-  if (!htu_valid_) return ErrorCode::kSensorHtuFail;
-  if (!ds_valid_) return ErrorCode::kSensorDsFail;
+  if (!bme_stat_.valid) return ErrorCode::kSensorBmeFail;
+  if (!htu_stat_.valid) return ErrorCode::kSensorHtuFail;
+  if (!ds_stat_.valid) return ErrorCode::kSensorDsFail;
 
-  // Логическая проверка: рассинхронизация основного (BME280) и контрольного (DS18B20) датчиков
-  if (abs(inside_data_.temp - control_temp_) > 2.0f) {
+  if (abs(inside_data_.temp - control_temp_) > kSensorDiffMax) {
 #ifdef DEBUG
     Serial.print(F("Temp Mismatch! BME: "));
     Serial.print(inside_data_.temp);
@@ -222,7 +189,7 @@ ErrorCode SensorManager::CheckErrors() {
 
 void SensorManager::Recover() {
   // Выполняем программный сброс шины (A4=SDA, A5=SCL на Arduino Nano)
-  I2CUtils::recoverBus(A4, A5);
+  i2c_utils::RecoverBus(A4, A5);
   // Пробуем инициализировать датчики заново
   Init();
 }

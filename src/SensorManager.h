@@ -9,8 +9,14 @@
 #include <DallasTemperature.h>
 
 #include "Types.h"
-#include "Config.h" // Предполагается, что здесь задан пин ONE_WIRE_BUS
+#include "config.h" // Предполагается, что здесь задан пин ONE_WIRE_BUS
 #include "MathUtils.h"
+
+struct SensorStatus {
+  bool valid;
+  uint8_t retries;
+  unsigned long lastRetry;
+};
 
 class SensorManager {
  private:
@@ -32,18 +38,11 @@ class SensorManager {
   Filter filter_htu_hum_;
   Filter filter_ds_temp_;
 
-  // Флаги состояния датчиков (исправен/неисправен)
-  bool bme_valid_;
-  bool htu_valid_;
-  bool ds_valid_;
+  // Состояния датчиков (исправен, попытки, время последнего ретрая)
+  SensorStatus bme_stat_;
+  SensorStatus htu_stat_;
+  SensorStatus ds_stat_;
 
-  // Параметры повторных попыток
-  uint8_t bme_retries_;
-  uint8_t htu_retries_;
-  uint8_t ds_retries_;
-  unsigned long last_bme_retry_;
-  unsigned long last_htu_retry_;
-  unsigned long last_ds_retry_;
   const uint8_t kMaxRetries = 3;
   const uint32_t kRetryInterval = 60000UL;
 

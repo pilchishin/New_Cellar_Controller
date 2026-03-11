@@ -2,7 +2,7 @@
 #include <avr/wdt.h> // Библиотека для работы со сторожевым таймером
 
 // Подключаем наши модули
-#include "Config.h"
+#include "config.h"
 #include "SensorManager.h"
 #include "RelayManager.h"
 #include "TimeManager.h"

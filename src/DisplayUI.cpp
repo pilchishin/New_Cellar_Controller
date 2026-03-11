@@ -1,5 +1,5 @@
 #include "DisplayUI.h"
-#include "Config.h"
+#include "config.h"
 
 // Конструктор: адрес 0x27 и размер 16x2
 DisplayUI::DisplayUI(Controller* c, SensorManager* s, TimeManager* t)
