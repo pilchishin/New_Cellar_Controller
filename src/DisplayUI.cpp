@@ -101,7 +101,19 @@ void DisplayUI::HandleButtons() {
           NextRoot();
         } else {
           // если в submenu: переключать MenuItem внутри раздела
-          NextItem();
+          if (current_root_ == MenuRoot::MANUAL) {
+            if (current_item_ == MenuItem::MANUAL_FAN) {
+              controller_->StartManualFan(30);
+              temp_message_ = "FAN STARTED";
+              message_timer_ = millis();
+            } else if (current_item_ == MenuItem::MANUAL_OZONE) {
+              controller_->StartManualOzone(15);
+              temp_message_ = "OZONE STARTED";
+              message_timer_ = millis();
+            }
+          } else {
+            NextItem();
+          }
         }
       } else {
         // Длинное нажатие
@@ -145,9 +157,7 @@ void DisplayUI::HandleButtons() {
               break;
             case MenuItem::MANUAL_FAN:
             case MenuItem::MANUAL_OZONE:
-              controller_->StartManualFan(30);
-              temp_message_ = "FAN STARTED";
-              message_timer_ = millis();
+              current_item_ = MenuItem::MANUAL_FAN;
               break;
             case MenuItem::CALIB_BME_T:
               c.bmeTempOffset += 0.1f;
@@ -192,9 +202,7 @@ void DisplayUI::HandleButtons() {
               break;
             case MenuItem::MANUAL_FAN:
             case MenuItem::MANUAL_OZONE:
-              controller_->StartManualOzone(15);
-              temp_message_ = "OZONE STARTED";
-              message_timer_ = millis();
+              current_item_ = MenuItem::MANUAL_OZONE;
               break;
             case MenuItem::CALIB_BME_T:
               c.bmeTempOffset -= 0.1f;
@@ -484,9 +492,20 @@ void DisplayUI::DrawTargets() {
 
 void DisplayUI::DrawManualModes() {
   lcd_.setCursor(0, 0);
-  lcd_.print(F("MANUAL START:"));
+  lcd_.print(F("MANUAL          "));
   lcd_.setCursor(0, 1);
-  lcd_.print(F("UP:FAN  DN:OZONE"));
+
+  if (current_item_ == MenuItem::MANUAL_FAN)
+    lcd_.print(F(">"));
+  else
+    lcd_.print(F(" "));
+  lcd_.print(F("FAN   "));
+
+  if (current_item_ == MenuItem::MANUAL_OZONE)
+    lcd_.print(F(">"));
+  else
+    lcd_.print(F(" "));
+  lcd_.print(F("OZONE   "));
 }
 
 void DisplayUI::DrawCalibPage(const char* label, float value, bool is_temp) {
