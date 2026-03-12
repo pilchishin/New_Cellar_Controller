@@ -264,6 +264,7 @@ void DisplayUI::NextRoot() {
   current_root_ = (MenuRoot)next;
   in_submenu_ = false;
   SetDefaultItemForRoot();
+  needs_redraw_ = true;
 }
 
 void DisplayUI::NextItem() {
@@ -291,6 +292,7 @@ void DisplayUI::NextItem() {
       break;
   }
   UpdateSubmenuIndex();
+  needs_redraw_ = true;
 }
 
 void DisplayUI::PrevItem() {
@@ -318,6 +320,7 @@ void DisplayUI::PrevItem() {
       break;
   }
   UpdateSubmenuIndex();
+  needs_redraw_ = true;
 }
 
 void DisplayUI::SetDefaultItemForRoot() {
@@ -331,6 +334,7 @@ void DisplayUI::SetDefaultItemForRoot() {
     case MenuRoot::SERVICE: current_item_ = MenuItem::CALIB_BME_T; break;
   }
   UpdateSubmenuIndex();
+  needs_redraw_ = true;
 }
 
 void DisplayUI::UpdateSubmenuIndex() {
