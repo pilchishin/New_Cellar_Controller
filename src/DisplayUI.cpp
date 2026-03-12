@@ -510,11 +510,11 @@ void DisplayUI::DrawManualModes() {
 
 void DisplayUI::DrawCalibPage(const char* label, float value, bool is_temp) {
   lcd_.setCursor(0, 0);
-  lcd_.print(F("CAL:"));
+  lcd_.print(F("CAL "));
   lcd_.print(label);
   lcd_.print(F("        "));  // Очистка остатка строки
   lcd_.setCursor(0, 1);
-  lcd_.print(F("OFFS:"));
+  lcd_.print(F("OFFS "));
   if (value >= 0) lcd_.print(F("+"));
   lcd_.print(value, 1);
   lcd_.print(is_temp ? F("C") : F("% "));
