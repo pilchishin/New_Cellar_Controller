@@ -81,12 +81,77 @@ void SensorManager::InitDs() {
  * @brief Главный цикл опроса датчиков и восстановления I2C шины.
  */
 void SensorManager::Update() {
-  bool i2c_success = false;
+  bool i2c_success = false;  // Флаг успешного чтения хотя бы одного I2C устройства
+  unsigned long now = millis();
 
-  HandleRetries();
-  ProcessBme(i2c_success);
-  ProcessHtu(i2c_success);
-  ProcessDs();
+  // 1. ОПРОС И ФИЛЬТРАЦИЯ BME280 (ПОМЕЩЕНИЕ)
+  if (!bme_valid_ && bme_retries_ < kMaxRetries) {
+    if (now - last_bme_retry_ >= kRetryInterval) {
+      last_bme_retry_ = now;
+      bme_retries_++;
+#ifdef DEBUG
+      Serial.print(F("BME280 Retry "));
+      Serial.println(bme_retries_);
+#endif
+      InitBme();
+    }
+  }
+
+  if (bme_valid_) {
+    float raw_temp = bme_.readTemperature();
+    float raw_hum = bme_.readHumidity();
+
+    // Проверка на NaN (ошибка чтения)
+    if (isnan(raw_temp) || isnan(raw_hum)) {
+      bme_valid_ = false;
+      inside_data_.valid = false;
+    } else {
+      // Пропускаем сырые данные через фильтры (Медиана -> EMA)
+      inside_data_.temp = filter_bme_temp_.Update(raw_temp) + calib_.bmeTempOffset;
+      inside_data_.rh = filter_bme_hum_.Update(raw_hum) + calib_.bmeHumOffset;
+
+      // Абсолютная влажность и точка росы считаются ТОЛЬКО по отфильтрованным данным
+      inside_data_.ah = climate_math::CalculateAH(inside_data_.temp, inside_data_.rh);
+      inside_data_.dewpoint =
+          climate_math::CalculateDewPoint(inside_data_.temp, inside_data_.rh);
+      inside_data_.valid = true;
+      i2c_success = true;
+    }
+  }
+
+  // 2. ОПРОС И ФИЛЬТРАЦИЯ HTU21D (УЛИЦА)
+  if (!htu_valid_ && htu_retries_ < kMaxRetries) {
+    if (now - last_htu_retry_ >= kRetryInterval) {
+      last_htu_retry_ = now;
+      htu_retries_++;
+#ifdef DEBUG
+      Serial.print(F("HTU21D Retry "));
+      Serial.println(htu_retries_);
+#endif
+      InitHtu();
+    }
+  }
+
+  if (htu_valid_) {
+    float raw_temp = htu_.readTemperature();
+    float raw_hum = htu_.readHumidity();
+
+    if (isnan(raw_temp) || isnan(raw_hum) ||
+        raw_hum > 100.0f) {  // HTU иногда выдает >100% при ошибках
+      htu_valid_ = false;
+      outside_data_.valid = false;
+    } else {
+      outside_data_.temp = filter_htu_temp_.Update(raw_temp) + calib_.htuTempOffset;
+      outside_data_.rh = filter_htu_hum_.Update(raw_hum) + calib_.htuHumOffset;
+
+      outside_data_.ah =
+          climate_math::CalculateAH(outside_data_.temp, outside_data_.rh);
+      outside_data_.dewpoint =
+          climate_math::CalculateDewPoint(outside_data_.temp, outside_data_.rh);
+      outside_data_.valid = true;
+      i2c_success = true;
+    }
+  }
 
   // Логика обнаружения полного отказа I2C-шины
   if (i2c_success) {
@@ -113,79 +178,23 @@ void SensorManager::HandleRetries() {
         Serial.print(F(" Retry "));
         Serial.println(stat.retries);
 #endif
-        (this->*init_func)();
-      }
+      InitDs();
     }
-  };
-
-  check_retry(bme_stat_, &SensorManager::InitBme, "BME280");
-  check_retry(htu_stat_, &SensorManager::InitHtu, "HTU21D");
-  check_retry(ds_stat_, &SensorManager::InitDs, "DS18B20");
-}
-
-void SensorManager::ProcessBme(bool& i2c_success) {
-  if (!bme_stat_.valid) return;
-
-  float raw_temp = bme_.readTemperature();
-  float raw_hum = bme_.readHumidity();
-
-  if (!IsDataPlausible(raw_temp, raw_hum)) {
-    bme_stat_.valid = false;
-    inside_data_.valid = false;
-  } else {
-    inside_data_ = FillSensorData(raw_temp, raw_hum, filter_bme_temp_,
-                                  filter_bme_hum_, calib_.bmeTempOffset,
-                                  calib_.bmeHumOffset);
-    i2c_success = true;
   }
-}
 
-void SensorManager::ProcessHtu(bool& i2c_success) {
-  if (!htu_stat_.valid) return;
+  if (ds_valid_) {
+    // Читаем значение из памяти датчика (результат предыдущего запроса)
+    float raw_ds_temp = ds_sensor_.getTempCByIndex(0);
 
-  float raw_temp = htu_.readTemperature();
-  float raw_hum = htu_.readHumidity();
+    if (raw_ds_temp == DEVICE_DISCONNECTED_C) {
+      ds_valid_ = false;
+    } else {
+      control_temp_ = filter_ds_temp_.Update(raw_ds_temp) + calib_.dsTempOffset;
+    }
 
-  if (!IsDataPlausible(raw_temp, raw_hum)) {
-    htu_stat_.valid = false;
-    outside_data_.valid = false;
-  } else {
-    outside_data_ = FillSensorData(raw_temp, raw_hum, filter_htu_temp_,
-                                   filter_htu_hum_, calib_.htuTempOffset,
-                                   calib_.htuHumOffset);
-    i2c_success = true;
+    // Сразу запрашиваем новую конверсию для следующего цикла опроса (через 10 сек)
+    ds_sensor_.requestTemperatures();
   }
-}
-
-void SensorManager::ProcessDs() {
-  if (!ds_stat_.valid) return;
-
-  float raw_ds_temp = ds_sensor_.getTempCByIndex(0);
-  if (raw_ds_temp == DEVICE_DISCONNECTED_C) {
-    ds_stat_.valid = false;
-  } else {
-    control_temp_ = filter_ds_temp_.Update(raw_ds_temp) + calib_.dsTempOffset;
-  }
-  ds_sensor_.requestTemperatures();
-}
-
-bool SensorManager::IsDataPlausible(float temp, float rh) {
-  if (isnan(temp) || isnan(rh)) return false;
-  if (temp < kRawTempMin || temp > kRawTempMax) return false;
-  if (rh < kRawHumMin || rh > kRawHumMax) return false;
-  return true;
-}
-
-SensorData SensorManager::FillSensorData(float temp, float rh, Filter& tFilter,
-                                         Filter& hFilter, float tOffset,
-                                         float hOffset) {
-  SensorData data;
-  data.temp = tFilter.Update(temp) + tOffset;
-  data.rh = hFilter.Update(rh) + hOffset;
-  data.ah = climate_math::CalculateAH(data.temp, data.rh);
-  data.dewpoint = climate_math::CalculateDewPoint(data.temp, data.rh);
-  data.valid = true;
-  return data;
 }
 
 ErrorCode SensorManager::CheckErrors() {

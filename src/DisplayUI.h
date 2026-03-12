@@ -7,21 +7,64 @@
 #include "SensorManager.h"
 #include "TimeManager.h"
 
-// Состояния меню
-enum class MenuPage {
-    HOME_SCREEN,    // Главная: T/H, цели и статусы реле
-    STATUS_IN,      // Датчики внутри (детально: AH, точка росы)
-    STATUS_OUT,     // Датчики снаружи (детально: AH)
-    SET_TEMP,       // Установка целевой T
-    SET_HUM,        // Установка целевой RH
-    MANUAL_MODES,   // Ручной запуск FAN/OZONE
-    ERROR_LOG,      // Просмотр и сброс ошибок
-    STATS,          // Статистика работы
-    CALIB_BME_T,    // Калибровка BME T
-    CALIB_BME_H,    // Калибровка BME H
-    CALIB_HTU_T,    // Калибровка HTU T
-    CALIB_HTU_H,    // Калибровка HTU H
-    CALIB_DS_T      // Калибровка DS T
+/**
+ * @brief Простая обертка над буфером строки для реализации Print.
+ * Позволяет использовать методы print/println для заполнения строки 16 симв.
+ */
+class LcdBuffer : public Print {
+ public:
+  char data[17];
+  int pos = 0;
+
+  void Clear() {
+    memset(data, ' ', 16);
+    data[16] = '\0';
+    pos = 0;
+  }
+
+  size_t write(uint8_t c) override {
+    if (pos < 16) {
+      data[pos++] = (char)c;
+      return 1;
+    }
+    return 0;
+  }
+};
+
+// Разделы меню верхнего уровня
+enum class MenuRoot {
+  HOME,
+  STATUS,
+  TARGETS,
+  MANUAL,
+  STATS,
+  ERRORS,
+  SERVICE
+};
+
+// Элементы подменю
+enum class MenuItem {
+  NONE,
+
+  STATUS_IN,
+  STATUS_OUT,
+
+  TARGET_TEMP,
+  TARGET_HUM,
+
+  MANUAL_FAN,
+  MANUAL_OZONE,
+
+  STATS_VIEW,
+  STATS_RESET,
+
+  ERROR_VIEW,
+
+  CALIB_BME_T,
+  CALIB_BME_H,
+  CALIB_HTU_T,
+  CALIB_HTU_H,
+  CALIB_DS_T
 };
 
 class DisplayUI {
@@ -31,7 +74,11 @@ class DisplayUI {
   SensorManager* sensors_;
   TimeManager* rtc_;
 
-  MenuPage current_page_;
+  MenuRoot current_root_;
+  MenuItem current_item_;
+  bool in_submenu_;
+  int submenu_index_;
+  int submenu_count_;
 
   // Переменные для кнопок
   unsigned long last_btn_check_;
@@ -47,16 +94,30 @@ class DisplayUI {
   unsigned long last_activity_time_;
   bool backlight_on_;
 
+  // Оптимизация вывода
+  LcdBuffer bufs_[2];
+  char last_lines_[2][17];
+  bool needs_redraw_;
+  void Flush();
+
   void HandleButtons();
   void DrawPage();
+  void DrawRootPage();
+  void DrawSubPage();
   void UpdateBacklight();
+
+  // Навигация
+  void NextRoot();
+  void NextItem();
+  void PrevItem();
+  void SetDefaultItemForRoot();
+  void UpdateSubmenuIndex();
 
   // Вспомогательные методы отрисовки
   void DrawHomeScreen();
   void DrawStatusIn();
   void DrawStatusOut();
-  void DrawSetTemp();
-  void DrawSetHum();
+  void DrawTargets();
   void DrawManualModes();
   void DrawCalibPage(const char* label, float value, bool is_temp);
   void DrawStats();
