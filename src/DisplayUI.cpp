@@ -314,13 +314,35 @@ void DisplayUI::UpdateBacklight() {
 }
 
 void DisplayUI::DrawPage() {
-  CalibrationData c = controller_->GetCalibration();
+  if (!in_submenu_) {
+    DrawRootPage();
+  } else {
+    DrawSubPage();
+  }
+}
 
+void DisplayUI::DrawRootPage() {
   if (current_root_ == MenuRoot::HOME) {
     DrawHomeScreen();
     return;
   }
 
+  lcd_.setCursor(0, 0);
+  switch (current_root_) {
+    case MenuRoot::STATUS:  lcd_.print(F("> STATUS        ")); break;
+    case MenuRoot::TARGETS: lcd_.print(F("> TARGETS       ")); break;
+    case MenuRoot::MANUAL:  lcd_.print(F("> MANUAL        ")); break;
+    case MenuRoot::STATS:   lcd_.print(F("> STATS         ")); break;
+    case MenuRoot::ERRORS:  lcd_.print(F("> ERRORS        ")); break;
+    case MenuRoot::SERVICE: lcd_.print(F("> SERVICE       ")); break;
+    default: break;
+  }
+  lcd_.setCursor(0, 1);
+  lcd_.print(F("                "));
+}
+
+void DisplayUI::DrawSubPage() {
+  CalibrationData c = controller_->GetCalibration();
   switch (current_item_) {
     case MenuItem::STATUS_IN:
       DrawStatusIn();

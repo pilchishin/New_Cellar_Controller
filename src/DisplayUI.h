@@ -70,6 +70,8 @@ class DisplayUI {
 
   void HandleButtons();
   void DrawPage();
+  void DrawRootPage();
+  void DrawSubPage();
   void UpdateBacklight();
 
   // Навигация
