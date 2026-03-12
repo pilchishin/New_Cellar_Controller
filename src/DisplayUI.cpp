@@ -522,20 +522,25 @@ void DisplayUI::DrawCalibPage(const char* label, float value, bool is_temp) {
 }
 
 void DisplayUI::DrawStats() {
-  SystemStatistics s = controller_->GetStats();
-  lcd_.setCursor(0, 0);
-  lcd_.print(F("U:"));
-  lcd_.print(s.uptimeMinutes / 60);
-  lcd_.print(F("h "));
-  lcd_.print(F("F:"));
-  lcd_.print(s.fanMinutes / 60);
-  lcd_.print(F("h    "));
+  if (current_item_ == MenuItem::STATS_VIEW) {
+    SystemStatistics s = controller_->GetStats();
+    lcd_.setCursor(0, 0);
+    lcd_.print(F("UP "));
+    lcd_.print(s.uptimeMinutes / 60);
+    lcd_.print(F("h               "));
 
-  lcd_.setCursor(0, 1);
-  lcd_.print(F("O3:"));
-  lcd_.print(s.ozoneMinutes / 60);
-  lcd_.print(F("h "));
-  lcd_.print(F("M:RESET "));
+    lcd_.setCursor(0, 1);
+    lcd_.print(F("FAN "));
+    lcd_.print(s.fanMinutes / 60);
+    lcd_.print(F("h O3 "));
+    lcd_.print(s.ozoneMinutes / 60);
+    lcd_.print(F("h      "));
+  } else if (current_item_ == MenuItem::STATS_RESET) {
+    lcd_.setCursor(0, 0);
+    lcd_.print(F("RESET STATS     "));
+    lcd_.setCursor(0, 1);
+    lcd_.print(F("MENU CONFIRM    "));
+  }
 }
 
 void DisplayUI::DrawErrorLog() {
