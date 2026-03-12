@@ -1,6 +1,6 @@
 #include "AppEEPROM.h"
 #include <EEPROM.h>
-#include "Config.h"
+#include "config.h"
 
 AppEEPROM::AppEEPROM() : needs_save_(false), last_change_time_(0) {}
 

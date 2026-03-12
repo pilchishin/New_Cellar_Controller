@@ -2,7 +2,7 @@
 #define RELAY_MANAGER_H
 
 #include <Arduino.h>
-#include "Config.h" // Предполагается, что здесь заданы пины PIN_RELAY_FAN и PIN_RELAY_OZONE
+#include "config.h" // Предполагается, что здесь заданы пины PIN_RELAY_FAN и PIN_RELAY_OZONE
 
 class RelayManager {
  private:

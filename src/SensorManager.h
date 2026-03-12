@@ -9,7 +9,7 @@
 #include <DallasTemperature.h>
 
 #include "Types.h"
-#include "Config.h" // Предполагается, что здесь задан пин ONE_WIRE_BUS
+#include "config.h" // Предполагается, что здесь задан пин ONE_WIRE_BUS
 #include "MathUtils.h"
 
 class SensorManager {

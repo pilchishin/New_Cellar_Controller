@@ -1,5 +1,5 @@
 #include "DisplayUI.h"
-#include "Config.h"
+#include "config.h"
 
 // Конструктор: адрес 0x27 и размер 16x2
 DisplayUI::DisplayUI(Controller* c, SensorManager* s, TimeManager* t)
@@ -7,7 +7,9 @@ DisplayUI::DisplayUI(Controller* c, SensorManager* s, TimeManager* t)
       controller_(c),
       sensors_(s),
       rtc_(t),
-      current_page_(MenuPage::HOME_SCREEN),
+      current_root_(MenuRoot::HOME),
+      current_item_(MenuItem::NONE),
+      in_submenu_(false),
       last_btn_check_(0),
       last_btn_action_(0),
       menu_btn_pressed_(false),
@@ -83,7 +85,7 @@ void DisplayUI::HandleButtons() {
     }
   }
 
-  // Логика кнопки MENU (переключение страниц и длинное нажатие)
+  // Логика кнопки MENU
   if (menu) {
     if (!menu_btn_pressed_) {
       menu_btn_pressed_ = true;
@@ -93,19 +95,32 @@ void DisplayUI::HandleButtons() {
     if (menu_btn_pressed_) {
       unsigned long press_duration = millis() - menu_btn_timer_;
       if (press_duration < 600) {
-        // Короткое нажатие: листаем страницы вперед
-        int next = (int)current_page_ + 1;
-        if (next > (int)MenuPage::CALIB_DS_T) next = 0;
-        current_page_ = (MenuPage)next;
-        lcd_.clear();
+        // Короткое нажатие
+        if (!in_submenu_) {
+          // если не в submenu: переключать MenuRoot
+          NextRoot();
+        } else {
+          // если в submenu: переключать MenuItem внутри раздела
+          NextItem();
+        }
       } else {
         // Длинное нажатие
-        if (current_page_ == MenuPage::STATS) {
-          controller_->ResetStats();
-          temp_message_ = "STATS RESET";
-          message_timer_ = millis();
+        if (!in_submenu_) {
+          // если submenu закрыт: открыть submenu выбранного раздела
+          if (current_root_ != MenuRoot::HOME) {
+            in_submenu_ = true;
+          }
+        } else {
+          // если submenu открыт: выйти в root меню
+          if (current_item_ == MenuItem::STATS_RESET) {
+            controller_->ResetStats();
+            temp_message_ = "STATS RESET";
+            message_timer_ = millis();
+          }
+          in_submenu_ = false;
         }
       }
+      lcd_.clear();
       menu_btn_pressed_ = false;
     }
   }
@@ -115,99 +130,175 @@ void DisplayUI::HandleButtons() {
     // Ограничение скорости изменения значений (150мс между шагами)
     if (millis() - last_btn_action_ >= 150) {
       last_btn_action_ = millis();
-      CalibrationData c = controller_->GetCalibration();
 
-      if (up) {
-        switch (current_page_) {
-          case MenuPage::SET_TEMP:
-            controller_->SetTargetTemp(controller_->GetTargetTemp() + 0.1f);
-            break;
-          case MenuPage::SET_HUM:
-            controller_->SetTargetRh(controller_->GetTargetRh() + 1.0f);
-            if (controller_->GetTargetRh() > 100.0f)
-              controller_->SetTargetRh(100.0f);
-            break;
-          case MenuPage::MANUAL_MODES:
-            controller_->StartManualFan(30);
-            temp_message_ = "FAN STARTED";
-            message_timer_ = millis();
-            break;
-          case MenuPage::CALIB_BME_T:
-            c.bmeTempOffset += 0.1f;
-            if (c.bmeTempOffset > 5.0f) c.bmeTempOffset = 5.0f;
-            controller_->SetCalibration(c);
-            break;
-          case MenuPage::CALIB_BME_H:
-            c.bmeHumOffset += 0.1f;
-            if (c.bmeHumOffset > 5.0f) c.bmeHumOffset = 5.0f;
-            controller_->SetCalibration(c);
-            break;
-          case MenuPage::CALIB_HTU_T:
-            c.htuTempOffset += 0.1f;
-            if (c.htuTempOffset > 5.0f) c.htuTempOffset = 5.0f;
-            controller_->SetCalibration(c);
-            break;
-          case MenuPage::CALIB_HTU_H:
-            c.htuHumOffset += 0.1f;
-            if (c.htuHumOffset > 5.0f) c.htuHumOffset = 5.0f;
-            controller_->SetCalibration(c);
-            break;
-          case MenuPage::CALIB_DS_T:
-            c.dsTempOffset += 0.1f;
-            if (c.dsTempOffset > 5.0f) c.dsTempOffset = 5.0f;
-            controller_->SetCalibration(c);
-            break;
-          case MenuPage::ERROR_LOG:
-            controller_->ResetError();
-            break;
-          default:
-            break;
-        }
-      } else if (down) {
-        switch (current_page_) {
-          case MenuPage::SET_TEMP:
-            controller_->SetTargetTemp(controller_->GetTargetTemp() - 0.1f);
-            break;
-          case MenuPage::SET_HUM:
-            controller_->SetTargetRh(controller_->GetTargetRh() - 1.0f);
-            if (controller_->GetTargetRh() < 0.0f)
-              controller_->SetTargetRh(0.0f);
-            break;
-          case MenuPage::MANUAL_MODES:
-            controller_->StartManualOzone(15);
-            temp_message_ = "OZONE STARTED";
-            message_timer_ = millis();
-            break;
-          case MenuPage::CALIB_BME_T:
-            c.bmeTempOffset -= 0.1f;
-            if (c.bmeTempOffset < -5.0f) c.bmeTempOffset = -5.0f;
-            controller_->SetCalibration(c);
-            break;
-          case MenuPage::CALIB_BME_H:
-            c.bmeHumOffset -= 0.1f;
-            if (c.bmeHumOffset < -5.0f) c.bmeHumOffset = -5.0f;
-            controller_->SetCalibration(c);
-            break;
-          case MenuPage::CALIB_HTU_T:
-            c.htuTempOffset -= 0.1f;
-            if (c.htuTempOffset < -5.0f) c.htuTempOffset = -5.0f;
-            controller_->SetCalibration(c);
-            break;
-          case MenuPage::CALIB_HTU_H:
-            c.htuHumOffset -= 0.1f;
-            if (c.htuHumOffset < -5.0f) c.htuHumOffset = -5.0f;
-            controller_->SetCalibration(c);
-            break;
-          case MenuPage::CALIB_DS_T:
-            c.dsTempOffset -= 0.1f;
-            if (c.dsTempOffset < -5.0f) c.dsTempOffset = -5.0f;
-            controller_->SetCalibration(c);
-            break;
-          default:
-            break;
+      if (in_submenu_) {
+        CalibrationData c = controller_->GetCalibration();
+        if (up) {
+          switch (current_item_) {
+            case MenuItem::TARGET_TEMP:
+              controller_->SetTargetTemp(controller_->GetTargetTemp() + 0.1f);
+              break;
+            case MenuItem::TARGET_HUM:
+              controller_->SetTargetRh(controller_->GetTargetRh() + 1.0f);
+              if (controller_->GetTargetRh() > 100.0f)
+                controller_->SetTargetRh(100.0f);
+              break;
+            case MenuItem::MANUAL_FAN:
+            case MenuItem::MANUAL_OZONE:
+              controller_->StartManualFan(30);
+              temp_message_ = "FAN STARTED";
+              message_timer_ = millis();
+              break;
+            case MenuItem::CALIB_BME_T:
+              c.bmeTempOffset += 0.1f;
+              if (c.bmeTempOffset > 5.0f) c.bmeTempOffset = 5.0f;
+              controller_->SetCalibration(c);
+              break;
+            case MenuItem::CALIB_BME_H:
+              c.bmeHumOffset += 0.1f;
+              if (c.bmeHumOffset > 5.0f) c.bmeHumOffset = 5.0f;
+              controller_->SetCalibration(c);
+              break;
+            case MenuItem::CALIB_HTU_T:
+              c.htuTempOffset += 0.1f;
+              if (c.htuTempOffset > 5.0f) c.htuTempOffset = 5.0f;
+              controller_->SetCalibration(c);
+              break;
+            case MenuItem::CALIB_HTU_H:
+              c.htuHumOffset += 0.1f;
+              if (c.htuHumOffset > 5.0f) c.htuHumOffset = 5.0f;
+              controller_->SetCalibration(c);
+              break;
+            case MenuItem::CALIB_DS_T:
+              c.dsTempOffset += 0.1f;
+              if (c.dsTempOffset > 5.0f) c.dsTempOffset = 5.0f;
+              controller_->SetCalibration(c);
+              break;
+            case MenuItem::ERROR_VIEW:
+              controller_->ResetError();
+              break;
+            default:
+              break;
+          }
+        } else if (down) {
+          switch (current_item_) {
+            case MenuItem::TARGET_TEMP:
+              controller_->SetTargetTemp(controller_->GetTargetTemp() - 0.1f);
+              break;
+            case MenuItem::TARGET_HUM:
+              controller_->SetTargetRh(controller_->GetTargetRh() - 1.0f);
+              if (controller_->GetTargetRh() < 0.0f)
+                controller_->SetTargetRh(0.0f);
+              break;
+            case MenuItem::MANUAL_FAN:
+            case MenuItem::MANUAL_OZONE:
+              controller_->StartManualOzone(15);
+              temp_message_ = "OZONE STARTED";
+              message_timer_ = millis();
+              break;
+            case MenuItem::CALIB_BME_T:
+              c.bmeTempOffset -= 0.1f;
+              if (c.bmeTempOffset < -5.0f) c.bmeTempOffset = -5.0f;
+              controller_->SetCalibration(c);
+              break;
+            case MenuItem::CALIB_BME_H:
+              c.bmeHumOffset -= 0.1f;
+              if (c.bmeHumOffset < -5.0f) c.bmeHumOffset = -5.0f;
+              controller_->SetCalibration(c);
+              break;
+            case MenuItem::CALIB_HTU_T:
+              c.htuTempOffset -= 0.1f;
+              if (c.htuTempOffset < -5.0f) c.htuTempOffset = -5.0f;
+              controller_->SetCalibration(c);
+              break;
+            case MenuItem::CALIB_HTU_H:
+              c.htuHumOffset -= 0.1f;
+              if (c.htuHumOffset < -5.0f) c.htuHumOffset = -5.0f;
+              controller_->SetCalibration(c);
+              break;
+            case MenuItem::CALIB_DS_T:
+              c.dsTempOffset -= 0.1f;
+              if (c.dsTempOffset < -5.0f) c.dsTempOffset = -5.0f;
+              controller_->SetCalibration(c);
+              break;
+            default:
+              break;
+          }
         }
       }
     }
+  }
+}
+
+void DisplayUI::NextRoot() {
+  int next = (int)current_root_ + 1;
+  if (next > (int)MenuRoot::SERVICE) next = 0;
+  current_root_ = (MenuRoot)next;
+  in_submenu_ = false;
+  SetDefaultItemForRoot();
+}
+
+void DisplayUI::NextItem() {
+  switch (current_root_) {
+    case MenuRoot::STATUS:
+      current_item_ = (current_item_ == MenuItem::STATUS_IN) ? MenuItem::STATUS_OUT : MenuItem::STATUS_IN;
+      break;
+    case MenuRoot::TARGETS:
+      current_item_ = (current_item_ == MenuItem::TARGET_TEMP) ? MenuItem::TARGET_HUM : MenuItem::TARGET_TEMP;
+      break;
+    case MenuRoot::MANUAL:
+      current_item_ = (current_item_ == MenuItem::MANUAL_FAN) ? MenuItem::MANUAL_OZONE : MenuItem::MANUAL_FAN;
+      break;
+    case MenuRoot::STATS:
+      current_item_ = (current_item_ == MenuItem::STATS_VIEW) ? MenuItem::STATS_RESET : MenuItem::STATS_VIEW;
+      break;
+    case MenuRoot::SERVICE:
+      {
+        int next = (int)current_item_ + 1;
+        if (next > (int)MenuItem::CALIB_DS_T) next = (int)MenuItem::CALIB_BME_T;
+        current_item_ = (MenuItem)next;
+      }
+      break;
+    default:
+      break;
+  }
+}
+
+void DisplayUI::PrevItem() {
+  switch (current_root_) {
+    case MenuRoot::STATUS:
+      current_item_ = (current_item_ == MenuItem::STATUS_IN) ? MenuItem::STATUS_OUT : MenuItem::STATUS_IN;
+      break;
+    case MenuRoot::TARGETS:
+      current_item_ = (current_item_ == MenuItem::TARGET_TEMP) ? MenuItem::TARGET_HUM : MenuItem::TARGET_TEMP;
+      break;
+    case MenuRoot::MANUAL:
+      current_item_ = (current_item_ == MenuItem::MANUAL_FAN) ? MenuItem::MANUAL_OZONE : MenuItem::MANUAL_FAN;
+      break;
+    case MenuRoot::STATS:
+      current_item_ = (current_item_ == MenuItem::STATS_VIEW) ? MenuItem::STATS_RESET : MenuItem::STATS_VIEW;
+      break;
+    case MenuRoot::SERVICE:
+      {
+        int next = (int)current_item_ - 1;
+        if (next < (int)MenuItem::CALIB_BME_T) next = (int)MenuItem::CALIB_DS_T;
+        current_item_ = (MenuItem)next;
+      }
+      break;
+    default:
+      break;
+  }
+}
+
+void DisplayUI::SetDefaultItemForRoot() {
+  switch (current_root_) {
+    case MenuRoot::HOME:    current_item_ = MenuItem::NONE; break;
+    case MenuRoot::STATUS:  current_item_ = MenuItem::STATUS_IN; break;
+    case MenuRoot::TARGETS: current_item_ = MenuItem::TARGET_TEMP; break;
+    case MenuRoot::MANUAL:  current_item_ = MenuItem::MANUAL_FAN; break;
+    case MenuRoot::STATS:   current_item_ = MenuItem::STATS_VIEW; break;
+    case MenuRoot::ERRORS:  current_item_ = MenuItem::ERROR_VIEW; break;
+    case MenuRoot::SERVICE: current_item_ = MenuItem::CALIB_BME_T; break;
   }
 }
 
@@ -224,45 +315,52 @@ void DisplayUI::UpdateBacklight() {
 
 void DisplayUI::DrawPage() {
   CalibrationData c = controller_->GetCalibration();
-  switch (current_page_) {
-    case MenuPage::HOME_SCREEN:
-      DrawHomeScreen();
-      break;
-    case MenuPage::STATUS_IN:
+
+  if (current_root_ == MenuRoot::HOME) {
+    DrawHomeScreen();
+    return;
+  }
+
+  switch (current_item_) {
+    case MenuItem::STATUS_IN:
       DrawStatusIn();
       break;
-    case MenuPage::STATUS_OUT:
+    case MenuItem::STATUS_OUT:
       DrawStatusOut();
       break;
-    case MenuPage::SET_TEMP:
+    case MenuItem::TARGET_TEMP:
       DrawSetTemp();
       break;
-    case MenuPage::SET_HUM:
+    case MenuItem::TARGET_HUM:
       DrawSetHum();
       break;
-    case MenuPage::MANUAL_MODES:
+    case MenuItem::MANUAL_FAN:
+    case MenuItem::MANUAL_OZONE:
       DrawManualModes();
       break;
-    case MenuPage::CALIB_BME_T:
-      DrawCalibPage("BME TEMP", c.bmeTempOffset, true);
-      break;
-    case MenuPage::CALIB_BME_H:
-      DrawCalibPage("BME HUM", c.bmeHumOffset, false);
-      break;
-    case MenuPage::CALIB_HTU_T:
-      DrawCalibPage("HTU TEMP", c.htuTempOffset, true);
-      break;
-    case MenuPage::CALIB_HTU_H:
-      DrawCalibPage("HTU HUM", c.htuHumOffset, false);
-      break;
-    case MenuPage::CALIB_DS_T:
-      DrawCalibPage("DS TEMP", c.dsTempOffset, true);
-      break;
-    case MenuPage::STATS:
+    case MenuItem::STATS_VIEW:
+    case MenuItem::STATS_RESET:
       DrawStats();
       break;
-    case MenuPage::ERROR_LOG:
+    case MenuItem::ERROR_VIEW:
       DrawErrorLog();
+      break;
+    case MenuItem::CALIB_BME_T:
+      DrawCalibPage("BME TEMP", c.bmeTempOffset, true);
+      break;
+    case MenuItem::CALIB_BME_H:
+      DrawCalibPage("BME HUM", c.bmeHumOffset, false);
+      break;
+    case MenuItem::CALIB_HTU_T:
+      DrawCalibPage("HTU TEMP", c.htuTempOffset, true);
+      break;
+    case MenuItem::CALIB_HTU_H:
+      DrawCalibPage("HTU HUM", c.htuHumOffset, false);
+      break;
+    case MenuItem::CALIB_DS_T:
+      DrawCalibPage("DS TEMP", c.dsTempOffset, true);
+      break;
+    default:
       break;
   }
 }

@@ -113,13 +113,13 @@ void SensorManager::Update() {
       inside_data_.valid = false;
     } else {
       // Пропускаем сырые данные через фильтры (Медиана -> EMA)
-      inside_data_.temp = filter_bme_temp_.update(raw_temp) + calib_.bmeTempOffset;
-      inside_data_.rh = filter_bme_hum_.update(raw_hum) + calib_.bmeHumOffset;
+      inside_data_.temp = filter_bme_temp_.Update(raw_temp) + calib_.bmeTempOffset;
+      inside_data_.rh = filter_bme_hum_.Update(raw_hum) + calib_.bmeHumOffset;
 
       // Абсолютная влажность и точка росы считаются ТОЛЬКО по отфильтрованным данным
-      inside_data_.ah = ClimateMath::calculateAH(inside_data_.temp, inside_data_.rh);
+      inside_data_.ah = climate_math::CalculateAH(inside_data_.temp, inside_data_.rh);
       inside_data_.dewpoint =
-          ClimateMath::calculateDewPoint(inside_data_.temp, inside_data_.rh);
+          climate_math::CalculateDewPoint(inside_data_.temp, inside_data_.rh);
       inside_data_.valid = true;
       i2c_success = true;
     }
@@ -147,13 +147,13 @@ void SensorManager::Update() {
       htu_valid_ = false;
       outside_data_.valid = false;
     } else {
-      outside_data_.temp = filter_htu_temp_.update(raw_temp) + calib_.htuTempOffset;
-      outside_data_.rh = filter_htu_hum_.update(raw_hum) + calib_.htuHumOffset;
+      outside_data_.temp = filter_htu_temp_.Update(raw_temp) + calib_.htuTempOffset;
+      outside_data_.rh = filter_htu_hum_.Update(raw_hum) + calib_.htuHumOffset;
 
       outside_data_.ah =
-          ClimateMath::calculateAH(outside_data_.temp, outside_data_.rh);
+          climate_math::CalculateAH(outside_data_.temp, outside_data_.rh);
       outside_data_.dewpoint =
-          ClimateMath::calculateDewPoint(outside_data_.temp, outside_data_.rh);
+          climate_math::CalculateDewPoint(outside_data_.temp, outside_data_.rh);
       outside_data_.valid = true;
       i2c_success = true;
     }
@@ -191,7 +191,7 @@ void SensorManager::Update() {
     if (raw_ds_temp == DEVICE_DISCONNECTED_C) {
       ds_valid_ = false;
     } else {
-      control_temp_ = filter_ds_temp_.update(raw_ds_temp) + calib_.dsTempOffset;
+      control_temp_ = filter_ds_temp_.Update(raw_ds_temp) + calib_.dsTempOffset;
     }
 
     // Сразу запрашиваем новую конверсию для следующего цикла опроса (через 10 сек)
@@ -222,7 +222,7 @@ ErrorCode SensorManager::CheckErrors() {
 
 void SensorManager::Recover() {
   // Выполняем программный сброс шины (A4=SDA, A5=SCL на Arduino Nano)
-  I2CUtils::recoverBus(A4, A5);
+  i2c_utils::RecoverBus(A4, A5);
   // Пробуем инициализировать датчики заново
   Init();
 }

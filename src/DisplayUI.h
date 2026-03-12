@@ -7,21 +7,40 @@
 #include "SensorManager.h"
 #include "TimeManager.h"
 
-// Состояния меню
-enum class MenuPage {
-    HOME_SCREEN,    // Главная: T/H, цели и статусы реле
-    STATUS_IN,      // Датчики внутри (детально: AH, точка росы)
-    STATUS_OUT,     // Датчики снаружи (детально: AH)
-    SET_TEMP,       // Установка целевой T
-    SET_HUM,        // Установка целевой RH
-    MANUAL_MODES,   // Ручной запуск FAN/OZONE
-    ERROR_LOG,      // Просмотр и сброс ошибок
-    STATS,          // Статистика работы
-    CALIB_BME_T,    // Калибровка BME T
-    CALIB_BME_H,    // Калибровка BME H
-    CALIB_HTU_T,    // Калибровка HTU T
-    CALIB_HTU_H,    // Калибровка HTU H
-    CALIB_DS_T      // Калибровка DS T
+// Разделы меню верхнего уровня
+enum class MenuRoot {
+  HOME,
+  STATUS,
+  TARGETS,
+  MANUAL,
+  STATS,
+  ERRORS,
+  SERVICE
+};
+
+// Элементы подменю
+enum class MenuItem {
+  NONE,
+
+  STATUS_IN,
+  STATUS_OUT,
+
+  TARGET_TEMP,
+  TARGET_HUM,
+
+  MANUAL_FAN,
+  MANUAL_OZONE,
+
+  STATS_VIEW,
+  STATS_RESET,
+
+  ERROR_VIEW,
+
+  CALIB_BME_T,
+  CALIB_BME_H,
+  CALIB_HTU_T,
+  CALIB_HTU_H,
+  CALIB_DS_T
 };
 
 class DisplayUI {
@@ -31,7 +50,9 @@ class DisplayUI {
   SensorManager* sensors_;
   TimeManager* rtc_;
 
-  MenuPage current_page_;
+  MenuRoot current_root_;
+  MenuItem current_item_;
+  bool in_submenu_;
 
   // Переменные для кнопок
   unsigned long last_btn_check_;
@@ -50,6 +71,12 @@ class DisplayUI {
   void HandleButtons();
   void DrawPage();
   void UpdateBacklight();
+
+  // Навигация
+  void NextRoot();
+  void NextItem();
+  void PrevItem();
+  void SetDefaultItemForRoot();
 
   // Вспомогательные методы отрисовки
   void DrawHomeScreen();
