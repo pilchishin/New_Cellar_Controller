@@ -433,32 +433,33 @@ void DisplayUI::DrawHomeScreen() {
 void DisplayUI::DrawStatusIn() {
   SensorData in = sensors_->GetInside();
   lcd_.setCursor(0, 0);
-  lcd_.print(F("IN: "));
+  lcd_.print(F("IN "));
   lcd_.print(in.temp, 1);
   lcd_.print(F("C "));
   lcd_.print(in.rh, 0);
-  lcd_.print(F("%  "));
+  lcd_.print(F("%         "));
 
   lcd_.setCursor(0, 1);
-  lcd_.print(F("AH:"));
-  lcd_.print(in.ah, 2);
-  lcd_.print(F(" DP:"));
+  lcd_.print(F("DP "));
   lcd_.print(in.dewpoint, 1);
+  lcd_.print(F(" AH "));
+  lcd_.print(in.ah, 1);
+  lcd_.print(F("        "));
 }
 
 void DisplayUI::DrawStatusOut() {
   SensorData out = sensors_->GetOutside();
   lcd_.setCursor(0, 0);
-  lcd_.print(F("OUT:"));
+  lcd_.print(F("OUT "));
   lcd_.print(out.temp, 1);
   lcd_.print(F("C "));
   lcd_.print(out.rh, 0);
-  lcd_.print(F("% "));
+  lcd_.print(F("%        "));
 
   lcd_.setCursor(0, 1);
-  lcd_.print(F("AH:"));
+  lcd_.print(F("AH "));
   lcd_.print(out.ah, 2);
-  if (out.temp < 0) lcd_.print(F(" FROST"));
+  lcd_.print(F("             "));
 }
 
 void DisplayUI::DrawSetTemp() {
