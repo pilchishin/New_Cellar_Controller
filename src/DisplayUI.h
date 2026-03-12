@@ -7,6 +7,30 @@
 #include "SensorManager.h"
 #include "TimeManager.h"
 
+/**
+ * @brief Простая обертка над буфером строки для реализации Print.
+ * Позволяет использовать методы print/println для заполнения строки 16 симв.
+ */
+class LcdBuffer : public Print {
+ public:
+  char data[17];
+  int pos = 0;
+
+  void Clear() {
+    memset(data, ' ', 16);
+    data[16] = '\0';
+    pos = 0;
+  }
+
+  size_t write(uint8_t c) override {
+    if (pos < 16) {
+      data[pos++] = (char)c;
+      return 1;
+    }
+    return 0;
+  }
+};
+
 // Разделы меню верхнего уровня
 enum class MenuRoot {
   HOME,
@@ -69,6 +93,12 @@ class DisplayUI {
   // Таймер подсветки
   unsigned long last_activity_time_;
   bool backlight_on_;
+
+  // Оптимизация вывода
+  LcdBuffer bufs_[2];
+  char last_lines_[2][17];
+  bool needs_redraw_;
+  void Flush();
 
   void HandleButtons();
   void DrawPage();

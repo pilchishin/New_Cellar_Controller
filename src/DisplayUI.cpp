@@ -19,7 +19,10 @@ DisplayUI::DisplayUI(Controller* c, SensorManager* s, TimeManager* t)
       message_timer_(0),
       temp_message_(nullptr),
       last_activity_time_(0),
-      backlight_on_(true) {}
+      backlight_on_(true),
+      needs_redraw_(true) {
+  memset(last_lines_, 0, sizeof(last_lines_));
+}
 
 void DisplayUI::Init() {
   lcd_.init();
@@ -42,25 +45,38 @@ void DisplayUI::Update() {
   HandleButtons();    // Опрос кнопок
   UpdateBacklight();  // Управление светом
 
-  // Обновляем экран раз в 500мс, чтобы не мерцал
   static unsigned long last_draw = 0;
-  if (millis() - last_draw >= 500) {
-    last_draw = millis();
+  unsigned long interval = (current_root_ == MenuRoot::HOME && !in_submenu_) ? 500 : 1000;
 
-    // Если отображается временное сообщение, ничего другого не рисуем
+  if (needs_redraw_ || (millis() - last_draw >= interval)) {
+    last_draw = millis();
+    needs_redraw_ = false;
+
+    // Сбрасываем буферы
+    bufs_[0].Clear();
+    bufs_[1].Clear();
+
+    // Если отображается временное сообщение, заполняем буферы им
     if (temp_message_ != nullptr && millis() - message_timer_ < 2000) {
-      lcd_.setCursor(0, 0);
-      lcd_.print(F("                "));
-      lcd_.setCursor(0, 0);
-      lcd_.print(temp_message_);
-      lcd_.setCursor(0, 1);
-      lcd_.print(F("                "));
+      bufs_[0].print(temp_message_);
+      bufs_[1].print(F("                "));
     } else {
       if (temp_message_ != nullptr) {
         temp_message_ = nullptr;  // Сброс сообщения по истечении времени
-        lcd_.clear();
       }
-      DrawPage();
+      DrawPage(); // DrawPage теперь наполняет bufs_
+    }
+
+    Flush(); // Flush сравнивает с last_lines_ и выводит только изменения
+  }
+}
+
+void DisplayUI::Flush() {
+  for (int i = 0; i < 2; i++) {
+    if (strcmp(bufs_[i].data, last_lines_[i]) != 0) {
+      lcd_.setCursor(0, i);
+      lcd_.print(bufs_[i].data);
+      strcpy(last_lines_[i], bufs_[i].data);
     }
   }
 }
@@ -80,6 +96,7 @@ void DisplayUI::HandleButtons() {
 
   // Сброс таймера гашения подсветки при любой активности
   if (up || down || menu) {
+    needs_redraw_ = true;
     controller_->NotifyUserActivity();  // Уведомляем контроллер о присутствии человека
     last_activity_time_ = millis();
     if (!backlight_on_) {
@@ -136,7 +153,6 @@ void DisplayUI::HandleButtons() {
           in_submenu_ = false;
         }
       }
-      lcd_.clear();
       menu_btn_pressed_ = false;
     }
   }
@@ -375,18 +391,16 @@ void DisplayUI::DrawRootPage() {
     return;
   }
 
-  lcd_.setCursor(0, 0);
   switch (current_root_) {
-    case MenuRoot::STATUS:  lcd_.print(F("> STATUS        ")); break;
-    case MenuRoot::TARGETS: lcd_.print(F("> TARGETS       ")); break;
-    case MenuRoot::MANUAL:  lcd_.print(F("> MANUAL        ")); break;
-    case MenuRoot::STATS:   lcd_.print(F("> STATS         ")); break;
-    case MenuRoot::ERRORS:  lcd_.print(F("> ERRORS        ")); break;
-    case MenuRoot::SERVICE: lcd_.print(F("> SERVICE       ")); break;
+    case MenuRoot::STATUS:  bufs_[0].print(F("> STATUS")); break;
+    case MenuRoot::TARGETS: bufs_[0].print(F("> TARGETS")); break;
+    case MenuRoot::MANUAL:  bufs_[0].print(F("> MANUAL")); break;
+    case MenuRoot::STATS:   bufs_[0].print(F("> STATS")); break;
+    case MenuRoot::ERRORS:  bufs_[0].print(F("> ERRORS")); break;
+    case MenuRoot::SERVICE: bufs_[0].print(F("> SERVICE")); break;
     default: break;
   }
-  lcd_.setCursor(0, 1);
-  lcd_.print(F("  MENU ENTER    "));
+  bufs_[1].print(F("  MENU ENTER"));
 }
 
 void DisplayUI::DrawSubPage() {
@@ -439,179 +453,155 @@ void DisplayUI::DrawHomeScreen() {
   RelayManager* rm = controller_->GetRelayManager();
 
   // Строка 1: IN temp humidity fan/ozone indicator
-  lcd_.setCursor(0, 0);
-  lcd_.print(F("IN "));
-  lcd_.print(in.temp, 1);
-  lcd_.print(F("C "));
-  lcd_.print(in.rh, 0);
-  lcd_.print(F("%     "));
+  bufs_[0].print(F("IN "));
+  bufs_[0].print(in.temp, 1);
+  bufs_[0].print(F("C "));
+  bufs_[0].print(in.rh, 0);
+  bufs_[0].print(F("%"));
 
-  lcd_.setCursor(15, 0);
+  bufs_[0].pos = 15;
   if (rm->GetOzoneState())
-    lcd_.print(F("O"));
+    bufs_[0].print(F("O"));
   else if (rm->GetFanState())
-    lcd_.print(F("F"));
+    bufs_[0].print(F("F"));
   else
-    lcd_.print(F(" "));
+    bufs_[0].print(F(" "));
 
   // Строка 2: OUT temp humidity режим системы
-  lcd_.setCursor(0, 1);
-  lcd_.print(F("OUT "));
-  lcd_.print(out.temp, 1);
-  lcd_.print(F("C "));
-  lcd_.print(out.rh, 0);
-  lcd_.print(F("%    "));
+  bufs_[1].print(F("OUT "));
+  bufs_[1].print(out.temp, 1);
+  bufs_[1].print(F("C "));
+  bufs_[1].print(out.rh, 0);
+  bufs_[1].print(F("%"));
 
-  lcd_.setCursor(15, 1);
+  bufs_[1].pos = 15;
   SystemState state = controller_->GetState();
   if (state == SystemState::kErrorState)
-    lcd_.print(F("E"));
+    bufs_[1].print(F("E"));
   else if (state == SystemState::kAutoClimate ||
            state == SystemState::kOzoneStart ||
            state == SystemState::kOzoneActive ||
            state == SystemState::kOzoneHold ||
            state == SystemState::kOzoneVent)
-    lcd_.print(F("A"));
+    bufs_[1].print(F("A"));
   else
-    lcd_.print(F("M"));
+    bufs_[1].print(F("M"));
 }
 
 void DisplayUI::DrawStatusIn() {
-  lcd_.setCursor(0, 0);
-  lcd_.print(F("STATUS "));
-  lcd_.print(submenu_index_);
-  lcd_.print(F("/"));
-  lcd_.print(submenu_count_);
-  lcd_.print(F("         "));
+  bufs_[0].print(F("STATUS "));
+  bufs_[0].print(submenu_index_);
+  bufs_[0].print(F("/"));
+  bufs_[0].print(submenu_count_);
 
   SensorData in = sensors_->GetInside();
-  lcd_.setCursor(0, 1);
-  lcd_.print(F("IN "));
-  lcd_.print(in.temp, 1);
-  lcd_.print(F("C "));
-  lcd_.print(in.rh, 0);
-  lcd_.print(F("%        "));
+  bufs_[1].print(F("IN "));
+  bufs_[1].print(in.temp, 1);
+  bufs_[1].print(F("C "));
+  bufs_[1].print(in.rh, 0);
+  bufs_[1].print(F("%"));
 }
 
 void DisplayUI::DrawStatusOut() {
-  lcd_.setCursor(0, 0);
-  lcd_.print(F("STATUS "));
-  lcd_.print(submenu_index_);
-  lcd_.print(F("/"));
-  lcd_.print(submenu_count_);
-  lcd_.print(F("         "));
+  bufs_[0].print(F("STATUS "));
+  bufs_[0].print(submenu_index_);
+  bufs_[0].print(F("/"));
+  bufs_[0].print(submenu_count_);
 
   SensorData out = sensors_->GetOutside();
-  lcd_.setCursor(0, 1);
-  lcd_.print(F("OUT "));
-  lcd_.print(out.temp, 1);
-  lcd_.print(F("C "));
-  lcd_.print(out.rh, 0);
-  lcd_.print(F("%       "));
+  bufs_[1].print(F("OUT "));
+  bufs_[1].print(out.temp, 1);
+  bufs_[1].print(F("C "));
+  bufs_[1].print(out.rh, 0);
+  bufs_[1].print(F("%"));
 }
 
 void DisplayUI::DrawTargets() {
-  lcd_.setCursor(0, 0);
-  lcd_.print(F("TARGETS "));
-  lcd_.print(submenu_index_);
-  lcd_.print(F("/"));
-  lcd_.print(submenu_count_);
-  lcd_.print(F("        "));
+  bufs_[0].print(F("TARGETS "));
+  bufs_[0].print(submenu_index_);
+  bufs_[0].print(F("/"));
+  bufs_[0].print(submenu_count_);
 
-  lcd_.setCursor(0, 1);
   if (current_item_ == MenuItem::TARGET_TEMP)
-    lcd_.print(F(">"));
+    bufs_[1].print(F(">"));
   else
-    lcd_.print(F(" "));
-  lcd_.print(F("T:"));
-  lcd_.print(controller_->GetTargetTemp(), 1);
+    bufs_[1].print(F(" "));
+  bufs_[1].print(F("T:"));
+  bufs_[1].print(controller_->GetTargetTemp(), 1);
 
-  lcd_.print(F(" "));
+  bufs_[1].print(F(" "));
   if (current_item_ == MenuItem::TARGET_HUM)
-    lcd_.print(F(">"));
+    bufs_[1].print(F(">"));
   else
-    lcd_.print(F(" "));
-  lcd_.print(F("H:"));
-  lcd_.print(controller_->GetTargetRh(), 0);
-  lcd_.print(F("%   "));
+    bufs_[1].print(F(" "));
+  bufs_[1].print(F("H:"));
+  bufs_[1].print(controller_->GetTargetRh(), 0);
+  bufs_[1].print(F("%"));
 }
 
 void DisplayUI::DrawManualModes() {
-  lcd_.setCursor(0, 0);
-  lcd_.print(F("MANUAL "));
-  lcd_.print(submenu_index_);
-  lcd_.print(F("/"));
-  lcd_.print(submenu_count_);
-  lcd_.print(F("         "));
+  bufs_[0].print(F("MANUAL "));
+  bufs_[0].print(submenu_index_);
+  bufs_[0].print(F("/"));
+  bufs_[0].print(submenu_count_);
 
-  lcd_.setCursor(0, 1);
   if (current_item_ == MenuItem::MANUAL_FAN)
-    lcd_.print(F(">"));
+    bufs_[1].print(F(">"));
   else
-    lcd_.print(F(" "));
-  lcd_.print(F("FAN   "));
+    bufs_[1].print(F(" "));
+  bufs_[1].print(F("FAN   "));
 
   if (current_item_ == MenuItem::MANUAL_OZONE)
-    lcd_.print(F(">"));
+    bufs_[1].print(F(">"));
   else
-    lcd_.print(F(" "));
-  lcd_.print(F("OZONE   "));
+    bufs_[1].print(F(" "));
+  bufs_[1].print(F("OZONE"));
 }
 
 void DisplayUI::DrawCalibPage(const char* label, float value, bool is_temp) {
-  lcd_.setCursor(0, 0);
-  lcd_.print(F("SERVICE "));
-  lcd_.print(submenu_index_);
-  lcd_.print(F("/"));
-  lcd_.print(submenu_count_);
-  lcd_.print(F("        "));
+  bufs_[0].print(F("SERVICE "));
+  bufs_[0].print(submenu_index_);
+  bufs_[0].print(F("/"));
+  bufs_[0].print(submenu_count_);
 
-  lcd_.setCursor(0, 1);
-  lcd_.print(label);
-  lcd_.print(F(" "));
-  if (value >= 0) lcd_.print(F("+"));
-  lcd_.print(value, 1);
-  lcd_.print(is_temp ? F("C") : F("%"));
-  lcd_.print(F("     "));
+  bufs_[1].print(label);
+  bufs_[1].print(F(" "));
+  if (value >= 0) bufs_[1].print(F("+"));
+  bufs_[1].print(value, 1);
+  bufs_[1].print(is_temp ? F("C") : F("%"));
 }
 
 void DisplayUI::DrawStats() {
-  lcd_.setCursor(0, 0);
-  lcd_.print(F("STATS "));
-  lcd_.print(submenu_index_);
-  lcd_.print(F("/"));
-  lcd_.print(submenu_count_);
-  lcd_.print(F("          "));
+  bufs_[0].print(F("STATS "));
+  bufs_[0].print(submenu_index_);
+  bufs_[0].print(F("/"));
+  bufs_[0].print(submenu_count_);
 
-  lcd_.setCursor(0, 1);
   if (current_item_ == MenuItem::STATS_VIEW) {
     SystemStatistics s = controller_->GetStats();
-    lcd_.print(F("U:"));
-    lcd_.print(s.uptimeMinutes / 60);
-    lcd_.print(F(" F:"));
-    lcd_.print(s.fanMinutes / 60);
-    lcd_.print(F(" O3:"));
-    lcd_.print(s.ozoneMinutes / 60);
+    bufs_[1].print(F("U:"));
+    bufs_[1].print(s.uptimeMinutes / 60);
+    bufs_[1].print(F(" F:"));
+    bufs_[1].print(s.fanMinutes / 60);
+    bufs_[1].print(F(" O3:"));
+    bufs_[1].print(s.ozoneMinutes / 60);
   } else if (current_item_ == MenuItem::STATS_RESET) {
-    lcd_.print(F("MENU CONFIRM    "));
+    bufs_[1].print(F("MENU CONFIRM"));
   }
 }
 
 void DisplayUI::DrawErrorLog() {
-  lcd_.setCursor(0, 0);
-  lcd_.print(F("ERRORS "));
-  lcd_.print(submenu_index_);
-  lcd_.print(F("/"));
-  lcd_.print(submenu_count_);
-  lcd_.print(F("         "));
+  bufs_[0].print(F("ERRORS "));
+  bufs_[0].print(submenu_index_);
+  bufs_[0].print(F("/"));
+  bufs_[0].print(submenu_count_);
 
-  lcd_.setCursor(0, 1);
   ErrorCode err = controller_->GetError();
   if (err == ErrorCode::kNone) {
-    lcd_.print(F("SYSTEM OK       "));
+    bufs_[1].print(F("SYSTEM OK"));
   } else {
-    lcd_.print(ErrorToString(err));
-    lcd_.setCursor(12, 1);
-    lcd_.print(F("UP:R"));
+    bufs_[1].print(ErrorToString(err));
+    bufs_[1].pos = 12;
+    bufs_[1].print(F("UP:R"));
   }
 }
