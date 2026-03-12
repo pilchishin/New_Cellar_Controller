@@ -84,8 +84,7 @@ class DisplayUI {
   void DrawHomeScreen();
   void DrawStatusIn();
   void DrawStatusOut();
-  void DrawSetTemp();
-  void DrawSetHum();
+  void DrawTargets();
   void DrawManualModes();
   void DrawCalibPage(const char* label, float value, bool is_temp);
   void DrawStats();

@@ -351,10 +351,8 @@ void DisplayUI::DrawSubPage() {
       DrawStatusOut();
       break;
     case MenuItem::TARGET_TEMP:
-      DrawSetTemp();
-      break;
     case MenuItem::TARGET_HUM:
-      DrawSetHum();
+      DrawTargets();
       break;
     case MenuItem::MANUAL_FAN:
     case MenuItem::MANUAL_OZONE:
@@ -462,22 +460,26 @@ void DisplayUI::DrawStatusOut() {
   lcd_.print(F("             "));
 }
 
-void DisplayUI::DrawSetTemp() {
+void DisplayUI::DrawTargets() {
   lcd_.setCursor(0, 0);
-  lcd_.print(F("SET TARGET TEMP"));
+  lcd_.print(F("TARGETS         "));
   lcd_.setCursor(0, 1);
-  lcd_.print(F("TEMP: "));
-  lcd_.print(controller_->GetTargetTemp(), 1);
-  lcd_.print(F("C"));
-}
 
-void DisplayUI::DrawSetHum() {
-  lcd_.setCursor(0, 0);
-  lcd_.print(F("SET TARGET HUM"));
-  lcd_.setCursor(0, 1);
-  lcd_.print(F("HUM:  "));
+  if (current_item_ == MenuItem::TARGET_TEMP)
+    lcd_.print(F(">"));
+  else
+    lcd_.print(F(" "));
+  lcd_.print(F("T:"));
+  lcd_.print(controller_->GetTargetTemp(), 1);
+
+  lcd_.print(F(" "));
+  if (current_item_ == MenuItem::TARGET_HUM)
+    lcd_.print(F(">"));
+  else
+    lcd_.print(F(" "));
+  lcd_.print(F("H:"));
   lcd_.print(controller_->GetTargetRh(), 0);
-  lcd_.print(F("%"));
+  lcd_.print(F("%   "));
 }
 
 void DisplayUI::DrawManualModes() {
