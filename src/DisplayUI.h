@@ -53,6 +53,8 @@ class DisplayUI {
   MenuRoot current_root_;
   MenuItem current_item_;
   bool in_submenu_;
+  int submenu_index_;
+  int submenu_count_;
 
   // Переменные для кнопок
   unsigned long last_btn_check_;
@@ -79,6 +81,7 @@ class DisplayUI {
   void NextItem();
   void PrevItem();
   void SetDefaultItemForRoot();
+  void UpdateSubmenuIndex();
 
   // Вспомогательные методы отрисовки
   void DrawHomeScreen();

@@ -10,11 +10,15 @@ DisplayUI::DisplayUI(Controller* c, SensorManager* s, TimeManager* t)
       current_root_(MenuRoot::HOME),
       current_item_(MenuItem::NONE),
       in_submenu_(false),
+      submenu_index_(0),
+      submenu_count_(0),
       last_btn_check_(0),
       last_btn_action_(0),
+      menu_btn_timer_(0),
       menu_btn_pressed_(false),
       message_timer_(0),
       temp_message_(nullptr),
+      last_activity_time_(0),
       backlight_on_(true) {}
 
 void DisplayUI::Init() {
@@ -270,6 +274,7 @@ void DisplayUI::NextItem() {
     default:
       break;
   }
+  UpdateSubmenuIndex();
 }
 
 void DisplayUI::PrevItem() {
@@ -296,6 +301,7 @@ void DisplayUI::PrevItem() {
     default:
       break;
   }
+  UpdateSubmenuIndex();
 }
 
 void DisplayUI::SetDefaultItemForRoot() {
@@ -307,6 +313,40 @@ void DisplayUI::SetDefaultItemForRoot() {
     case MenuRoot::STATS:   current_item_ = MenuItem::STATS_VIEW; break;
     case MenuRoot::ERRORS:  current_item_ = MenuItem::ERROR_VIEW; break;
     case MenuRoot::SERVICE: current_item_ = MenuItem::CALIB_BME_T; break;
+  }
+  UpdateSubmenuIndex();
+}
+
+void DisplayUI::UpdateSubmenuIndex() {
+  switch (current_root_) {
+    case MenuRoot::STATUS:
+      submenu_count_ = 2;
+      submenu_index_ = (current_item_ == MenuItem::STATUS_IN) ? 1 : 2;
+      break;
+    case MenuRoot::TARGETS:
+      submenu_count_ = 2;
+      submenu_index_ = (current_item_ == MenuItem::TARGET_TEMP) ? 1 : 2;
+      break;
+    case MenuRoot::MANUAL:
+      submenu_count_ = 2;
+      submenu_index_ = (current_item_ == MenuItem::MANUAL_FAN) ? 1 : 2;
+      break;
+    case MenuRoot::STATS:
+      submenu_count_ = 2;
+      submenu_index_ = (current_item_ == MenuItem::STATS_VIEW) ? 1 : 2;
+      break;
+    case MenuRoot::ERRORS:
+      submenu_count_ = 1;
+      submenu_index_ = 1;
+      break;
+    case MenuRoot::SERVICE:
+      submenu_count_ = 5;
+      submenu_index_ = (int)current_item_ - (int)MenuItem::CALIB_BME_T + 1;
+      break;
+    default:
+      submenu_count_ = 0;
+      submenu_index_ = 0;
+      break;
   }
 }
 
@@ -437,42 +477,48 @@ void DisplayUI::DrawHomeScreen() {
 }
 
 void DisplayUI::DrawStatusIn() {
-  SensorData in = sensors_->GetInside();
   lcd_.setCursor(0, 0);
+  lcd_.print(F("STATUS "));
+  lcd_.print(submenu_index_);
+  lcd_.print(F("/"));
+  lcd_.print(submenu_count_);
+  lcd_.print(F("         "));
+
+  SensorData in = sensors_->GetInside();
+  lcd_.setCursor(0, 1);
   lcd_.print(F("IN "));
   lcd_.print(in.temp, 1);
   lcd_.print(F("C "));
   lcd_.print(in.rh, 0);
-  lcd_.print(F("%         "));
-
-  lcd_.setCursor(0, 1);
-  lcd_.print(F("DP "));
-  lcd_.print(in.dewpoint, 1);
-  lcd_.print(F(" AH "));
-  lcd_.print(in.ah, 1);
-  lcd_.print(F("        "));
+  lcd_.print(F("%        "));
 }
 
 void DisplayUI::DrawStatusOut() {
-  SensorData out = sensors_->GetOutside();
   lcd_.setCursor(0, 0);
+  lcd_.print(F("STATUS "));
+  lcd_.print(submenu_index_);
+  lcd_.print(F("/"));
+  lcd_.print(submenu_count_);
+  lcd_.print(F("         "));
+
+  SensorData out = sensors_->GetOutside();
+  lcd_.setCursor(0, 1);
   lcd_.print(F("OUT "));
   lcd_.print(out.temp, 1);
   lcd_.print(F("C "));
   lcd_.print(out.rh, 0);
-  lcd_.print(F("%        "));
-
-  lcd_.setCursor(0, 1);
-  lcd_.print(F("AH "));
-  lcd_.print(out.ah, 2);
-  lcd_.print(F("             "));
+  lcd_.print(F("%       "));
 }
 
 void DisplayUI::DrawTargets() {
   lcd_.setCursor(0, 0);
-  lcd_.print(F("TARGETS         "));
-  lcd_.setCursor(0, 1);
+  lcd_.print(F("TARGETS "));
+  lcd_.print(submenu_index_);
+  lcd_.print(F("/"));
+  lcd_.print(submenu_count_);
+  lcd_.print(F("        "));
 
+  lcd_.setCursor(0, 1);
   if (current_item_ == MenuItem::TARGET_TEMP)
     lcd_.print(F(">"));
   else
@@ -492,9 +538,13 @@ void DisplayUI::DrawTargets() {
 
 void DisplayUI::DrawManualModes() {
   lcd_.setCursor(0, 0);
-  lcd_.print(F("MANUAL          "));
-  lcd_.setCursor(0, 1);
+  lcd_.print(F("MANUAL "));
+  lcd_.print(submenu_index_);
+  lcd_.print(F("/"));
+  lcd_.print(submenu_count_);
+  lcd_.print(F("         "));
 
+  lcd_.setCursor(0, 1);
   if (current_item_ == MenuItem::MANUAL_FAN)
     lcd_.print(F(">"));
   else
@@ -510,42 +560,51 @@ void DisplayUI::DrawManualModes() {
 
 void DisplayUI::DrawCalibPage(const char* label, float value, bool is_temp) {
   lcd_.setCursor(0, 0);
-  lcd_.print(F("CAL "));
-  lcd_.print(label);
-  lcd_.print(F("        "));  // Очистка остатка строки
+  lcd_.print(F("SERVICE "));
+  lcd_.print(submenu_index_);
+  lcd_.print(F("/"));
+  lcd_.print(submenu_count_);
+  lcd_.print(F("        "));
+
   lcd_.setCursor(0, 1);
-  lcd_.print(F("OFFS "));
+  lcd_.print(label);
+  lcd_.print(F(" "));
   if (value >= 0) lcd_.print(F("+"));
   lcd_.print(value, 1);
-  lcd_.print(is_temp ? F("C") : F("% "));
-  lcd_.print(F("      "));  // Очистка
+  lcd_.print(is_temp ? F("C") : F("%"));
+  lcd_.print(F("     "));
 }
 
 void DisplayUI::DrawStats() {
+  lcd_.setCursor(0, 0);
+  lcd_.print(F("STATS "));
+  lcd_.print(submenu_index_);
+  lcd_.print(F("/"));
+  lcd_.print(submenu_count_);
+  lcd_.print(F("          "));
+
+  lcd_.setCursor(0, 1);
   if (current_item_ == MenuItem::STATS_VIEW) {
     SystemStatistics s = controller_->GetStats();
-    lcd_.setCursor(0, 0);
-    lcd_.print(F("UP "));
+    lcd_.print(F("U:"));
     lcd_.print(s.uptimeMinutes / 60);
-    lcd_.print(F("h               "));
-
-    lcd_.setCursor(0, 1);
-    lcd_.print(F("FAN "));
+    lcd_.print(F(" F:"));
     lcd_.print(s.fanMinutes / 60);
-    lcd_.print(F("h O3 "));
+    lcd_.print(F(" O3:"));
     lcd_.print(s.ozoneMinutes / 60);
-    lcd_.print(F("h      "));
   } else if (current_item_ == MenuItem::STATS_RESET) {
-    lcd_.setCursor(0, 0);
-    lcd_.print(F("RESET STATS     "));
-    lcd_.setCursor(0, 1);
     lcd_.print(F("MENU CONFIRM    "));
   }
 }
 
 void DisplayUI::DrawErrorLog() {
   lcd_.setCursor(0, 0);
-  lcd_.print(F("ERROR           "));
+  lcd_.print(F("ERRORS "));
+  lcd_.print(submenu_index_);
+  lcd_.print(F("/"));
+  lcd_.print(submenu_count_);
+  lcd_.print(F("         "));
+
   lcd_.setCursor(0, 1);
   ErrorCode err = controller_->GetError();
   if (err == ErrorCode::kNone) {
