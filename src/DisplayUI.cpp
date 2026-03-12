@@ -545,14 +545,14 @@ void DisplayUI::DrawStats() {
 
 void DisplayUI::DrawErrorLog() {
   lcd_.setCursor(0, 0);
-  lcd_.print(F("LAST ERROR:     "));
+  lcd_.print(F("ERROR           "));
   lcd_.setCursor(0, 1);
   ErrorCode err = controller_->GetError();
   if (err == ErrorCode::kNone) {
     lcd_.print(F("SYSTEM OK       "));
   } else {
     lcd_.print(ErrorToString(err));
-    lcd_.setCursor(10, 1);
-    lcd_.print(F("UP:RST"));
+    lcd_.setCursor(12, 1);
+    lcd_.print(F("UP:R"));
   }
 }
