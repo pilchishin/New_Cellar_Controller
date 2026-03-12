@@ -16,6 +16,7 @@
 
 // Шина I2C для Arduino Nano: A4 (SDA), A5 (SCL) - задействована аппаратно
 // Датчики BME280, HTU21D, RTC DS3231 и LCD 1602 висят на этой шине.
+#define BME280_ADDR 0x76
 
 // Пины для кнопок управления
 #define BT_UP    3  // Кнопка ВВЕРХ
@@ -52,6 +53,8 @@ const float kSensorDiffMax = 2.0f;    // Макс. разница между BME
 // 5. ТАЙМИНГИ И ИНТЕРВАЛЫ
 // =================================================================
 const uint32_t kSensorPollInterval = 10000UL; // Опрос датчиков раз в 10 секунд
+const uint32_t kSensorRetryInterval = 60000UL; // Интервал повторной попытки опроса датчика
+const uint8_t  kSensorMaxRetries    = 3;       // Макс. количество попыток оживления датчика
 const uint32_t kFanMinWorkTime    = 300000UL; // Антидребезг вентилятора (5 минут)
 const uint32_t kBacklightTimeout    = 30000UL;  // Автовыключение подсветки (30 секунд)
 
@@ -68,5 +71,13 @@ const uint32_t kOzoneRetryShort = 1800000UL; // Перезапуск через 
 // =================================================================
 const float kFilterEmaAlpha = 0.2f; // Коэффициент сглаживания EMA
 const uint8_t kMedianWindow  = 3;    // Размер окна медианного фильтра
+
+// =================================================================
+// 7. ГРАНИЦЫ ДОСТОВЕРНОСТИ ДАННЫХ (Plausibility Checks)
+// =================================================================
+const float kRawTempMin = -40.0f;
+const float kRawTempMax = 80.0f;
+const float kRawHumMin  = 0.0f;
+const float kRawHumMax  = 100.0f;
 
 #endif // CONFIG_H

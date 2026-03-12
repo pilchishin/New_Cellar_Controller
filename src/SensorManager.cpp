@@ -26,7 +26,7 @@ void SensorManager::Init() {
 }
 
 void SensorManager::InitBme() {
-  if (bme_.begin(0x76)) {
+  if (bme_.begin(BME280_ADDR)) {
     bme_stat_.valid = true;
     bme_stat_.retries = 0;
     bme_.setSampling(Adafruit_BME280::MODE_NORMAL, Adafruit_BME280::SAMPLING_X1,
@@ -104,8 +104,8 @@ void SensorManager::HandleRetries() {
   unsigned long now = millis();
   auto check_retry = [&](SensorStatus& stat, void (SensorManager::*init_func)(),
                          const char* name) {
-    if (!stat.valid && stat.retries < kMaxRetries) {
-      if (now - stat.lastRetry >= kRetryInterval) {
+    if (!stat.valid && stat.retries < kSensorMaxRetries) {
+      if (now - stat.lastRetry >= kSensorRetryInterval) {
         stat.lastRetry = now;
         stat.retries++;
 #ifdef DEBUG
@@ -129,7 +129,7 @@ void SensorManager::ProcessBme(bool& i2c_success) {
   float raw_temp = bme_.readTemperature();
   float raw_hum = bme_.readHumidity();
 
-  if (isnan(raw_temp) || isnan(raw_hum)) {
+  if (!IsDataPlausible(raw_temp, raw_hum)) {
     bme_stat_.valid = false;
     inside_data_.valid = false;
   } else {
@@ -146,7 +146,7 @@ void SensorManager::ProcessHtu(bool& i2c_success) {
   float raw_temp = htu_.readTemperature();
   float raw_hum = htu_.readHumidity();
 
-  if (isnan(raw_temp) || isnan(raw_hum) || raw_hum > 100.0f) {
+  if (!IsDataPlausible(raw_temp, raw_hum)) {
     htu_stat_.valid = false;
     outside_data_.valid = false;
   } else {
@@ -167,6 +167,13 @@ void SensorManager::ProcessDs() {
     control_temp_ = filter_ds_temp_.Update(raw_ds_temp) + calib_.dsTempOffset;
   }
   ds_sensor_.requestTemperatures();
+}
+
+bool SensorManager::IsDataPlausible(float temp, float rh) {
+  if (isnan(temp) || isnan(rh)) return false;
+  if (temp < kRawTempMin || temp > kRawTempMax) return false;
+  if (rh < kRawHumMin || rh > kRawHumMax) return false;
+  return true;
 }
 
 SensorData SensorManager::FillSensorData(float temp, float rh, Filter& tFilter,

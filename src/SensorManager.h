@@ -43,9 +43,6 @@ class SensorManager {
   SensorStatus htu_stat_;
   SensorStatus ds_stat_;
 
-  const uint8_t kMaxRetries = 3;
-  const uint32_t kRetryInterval = 60000UL;
-
   // Методы инициализации конкретных датчиков
   void InitBme();
   void InitHtu();
@@ -57,6 +54,7 @@ class SensorManager {
   void ProcessHtu(bool& i2c_success);
   void ProcessDs();
   SensorData FillSensorData(float temp, float rh, Filter& tFilter, Filter& hFilter, float tOffset, float hOffset);
+  bool IsDataPlausible(float temp, float rh);
 
   // Счетчики ошибок для I2C устройств
   uint8_t i2c_error_count_;
