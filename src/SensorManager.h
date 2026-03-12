@@ -51,6 +51,13 @@ class SensorManager {
   void InitHtu();
   void InitDs();
 
+  // Методы декомпозиции Update()
+  void HandleRetries();
+  void ProcessBme(bool& i2c_success);
+  void ProcessHtu(bool& i2c_success);
+  void ProcessDs();
+  SensorData FillSensorData(float temp, float rh, Filter& tFilter, Filter& hFilter, float tOffset, float hOffset);
+
   // Счетчики ошибок для I2C устройств
   uint8_t i2c_error_count_;
   const uint8_t kI2cMaxErrors = 3;
