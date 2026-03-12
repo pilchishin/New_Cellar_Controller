@@ -53,18 +53,19 @@ void DisplayUI::Update() {
     needs_redraw_ = false;
 
     // Сбрасываем буферы
-    bufs_[0].Clear();
-    bufs_[1].Clear();
+    screen_.Clear();
 
     // Если отображается временное сообщение, заполняем буферы им
     if (temp_message_ != nullptr && millis() - message_timer_ < 2000) {
-      bufs_[0].print(temp_message_);
-      bufs_[1].print(F("                "));
+      screen_.SetPos(0, 0);
+      screen_.print(temp_message_);
+      screen_.SetPos(1, 0);
+      screen_.print(F("                "));
     } else {
       if (temp_message_ != nullptr) {
         temp_message_ = nullptr;  // Сброс сообщения по истечении времени
       }
-      DrawPage(); // DrawPage теперь наполняет bufs_
+      DrawPage(); // DrawPage теперь наполняет screen_
     }
 
     Flush(); // Flush сравнивает с last_lines_ и выводит только изменения
@@ -73,10 +74,11 @@ void DisplayUI::Update() {
 
 void DisplayUI::Flush() {
   for (int i = 0; i < 2; i++) {
-    if (strcmp(bufs_[i].data, last_lines_[i]) != 0) {
+    const char* line = screen_.GetLine(i);
+    if (strcmp(line, last_lines_[i]) != 0) {
       lcd_.setCursor(0, i);
-      lcd_.print(bufs_[i].data);
-      strcpy(last_lines_[i], bufs_[i].data);
+      lcd_.print(line);
+      strcpy(last_lines_[i], line);
     }
   }
 }
@@ -395,16 +397,18 @@ void DisplayUI::DrawRootPage() {
     return;
   }
 
+  screen_.SetPos(0, 0);
   switch (current_root_) {
-    case MenuRoot::STATUS:  bufs_[0].print(F("> STATUS")); break;
-    case MenuRoot::TARGETS: bufs_[0].print(F("> TARGETS")); break;
-    case MenuRoot::MANUAL:  bufs_[0].print(F("> MANUAL")); break;
-    case MenuRoot::STATS:   bufs_[0].print(F("> STATS")); break;
-    case MenuRoot::ERRORS:  bufs_[0].print(F("> ERRORS")); break;
-    case MenuRoot::SERVICE: bufs_[0].print(F("> SERVICE")); break;
+    case MenuRoot::STATUS:  screen_.print(F("> STATUS")); break;
+    case MenuRoot::TARGETS: screen_.print(F("> TARGETS")); break;
+    case MenuRoot::MANUAL:  screen_.print(F("> MANUAL")); break;
+    case MenuRoot::STATS:   screen_.print(F("> STATS")); break;
+    case MenuRoot::ERRORS:  screen_.print(F("> ERRORS")); break;
+    case MenuRoot::SERVICE: screen_.print(F("> SERVICE")); break;
     default: break;
   }
-  bufs_[1].print(F("  MENU ENTER"));
+  screen_.SetPos(1, 0);
+  screen_.print(F("  MENU ENTER"));
 }
 
 void DisplayUI::DrawSubPage() {
@@ -457,155 +461,171 @@ void DisplayUI::DrawHomeScreen() {
   RelayManager* rm = controller_->GetRelayManager();
 
   // Строка 1: IN temp humidity fan/ozone indicator
-  bufs_[0].print(F("IN "));
-  bufs_[0].print(in.temp, 1);
-  bufs_[0].print(F("C "));
-  bufs_[0].print(in.rh, 0);
-  bufs_[0].print(F("%"));
+  screen_.SetPos(0, 0);
+  screen_.print(F("IN "));
+  screen_.print(in.temp, 1);
+  screen_.print(F("C "));
+  screen_.print(in.rh, 0);
+  screen_.print(F("%"));
 
-  bufs_[0].pos = 15;
+  screen_.SetPos(0, 15);
   if (rm->GetOzoneState())
-    bufs_[0].print(F("O"));
+    screen_.print(F("O"));
   else if (rm->GetFanState())
-    bufs_[0].print(F("F"));
+    screen_.print(F("F"));
   else
-    bufs_[0].print(F(" "));
+    screen_.print(F(" "));
 
   // Строка 2: OUT temp humidity режим системы
-  bufs_[1].print(F("OUT "));
-  bufs_[1].print(out.temp, 1);
-  bufs_[1].print(F("C "));
-  bufs_[1].print(out.rh, 0);
-  bufs_[1].print(F("%"));
+  screen_.SetPos(1, 0);
+  screen_.print(F("OUT "));
+  screen_.print(out.temp, 1);
+  screen_.print(F("C "));
+  screen_.print(out.rh, 0);
+  screen_.print(F("%"));
 
-  bufs_[1].pos = 15;
+  screen_.SetPos(1, 15);
   SystemState state = controller_->GetState();
   if (state == SystemState::kErrorState)
-    bufs_[1].print(F("E"));
+    screen_.print(F("E"));
   else if (state == SystemState::kAutoClimate ||
            state == SystemState::kOzoneStart ||
            state == SystemState::kOzoneActive ||
            state == SystemState::kOzoneHold ||
            state == SystemState::kOzoneVent)
-    bufs_[1].print(F("A"));
+    screen_.print(F("A"));
   else
-    bufs_[1].print(F("M"));
+    screen_.print(F("M"));
 }
 
 void DisplayUI::DrawStatusIn() {
-  bufs_[0].print(F("STATUS "));
-  bufs_[0].print(submenu_index_);
-  bufs_[0].print(F("/"));
-  bufs_[0].print(submenu_count_);
+  screen_.SetPos(0, 0);
+  screen_.print(F("STATUS "));
+  screen_.print(submenu_index_);
+  screen_.print(F("/"));
+  screen_.print(submenu_count_);
 
   SensorData in = sensors_->GetInside();
-  bufs_[1].print(F("IN "));
-  bufs_[1].print(in.temp, 1);
-  bufs_[1].print(F("C "));
-  bufs_[1].print(in.rh, 0);
-  bufs_[1].print(F("%"));
+  screen_.SetPos(1, 0);
+  screen_.print(F("IN "));
+  screen_.print(in.temp, 1);
+  screen_.print(F("C "));
+  screen_.print(in.rh, 0);
+  screen_.print(F("%"));
 }
 
 void DisplayUI::DrawStatusOut() {
-  bufs_[0].print(F("STATUS "));
-  bufs_[0].print(submenu_index_);
-  bufs_[0].print(F("/"));
-  bufs_[0].print(submenu_count_);
+  screen_.SetPos(0, 0);
+  screen_.print(F("STATUS "));
+  screen_.print(submenu_index_);
+  screen_.print(F("/"));
+  screen_.print(submenu_count_);
 
   SensorData out = sensors_->GetOutside();
-  bufs_[1].print(F("OUT "));
-  bufs_[1].print(out.temp, 1);
-  bufs_[1].print(F("C "));
-  bufs_[1].print(out.rh, 0);
-  bufs_[1].print(F("%"));
+  screen_.SetPos(1, 0);
+  screen_.print(F("OUT "));
+  screen_.print(out.temp, 1);
+  screen_.print(F("C "));
+  screen_.print(out.rh, 0);
+  screen_.print(F("%"));
 }
 
 void DisplayUI::DrawTargets() {
-  bufs_[0].print(F("TARGETS "));
-  bufs_[0].print(submenu_index_);
-  bufs_[0].print(F("/"));
-  bufs_[0].print(submenu_count_);
+  screen_.SetPos(0, 0);
+  screen_.print(F("TARGETS "));
+  screen_.print(submenu_index_);
+  screen_.print(F("/"));
+  screen_.print(submenu_count_);
 
+  screen_.SetPos(1, 0);
   if (current_item_ == MenuItem::TARGET_TEMP)
-    bufs_[1].print(F(">"));
+    screen_.print(F(">"));
   else
-    bufs_[1].print(F(" "));
-  bufs_[1].print(F("T:"));
-  bufs_[1].print(controller_->GetTargetTemp(), 1);
+    screen_.print(F(" "));
+  screen_.print(F("T:"));
+  screen_.print(controller_->GetTargetTemp(), 1);
 
-  bufs_[1].print(F(" "));
+  screen_.print(F(" "));
   if (current_item_ == MenuItem::TARGET_HUM)
-    bufs_[1].print(F(">"));
+    screen_.print(F(">"));
   else
-    bufs_[1].print(F(" "));
-  bufs_[1].print(F("H:"));
-  bufs_[1].print(controller_->GetTargetRh(), 0);
-  bufs_[1].print(F("%"));
+    screen_.print(F(" "));
+  screen_.print(F("H:"));
+  screen_.print(controller_->GetTargetRh(), 0);
+  screen_.print(F("%"));
 }
 
 void DisplayUI::DrawManualModes() {
-  bufs_[0].print(F("MANUAL "));
-  bufs_[0].print(submenu_index_);
-  bufs_[0].print(F("/"));
-  bufs_[0].print(submenu_count_);
+  screen_.SetPos(0, 0);
+  screen_.print(F("MANUAL "));
+  screen_.print(submenu_index_);
+  screen_.print(F("/"));
+  screen_.print(submenu_count_);
 
+  screen_.SetPos(1, 0);
   if (current_item_ == MenuItem::MANUAL_FAN)
-    bufs_[1].print(F(">"));
+    screen_.print(F(">"));
   else
-    bufs_[1].print(F(" "));
-  bufs_[1].print(F("FAN   "));
+    screen_.print(F(" "));
+  screen_.print(F("FAN   "));
 
   if (current_item_ == MenuItem::MANUAL_OZONE)
-    bufs_[1].print(F(">"));
+    screen_.print(F(">"));
   else
-    bufs_[1].print(F(" "));
-  bufs_[1].print(F("OZONE"));
+    screen_.print(F(" "));
+  screen_.print(F("OZONE"));
 }
 
 void DisplayUI::DrawCalibPage(const char* label, float value, bool is_temp) {
-  bufs_[0].print(F("SERVICE "));
-  bufs_[0].print(submenu_index_);
-  bufs_[0].print(F("/"));
-  bufs_[0].print(submenu_count_);
+  screen_.SetPos(0, 0);
+  screen_.print(F("SERVICE "));
+  screen_.print(submenu_index_);
+  screen_.print(F("/"));
+  screen_.print(submenu_count_);
 
-  bufs_[1].print(label);
-  bufs_[1].print(F(" "));
-  if (value >= 0) bufs_[1].print(F("+"));
-  bufs_[1].print(value, 1);
-  bufs_[1].print(is_temp ? F("C") : F("%"));
+  screen_.SetPos(1, 0);
+  screen_.print(label);
+  screen_.print(F(" "));
+  if (value >= 0) screen_.print(F("+"));
+  screen_.print(value, 1);
+  screen_.print(is_temp ? F("C") : F("%"));
 }
 
 void DisplayUI::DrawStats() {
-  bufs_[0].print(F("STATS "));
-  bufs_[0].print(submenu_index_);
-  bufs_[0].print(F("/"));
-  bufs_[0].print(submenu_count_);
+  screen_.SetPos(0, 0);
+  screen_.print(F("STATS "));
+  screen_.print(submenu_index_);
+  screen_.print(F("/"));
+  screen_.print(submenu_count_);
 
+  screen_.SetPos(1, 0);
   if (current_item_ == MenuItem::STATS_VIEW) {
     SystemStatistics s = controller_->GetStats();
-    bufs_[1].print(F("U:"));
-    bufs_[1].print(s.uptimeMinutes / 60);
-    bufs_[1].print(F(" F:"));
-    bufs_[1].print(s.fanMinutes / 60);
-    bufs_[1].print(F(" O3:"));
-    bufs_[1].print(s.ozoneMinutes / 60);
+    screen_.print(F("U:"));
+    screen_.print(s.uptimeMinutes / 60);
+    screen_.print(F(" F:"));
+    screen_.print(s.fanMinutes / 60);
+    screen_.print(F(" O3:"));
+    screen_.print(s.ozoneMinutes / 60);
   } else if (current_item_ == MenuItem::STATS_RESET) {
-    bufs_[1].print(F("MENU CONFIRM"));
+    screen_.print(F("MENU CONFIRM"));
   }
 }
 
 void DisplayUI::DrawErrorLog() {
-  bufs_[0].print(F("ERRORS "));
-  bufs_[0].print(submenu_index_);
-  bufs_[0].print(F("/"));
-  bufs_[0].print(submenu_count_);
+  screen_.SetPos(0, 0);
+  screen_.print(F("ERRORS "));
+  screen_.print(submenu_index_);
+  screen_.print(F("/"));
+  screen_.print(submenu_count_);
 
+  screen_.SetPos(1, 0);
   ErrorCode err = controller_->GetError();
   if (err == ErrorCode::kNone) {
-    bufs_[1].print(F("SYSTEM OK"));
+    screen_.print(F("SYSTEM OK"));
   } else {
-    bufs_[1].print(ErrorToString(err));
-    bufs_[1].pos = 12;
-    bufs_[1].print(F("UP:R"));
+    screen_.print(ErrorToString(err));
+    screen_.SetPos(1, 12);
+    screen_.print(F("UP:R"));
   }
 }

@@ -8,27 +8,42 @@
 #include "TimeManager.h"
 
 /**
- * @brief Простая обертка над буфером строки для реализации Print.
- * Позволяет использовать методы print/println для заполнения строки 16 симв.
+ * @brief Класс для формирования содержимого экрана 16x2.
  */
-class LcdBuffer : public Print {
+class ScreenBuffer : public Print {
  public:
-  char data[17];
-  int pos = 0;
+  ScreenBuffer() { Clear(); }
 
   void Clear() {
-    memset(data, ' ', 16);
-    data[16] = '\0';
-    pos = 0;
+    memset(lines_[0], ' ', 16);
+    lines_[0][16] = '\0';
+    memset(lines_[1], ' ', 16);
+    lines_[1][16] = '\0';
+    row_ = 0;
+    col_ = 0;
+  }
+
+  void SetPos(int row, int col) {
+    if (row >= 0 && row < 2) row_ = row;
+    if (col >= 0 && col < 16) col_ = col;
   }
 
   size_t write(uint8_t c) override {
-    if (pos < 16) {
-      data[pos++] = (char)c;
+    if (col_ < 16) {
+      lines_[row_][col_++] = (char)c;
       return 1;
     }
     return 0;
   }
+
+  const char* GetLine(int row) const {
+    if (row < 0 || row >= 2) return "";
+    return lines_[row];
+  }
+
+ private:
+  char lines_[2][17];
+  int row_, col_;
 };
 
 // Разделы меню верхнего уровня
@@ -95,7 +110,7 @@ class DisplayUI {
   bool backlight_on_;
 
   // Оптимизация вывода
-  LcdBuffer bufs_[2];
+  ScreenBuffer screen_;
   char last_lines_[2][17];
   bool needs_redraw_;
   void Flush();
