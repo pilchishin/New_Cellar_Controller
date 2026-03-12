@@ -389,36 +389,45 @@ void DisplayUI::DrawSubPage() {
 
 void DisplayUI::DrawHomeScreen() {
   SensorData in = sensors_->GetInside();
+  SensorData out = sensors_->GetOutside();
+  RelayManager* rm = controller_->GetRelayManager();
+
+  // Строка 1: IN temp humidity fan/ozone indicator
   lcd_.setCursor(0, 0);
-  lcd_.print(F("IN:"));
+  lcd_.print(F("IN "));
   lcd_.print(in.temp, 1);
   lcd_.print(F("C "));
   lcd_.print(in.rh, 0);
-  lcd_.print(F("%"));
+  lcd_.print(F("%     "));
 
-  // Состояние реле (F - Fan, O - Ozone)
-  lcd_.setCursor(14, 0);
-  lcd_.print(controller_->GetRelayManager()->GetFanState() ? F("F") : F("."));
-  lcd_.print(controller_->GetRelayManager()->GetOzoneState() ? F("O") : F("."));
-
-  lcd_.setCursor(0, 1);
-  lcd_.print(F("SET:"));
-  lcd_.print(controller_->GetTargetTemp(), 1);
-  lcd_.print(F("C "));
-  lcd_.print(controller_->GetTargetRh(), 0);
-  lcd_.print(F("% "));
-
-  // Короткое имя текущего режима
-  lcd_.setCursor(12, 1);
-  SystemState state = controller_->GetState();
-  if (state == SystemState::kAutoClimate)
-    lcd_.print(F("AUTO"));
-  else if (state == SystemState::kOzoneActive)
-    lcd_.print(F("OZN!"));
-  else if (state == SystemState::kErrorState)
-    lcd_.print(F("ERR!"));
+  lcd_.setCursor(15, 0);
+  if (rm->GetOzoneState())
+    lcd_.print(F("O"));
+  else if (rm->GetFanState())
+    lcd_.print(F("F"));
   else
-    lcd_.print(F("MAN "));
+    lcd_.print(F(" "));
+
+  // Строка 2: OUT temp humidity режим системы
+  lcd_.setCursor(0, 1);
+  lcd_.print(F("OUT "));
+  lcd_.print(out.temp, 1);
+  lcd_.print(F("C "));
+  lcd_.print(out.rh, 0);
+  lcd_.print(F("%    "));
+
+  lcd_.setCursor(15, 1);
+  SystemState state = controller_->GetState();
+  if (state == SystemState::kErrorState)
+    lcd_.print(F("E"));
+  else if (state == SystemState::kAutoClimate ||
+           state == SystemState::kOzoneStart ||
+           state == SystemState::kOzoneActive ||
+           state == SystemState::kOzoneHold ||
+           state == SystemState::kOzoneVent)
+    lcd_.print(F("A"));
+  else
+    lcd_.print(F("M"));
 }
 
 void DisplayUI::DrawStatusIn() {
