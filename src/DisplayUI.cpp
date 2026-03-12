@@ -338,7 +338,7 @@ void DisplayUI::DrawRootPage() {
     default: break;
   }
   lcd_.setCursor(0, 1);
-  lcd_.print(F("                "));
+  lcd_.print(F("  MENU ENTER    "));
 }
 
 void DisplayUI::DrawSubPage() {
