@@ -7,28 +7,45 @@
 #include "SensorManager.h"
 #include "TimeManager.h"
 
+class DisplayUI;
+
 /**
- * @brief Простая обертка над буфером строки для реализации Print.
- * Позволяет использовать методы print/println для заполнения строки 16 симв.
+ * @brief Класс для формирования содержимого экрана 16x2.
  */
-class LcdBuffer : public Print {
+class ScreenBuffer : public Print {
  public:
-  char data[17];
-  int pos = 0;
+  ScreenBuffer() { Clear(); }
 
   void Clear() {
-    memset(data, ' ', 16);
-    data[16] = '\0';
-    pos = 0;
+    memset(lines_[0], ' ', 16);
+    lines_[0][16] = '\0';
+    memset(lines_[1], ' ', 16);
+    lines_[1][16] = '\0';
+    row_ = 0;
+    col_ = 0;
+  }
+
+  void SetPos(int row, int col) {
+    if (row >= 0 && row < 2) row_ = row;
+    if (col >= 0 && col < 16) col_ = col;
   }
 
   size_t write(uint8_t c) override {
-    if (pos < 16) {
-      data[pos++] = (char)c;
+    if (col_ < 16) {
+      lines_[row_][col_++] = (char)c;
       return 1;
     }
     return 0;
   }
+
+  const char* GetLine(int row) const {
+    if (row < 0 || row >= 2) return "";
+    return lines_[row];
+  }
+
+ private:
+  char lines_[2][17];
+  int row_, col_;
 };
 
 // Разделы меню верхнего уровня
@@ -67,6 +84,22 @@ enum class MenuItem {
   CALIB_DS_T
 };
 
+struct MenuItemDef {
+  MenuItem id;
+  const char* label;
+  void (*draw)(DisplayUI* ui);
+  void (*on_up)(DisplayUI* ui);
+  void (*on_down)(DisplayUI* ui);
+  void (*on_menu)(DisplayUI* ui);
+};
+
+struct MenuRootDef {
+  MenuRoot id;
+  const char* label;
+  const MenuItemDef* items;
+  uint8_t item_count;
+};
+
 class DisplayUI {
  private:
   LiquidCrystal_I2C lcd_;
@@ -95,7 +128,7 @@ class DisplayUI {
   bool backlight_on_;
 
   // Оптимизация вывода
-  LcdBuffer bufs_[2];
+  ScreenBuffer screen_;
   char last_lines_[2][17];
   bool needs_redraw_;
   void Flush();
@@ -122,6 +155,27 @@ class DisplayUI {
   void DrawCalibPage(const char* label, float value, bool is_temp);
   void DrawStats();
   void DrawErrorLog();
+
+  const MenuItemDef* FindItemDef(MenuItem id);
+  const MenuRootDef* FindRootDef(MenuRoot id);
+
+ public:
+  static void HandleDrawStatusIn(DisplayUI* ui);
+  static void HandleDrawStatusOut(DisplayUI* ui);
+  static void HandleDrawTargets(DisplayUI* ui);
+  static void HandleDrawManualModes(DisplayUI* ui);
+  static void HandleDrawStats(DisplayUI* ui);
+  static void HandleDrawErrorLog(DisplayUI* ui);
+  static void HandleDrawCalib(DisplayUI* ui);
+
+  static void HandleUpTargets(DisplayUI* ui);
+  static void HandleDownTargets(DisplayUI* ui);
+  static void HandleUpManual(DisplayUI* ui);
+  static void HandleDownManual(DisplayUI* ui);
+  static void HandleMenuManual(DisplayUI* ui);
+  static void HandleUpError(DisplayUI* ui);
+  static void HandleUpCalib(DisplayUI* ui);
+  static void HandleDownCalib(DisplayUI* ui);
 
  public:
   DisplayUI(Controller* c, SensorManager* s, TimeManager* t);
