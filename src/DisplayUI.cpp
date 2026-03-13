@@ -106,7 +106,7 @@ static const MenuItemDef TARGET_ITEMS[] = {
   { MenuItem::TARGET_HUM,  "TARGET_HUM",  DisplayUI::HandleDrawTargets,   DisplayUI::HandleUpTargets, DisplayUI::HandleDownTargets, nullptr }
 };
 
-static const MenuItemDef kManualItems[] = {
+static const MenuItemDef MANUAL_ITEMS[] = {
   { MenuItem::MANUAL_FAN,  "MANUAL_FAN",  DisplayUI::HandleDrawManualModes, DisplayUI::HandleUpManual, DisplayUI::HandleDownManual, DisplayUI::HandleMenuManual },
   { MenuItem::MANUAL_OZONE,"MANUAL_OZONE",DisplayUI::HandleDrawManualModes, DisplayUI::HandleUpManual, DisplayUI::HandleDownManual, DisplayUI::HandleMenuManual }
 };
@@ -132,7 +132,7 @@ static const MenuRootDef MENU_TABLE[] = {
   { MenuRoot::HOME,    "HOME",    nullptr,       0 },
   { MenuRoot::STATUS,  "STATUS",  STATUS_ITEMS,  2 },
   { MenuRoot::TARGETS, "TARGETS", TARGET_ITEMS,  2 },
-  { MenuRoot::MANUAL,  "MANUAL",  kManualItems,  2 },
+  { MenuRoot::MANUAL,  "MANUAL",  MANUAL_ITEMS,  2 },
   { MenuRoot::STATS,   "STATS",   kStatsItems,   2 },
   { MenuRoot::ERRORS,  "ERRORS",  kErrorItems,   1 },
   { MenuRoot::SERVICE, "SERVICE", kServiceItems, 5 }
