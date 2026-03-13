@@ -93,26 +93,60 @@ void DisplayUI::HandleDownCalib(DisplayUI* ui) {
   }
 }
 
-const MenuItemDef DisplayUI::kMenuDefs[] = {
-  { MenuItem::STATUS_IN,   "STATUS_IN",   HandleDrawStatusIn,     nullptr,           nullptr,             nullptr },
-  { MenuItem::STATUS_OUT,  "STATUS_OUT",  HandleDrawStatusOut,    nullptr,           nullptr,             nullptr },
-  { MenuItem::TARGET_TEMP, "TARGET_TEMP", HandleDrawTargets,      HandleUpTargets,   HandleDownTargets,   nullptr },
-  { MenuItem::TARGET_HUM,  "TARGET_HUM",  HandleDrawTargets,      HandleUpTargets,   HandleDownTargets,   nullptr },
-  { MenuItem::MANUAL_FAN,  "MANUAL_FAN",  HandleDrawManualModes,  HandleUpManual,    HandleDownManual,    HandleMenuManual },
-  { MenuItem::MANUAL_OZONE,"MANUAL_OZONE",HandleDrawManualModes,  HandleUpManual,    HandleDownManual,    HandleMenuManual },
-  { MenuItem::STATS_VIEW,  "STATS_VIEW",  HandleDrawStats,        nullptr,           nullptr,             nullptr },
-  { MenuItem::STATS_RESET, "STATS_RESET", HandleDrawStats,        nullptr,           nullptr,             nullptr },
-  { MenuItem::ERROR_VIEW,  "ERROR_VIEW",  HandleDrawErrorLog,     HandleUpError,     nullptr,             nullptr },
-  { MenuItem::CALIB_BME_T, "CALIB_BME_T", HandleDrawCalib,        HandleUpCalib,     HandleDownCalib,     nullptr },
-  { MenuItem::CALIB_BME_H, "CALIB_BME_H", HandleDrawCalib,        HandleUpCalib,     HandleDownCalib,     nullptr },
-  { MenuItem::CALIB_HTU_T, "CALIB_HTU_T", HandleDrawCalib,        HandleUpCalib,     HandleDownCalib,     nullptr },
-  { MenuItem::CALIB_HTU_H, "CALIB_HTU_H", HandleDrawCalib,        HandleUpCalib,     HandleDownCalib,     nullptr },
-  { MenuItem::CALIB_DS_T,  "CALIB_DS_T",  HandleDrawCalib,        HandleUpCalib,     HandleDownCalib,     nullptr }
+static const MenuItemDef kStatusItems[] = {
+  { MenuItem::STATUS_IN,   "STATUS_IN",   DisplayUI::HandleDrawStatusIn,  nullptr,            nullptr,              nullptr },
+  { MenuItem::STATUS_OUT,  "STATUS_OUT",  DisplayUI::HandleDrawStatusOut, nullptr,            nullptr,              nullptr }
 };
 
+static const MenuItemDef kTargetsItems[] = {
+  { MenuItem::TARGET_TEMP, "TARGET_TEMP", DisplayUI::HandleDrawTargets,   DisplayUI::HandleUpTargets, DisplayUI::HandleDownTargets, nullptr },
+  { MenuItem::TARGET_HUM,  "TARGET_HUM",  DisplayUI::HandleDrawTargets,   DisplayUI::HandleUpTargets, DisplayUI::HandleDownTargets, nullptr }
+};
+
+static const MenuItemDef kManualItems[] = {
+  { MenuItem::MANUAL_FAN,  "MANUAL_FAN",  DisplayUI::HandleDrawManualModes, DisplayUI::HandleUpManual, DisplayUI::HandleDownManual, DisplayUI::HandleMenuManual },
+  { MenuItem::MANUAL_OZONE,"MANUAL_OZONE",DisplayUI::HandleDrawManualModes, DisplayUI::HandleUpManual, DisplayUI::HandleDownManual, DisplayUI::HandleMenuManual }
+};
+
+static const MenuItemDef kStatsItems[] = {
+  { MenuItem::STATS_VIEW,  "STATS_VIEW",  DisplayUI::HandleDrawStats,     nullptr,            nullptr,              nullptr },
+  { MenuItem::STATS_RESET, "STATS_RESET", DisplayUI::HandleDrawStats,     nullptr,            nullptr,              nullptr }
+};
+
+static const MenuItemDef kErrorItems[] = {
+  { MenuItem::ERROR_VIEW,  "ERROR_VIEW",  DisplayUI::HandleDrawErrorLog,  DisplayUI::HandleUpError, nullptr,             nullptr }
+};
+
+static const MenuItemDef kServiceItems[] = {
+  { MenuItem::CALIB_BME_T, "CALIB_BME_T", DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, nullptr },
+  { MenuItem::CALIB_BME_H, "CALIB_BME_H", DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, nullptr },
+  { MenuItem::CALIB_HTU_T, "CALIB_HTU_T", DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, nullptr },
+  { MenuItem::CALIB_HTU_H, "CALIB_HTU_H", DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, nullptr },
+  { MenuItem::CALIB_DS_T,  "CALIB_DS_T",  DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, nullptr }
+};
+
+const MenuRootDef DisplayUI::kRootDefs[] = {
+  { MenuRoot::HOME,    "HOME",    nullptr,       0 },
+  { MenuRoot::STATUS,  "STATUS",  kStatusItems,  2 },
+  { MenuRoot::TARGETS, "TARGETS", kTargetsItems, 2 },
+  { MenuRoot::MANUAL,  "MANUAL",  kManualItems,  2 },
+  { MenuRoot::STATS,   "STATS",   kStatsItems,   2 },
+  { MenuRoot::ERRORS,  "ERRORS",  kErrorItems,   1 },
+  { MenuRoot::SERVICE, "SERVICE", kServiceItems, 5 }
+};
+
+const MenuRootDef* DisplayUI::FindRootDef(MenuRoot id) {
+  for (uint8_t i = 0; i < 7; i++) {
+    if (kRootDefs[i].id == id) return &kRootDefs[i];
+  }
+  return nullptr;
+}
+
 const MenuItemDef* DisplayUI::FindItemDef(MenuItem id) {
-  for (const auto& def : kMenuDefs) {
-    if (def.id == id) return &def;
+  const MenuRootDef* root = FindRootDef(current_root_);
+  if (!root || !root->items) return nullptr;
+  for (uint8_t i = 0; i < root->item_count; i++) {
+    if (root->items[i].id == id) return &root->items[i];
   }
   return nullptr;
 }
@@ -297,105 +331,68 @@ void DisplayUI::NextRoot() {
 }
 
 void DisplayUI::NextItem() {
-  switch (current_root_) {
-    case MenuRoot::STATUS:
-      current_item_ = (current_item_ == MenuItem::STATUS_IN) ? MenuItem::STATUS_OUT : MenuItem::STATUS_IN;
+  const MenuRootDef* root = FindRootDef(current_root_);
+  if (!root || root->item_count == 0) return;
+
+  int idx = -1;
+  for (uint8_t i = 0; i < root->item_count; i++) {
+    if (root->items[i].id == current_item_) {
+      idx = i;
       break;
-    case MenuRoot::TARGETS:
-      current_item_ = (current_item_ == MenuItem::TARGET_TEMP) ? MenuItem::TARGET_HUM : MenuItem::TARGET_TEMP;
-      break;
-    case MenuRoot::MANUAL:
-      current_item_ = (current_item_ == MenuItem::MANUAL_FAN) ? MenuItem::MANUAL_OZONE : MenuItem::MANUAL_FAN;
-      break;
-    case MenuRoot::STATS:
-      current_item_ = (current_item_ == MenuItem::STATS_VIEW) ? MenuItem::STATS_RESET : MenuItem::STATS_VIEW;
-      break;
-    case MenuRoot::SERVICE:
-      {
-        int next = (int)current_item_ + 1;
-        if (next > (int)MenuItem::CALIB_DS_T) next = (int)MenuItem::CALIB_BME_T;
-        current_item_ = (MenuItem)next;
-      }
-      break;
-    default:
-      break;
+    }
   }
+
+  idx = (idx + 1) % root->item_count;
+  current_item_ = root->items[idx].id;
+
   UpdateSubmenuIndex();
   needs_redraw_ = true;
 }
 
 void DisplayUI::PrevItem() {
-  switch (current_root_) {
-    case MenuRoot::STATUS:
-      current_item_ = (current_item_ == MenuItem::STATUS_IN) ? MenuItem::STATUS_OUT : MenuItem::STATUS_IN;
+  const MenuRootDef* root = FindRootDef(current_root_);
+  if (!root || root->item_count == 0) return;
+
+  int idx = -1;
+  for (uint8_t i = 0; i < root->item_count; i++) {
+    if (root->items[i].id == current_item_) {
+      idx = i;
       break;
-    case MenuRoot::TARGETS:
-      current_item_ = (current_item_ == MenuItem::TARGET_TEMP) ? MenuItem::TARGET_HUM : MenuItem::TARGET_TEMP;
-      break;
-    case MenuRoot::MANUAL:
-      current_item_ = (current_item_ == MenuItem::MANUAL_FAN) ? MenuItem::MANUAL_OZONE : MenuItem::MANUAL_FAN;
-      break;
-    case MenuRoot::STATS:
-      current_item_ = (current_item_ == MenuItem::STATS_VIEW) ? MenuItem::STATS_RESET : MenuItem::STATS_VIEW;
-      break;
-    case MenuRoot::SERVICE:
-      {
-        int next = (int)current_item_ - 1;
-        if (next < (int)MenuItem::CALIB_BME_T) next = (int)MenuItem::CALIB_DS_T;
-        current_item_ = (MenuItem)next;
-      }
-      break;
-    default:
-      break;
+    }
   }
+
+  idx = (idx - 1 + root->item_count) % root->item_count;
+  current_item_ = root->items[idx].id;
+
   UpdateSubmenuIndex();
   needs_redraw_ = true;
 }
 
 void DisplayUI::SetDefaultItemForRoot() {
-  switch (current_root_) {
-    case MenuRoot::HOME:    current_item_ = MenuItem::NONE; break;
-    case MenuRoot::STATUS:  current_item_ = MenuItem::STATUS_IN; break;
-    case MenuRoot::TARGETS: current_item_ = MenuItem::TARGET_TEMP; break;
-    case MenuRoot::MANUAL:  current_item_ = MenuItem::MANUAL_FAN; break;
-    case MenuRoot::STATS:   current_item_ = MenuItem::STATS_VIEW; break;
-    case MenuRoot::ERRORS:  current_item_ = MenuItem::ERROR_VIEW; break;
-    case MenuRoot::SERVICE: current_item_ = MenuItem::CALIB_BME_T; break;
+  const MenuRootDef* root = FindRootDef(current_root_);
+  if (root && root->item_count > 0) {
+    current_item_ = root->items[0].id;
+  } else {
+    current_item_ = MenuItem::NONE;
   }
   UpdateSubmenuIndex();
   needs_redraw_ = true;
 }
 
 void DisplayUI::UpdateSubmenuIndex() {
-  switch (current_root_) {
-    case MenuRoot::STATUS:
-      submenu_count_ = 2;
-      submenu_index_ = (current_item_ == MenuItem::STATUS_IN) ? 1 : 2;
+  const MenuRootDef* root = FindRootDef(current_root_);
+  if (!root || root->item_count == 0) {
+    submenu_index_ = 0;
+    submenu_count_ = 0;
+    return;
+  }
+
+  submenu_count_ = root->item_count;
+  for (uint8_t i = 0; i < root->item_count; i++) {
+    if (root->items[i].id == current_item_) {
+      submenu_index_ = i + 1;
       break;
-    case MenuRoot::TARGETS:
-      submenu_count_ = 2;
-      submenu_index_ = (current_item_ == MenuItem::TARGET_TEMP) ? 1 : 2;
-      break;
-    case MenuRoot::MANUAL:
-      submenu_count_ = 2;
-      submenu_index_ = (current_item_ == MenuItem::MANUAL_FAN) ? 1 : 2;
-      break;
-    case MenuRoot::STATS:
-      submenu_count_ = 2;
-      submenu_index_ = (current_item_ == MenuItem::STATS_VIEW) ? 1 : 2;
-      break;
-    case MenuRoot::ERRORS:
-      submenu_count_ = 1;
-      submenu_index_ = 1;
-      break;
-    case MenuRoot::SERVICE:
-      submenu_count_ = 5;
-      submenu_index_ = (int)current_item_ - (int)MenuItem::CALIB_BME_T + 1;
-      break;
-    default:
-      submenu_count_ = 0;
-      submenu_index_ = 0;
-      break;
+    }
   }
 }
 
@@ -424,16 +421,11 @@ void DisplayUI::DrawRootPage() {
     return;
   }
 
+  const MenuRootDef* root = FindRootDef(current_root_);
   screen_.SetPos(0, 0);
-  switch (current_root_) {
-    case MenuRoot::STATUS:  screen_.print(F("> STATUS")); break;
-    case MenuRoot::TARGETS: screen_.print(F("> TARGETS")); break;
-    case MenuRoot::MANUAL:  screen_.print(F("> MANUAL")); break;
-    case MenuRoot::STATS:   screen_.print(F("> STATS")); break;
-    case MenuRoot::ERRORS:  screen_.print(F("> ERRORS")); break;
-    case MenuRoot::SERVICE: screen_.print(F("> SERVICE")); break;
-    default: break;
-  }
+  screen_.print(F("> "));
+  if (root) screen_.print(root->label);
+
   screen_.SetPos(1, 0);
   screen_.print(F("  MENU ENTER"));
 }

@@ -93,6 +93,13 @@ struct MenuItemDef {
   void (*on_menu)(DisplayUI* ui);
 };
 
+struct MenuRootDef {
+  MenuRoot id;
+  const char* label;
+  const MenuItemDef* items;
+  uint8_t item_count;
+};
+
 class DisplayUI {
  private:
   LiquidCrystal_I2C lcd_;
@@ -150,7 +157,9 @@ class DisplayUI {
   void DrawErrorLog();
 
   const MenuItemDef* FindItemDef(MenuItem id);
+  const MenuRootDef* FindRootDef(MenuRoot id);
 
+ public:
   static void HandleDrawStatusIn(DisplayUI* ui);
   static void HandleDrawStatusOut(DisplayUI* ui);
   static void HandleDrawTargets(DisplayUI* ui);
@@ -168,7 +177,7 @@ class DisplayUI {
   static void HandleUpCalib(DisplayUI* ui);
   static void HandleDownCalib(DisplayUI* ui);
 
-  static const MenuItemDef kMenuDefs[];
+  static const MenuRootDef kRootDefs[];
 
  public:
   DisplayUI(Controller* c, SensorManager* s, TimeManager* t);
