@@ -124,11 +124,11 @@ static const MenuItemDef STATS_ITEMS[] = {
   { MenuItem::STATS_RESET, "STATS_RESET", DisplayUI::HandleDrawStats,     DisplayUI::HandleUpPrevItem, DisplayUI::HandleDownNextItem, nullptr, DisplayUI::HandleLongMenuStats }
 };
 
-static const MenuItemDef kErrorItems[] = {
+static const MenuItemDef ERROR_ITEMS[] = {
   { MenuItem::ERROR_VIEW,  "ERROR_VIEW",  DisplayUI::HandleDrawErrorLog,  DisplayUI::HandleUpError, nullptr,             nullptr, nullptr }
 };
 
-static const MenuItemDef kServiceItems[] = {
+static const MenuItemDef SERVICE_ITEMS[] = {
   { MenuItem::CALIB_BME_T, "CALIB_BME_T", DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, nullptr, nullptr },
   { MenuItem::CALIB_BME_H, "CALIB_BME_H", DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, nullptr, nullptr },
   { MenuItem::CALIB_HTU_T, "CALIB_HTU_T", DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, nullptr, nullptr },
@@ -142,8 +142,8 @@ static const MenuRootDef MENU_TABLE[] = {
   { MenuRoot::TARGETS, "TARGETS", TARGET_ITEMS,  2 },
   { MenuRoot::MANUAL,  "MANUAL",  MANUAL_ITEMS,  2 },
   { MenuRoot::STATS,   "STATS",   STATS_ITEMS,   2 },
-  { MenuRoot::ERRORS,  "ERRORS",  kErrorItems,   1 },
-  { MenuRoot::SERVICE, "SERVICE", kServiceItems, 5 }
+  { MenuRoot::ERRORS,  "ERRORS",  ERROR_ITEMS,   1 },
+  { MenuRoot::SERVICE, "SERVICE", SERVICE_ITEMS, 5 }
 };
 
 const MenuRootDef* DisplayUI::FindRootDef(MenuRoot id) {
