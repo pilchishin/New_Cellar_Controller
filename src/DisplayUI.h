@@ -7,6 +7,8 @@
 #include "SensorManager.h"
 #include "TimeManager.h"
 
+class DisplayUI;
+
 /**
  * @brief Класс для формирования содержимого экрана 16x2.
  */
@@ -82,6 +84,15 @@ enum class MenuItem {
   CALIB_DS_T
 };
 
+struct MenuItemDef {
+  MenuItem id;
+  const char* label;
+  void (*draw)(DisplayUI* ui);
+  void (*on_up)(DisplayUI* ui);
+  void (*on_down)(DisplayUI* ui);
+  void (*on_menu)(DisplayUI* ui);
+};
+
 class DisplayUI {
  private:
   LiquidCrystal_I2C lcd_;
@@ -137,6 +148,27 @@ class DisplayUI {
   void DrawCalibPage(const char* label, float value, bool is_temp);
   void DrawStats();
   void DrawErrorLog();
+
+  const MenuItemDef* FindItemDef(MenuItem id);
+
+  static void HandleDrawStatusIn(DisplayUI* ui);
+  static void HandleDrawStatusOut(DisplayUI* ui);
+  static void HandleDrawTargets(DisplayUI* ui);
+  static void HandleDrawManualModes(DisplayUI* ui);
+  static void HandleDrawStats(DisplayUI* ui);
+  static void HandleDrawErrorLog(DisplayUI* ui);
+  static void HandleDrawCalib(DisplayUI* ui);
+
+  static void HandleUpTargets(DisplayUI* ui);
+  static void HandleDownTargets(DisplayUI* ui);
+  static void HandleUpManual(DisplayUI* ui);
+  static void HandleDownManual(DisplayUI* ui);
+  static void HandleMenuManual(DisplayUI* ui);
+  static void HandleUpError(DisplayUI* ui);
+  static void HandleUpCalib(DisplayUI* ui);
+  static void HandleDownCalib(DisplayUI* ui);
+
+  static const MenuItemDef kMenuDefs[];
 
  public:
   DisplayUI(Controller* c, SensorManager* s, TimeManager* t);

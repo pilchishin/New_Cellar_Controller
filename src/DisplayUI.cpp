@@ -1,6 +1,122 @@
 #include "DisplayUI.h"
 #include "config.h"
 
+// --- Статические обработчики MenuItemDef ---
+
+void DisplayUI::HandleDrawStatusIn(DisplayUI* ui) { ui->DrawStatusIn(); }
+void DisplayUI::HandleDrawStatusOut(DisplayUI* ui) { ui->DrawStatusOut(); }
+void DisplayUI::HandleDrawTargets(DisplayUI* ui) { ui->DrawTargets(); }
+void DisplayUI::HandleDrawManualModes(DisplayUI* ui) { ui->DrawManualModes(); }
+void DisplayUI::HandleDrawStats(DisplayUI* ui) { ui->DrawStats(); }
+void DisplayUI::HandleDrawErrorLog(DisplayUI* ui) { ui->DrawErrorLog(); }
+
+void DisplayUI::HandleDrawCalib(DisplayUI* ui) {
+  CalibrationData c = ui->controller_->GetCalibration();
+  switch (ui->current_item_) {
+    case MenuItem::CALIB_BME_T: ui->DrawCalibPage("BME TEMP", c.bmeTempOffset, true); break;
+    case MenuItem::CALIB_BME_H: ui->DrawCalibPage("BME HUM", c.bmeHumOffset, false); break;
+    case MenuItem::CALIB_HTU_T: ui->DrawCalibPage("HTU TEMP", c.htuTempOffset, true); break;
+    case MenuItem::CALIB_HTU_H: ui->DrawCalibPage("HTU HUM", c.htuHumOffset, false); break;
+    case MenuItem::CALIB_DS_T:  ui->DrawCalibPage("DS TEMP", c.dsTempOffset, true); break;
+    default: break;
+  }
+}
+
+void DisplayUI::HandleUpTargets(DisplayUI* ui) {
+  if (ui->current_item_ == MenuItem::TARGET_TEMP)
+    ui->controller_->SetTargetTemp(ui->controller_->GetTargetTemp() + 0.1f);
+  else {
+    float h = ui->controller_->GetTargetRh() + 1.0f;
+    if (h > 100.0f) h = 100.0f;
+    ui->controller_->SetTargetRh(h);
+  }
+}
+void DisplayUI::HandleDownTargets(DisplayUI* ui) {
+  if (ui->current_item_ == MenuItem::TARGET_TEMP)
+    ui->controller_->SetTargetTemp(ui->controller_->GetTargetTemp() - 0.1f);
+  else {
+    float h = ui->controller_->GetTargetRh() - 1.0f;
+    if (h < 0.0f) h = 0.0f;
+    ui->controller_->SetTargetRh(h);
+  }
+}
+
+void DisplayUI::HandleUpManual(DisplayUI* ui) { ui->current_item_ = MenuItem::MANUAL_FAN; }
+void DisplayUI::HandleDownManual(DisplayUI* ui) { ui->current_item_ = MenuItem::MANUAL_OZONE; }
+
+void DisplayUI::HandleMenuManual(DisplayUI* ui) {
+  if (ui->current_item_ == MenuItem::MANUAL_FAN) {
+    ui->controller_->StartManualFan(30);
+    ui->temp_message_ = "FAN STARTED";
+  } else {
+    ui->controller_->StartManualOzone(15);
+    ui->temp_message_ = "OZONE STARTED";
+  }
+  ui->message_timer_ = millis();
+}
+
+void DisplayUI::HandleUpError(DisplayUI* ui) { ui->controller_->ResetError(); }
+
+void DisplayUI::HandleUpCalib(DisplayUI* ui) {
+  CalibrationData c = ui->controller_->GetCalibration();
+  float* val = nullptr;
+  switch (ui->current_item_) {
+    case MenuItem::CALIB_BME_T: val = &c.bmeTempOffset; break;
+    case MenuItem::CALIB_BME_H: val = &c.bmeHumOffset; break;
+    case MenuItem::CALIB_HTU_T: val = &c.htuTempOffset; break;
+    case MenuItem::CALIB_HTU_H: val = &c.htuHumOffset; break;
+    case MenuItem::CALIB_DS_T:  val = &c.dsTempOffset; break;
+    default: break;
+  }
+  if (val) {
+    *val += 0.1f;
+    if (*val > 5.0f) *val = 5.0f;
+    ui->controller_->SetCalibration(c);
+  }
+}
+
+void DisplayUI::HandleDownCalib(DisplayUI* ui) {
+  CalibrationData c = ui->controller_->GetCalibration();
+  float* val = nullptr;
+  switch (ui->current_item_) {
+    case MenuItem::CALIB_BME_T: val = &c.bmeTempOffset; break;
+    case MenuItem::CALIB_BME_H: val = &c.bmeHumOffset; break;
+    case MenuItem::CALIB_HTU_T: val = &c.htuTempOffset; break;
+    case MenuItem::CALIB_HTU_H: val = &c.htuHumOffset; break;
+    case MenuItem::CALIB_DS_T:  val = &c.dsTempOffset; break;
+    default: break;
+  }
+  if (val) {
+    *val -= 0.1f;
+    if (*val < -5.0f) *val = -5.0f;
+    ui->controller_->SetCalibration(c);
+  }
+}
+
+const MenuItemDef DisplayUI::kMenuDefs[] = {
+  { MenuItem::STATUS_IN,   "STATUS_IN",   HandleDrawStatusIn,     nullptr,           nullptr,             nullptr },
+  { MenuItem::STATUS_OUT,  "STATUS_OUT",  HandleDrawStatusOut,    nullptr,           nullptr,             nullptr },
+  { MenuItem::TARGET_TEMP, "TARGET_TEMP", HandleDrawTargets,      HandleUpTargets,   HandleDownTargets,   nullptr },
+  { MenuItem::TARGET_HUM,  "TARGET_HUM",  HandleDrawTargets,      HandleUpTargets,   HandleDownTargets,   nullptr },
+  { MenuItem::MANUAL_FAN,  "MANUAL_FAN",  HandleDrawManualModes,  HandleUpManual,    HandleDownManual,    HandleMenuManual },
+  { MenuItem::MANUAL_OZONE,"MANUAL_OZONE",HandleDrawManualModes,  HandleUpManual,    HandleDownManual,    HandleMenuManual },
+  { MenuItem::STATS_VIEW,  "STATS_VIEW",  HandleDrawStats,        nullptr,           nullptr,             nullptr },
+  { MenuItem::STATS_RESET, "STATS_RESET", HandleDrawStats,        nullptr,           nullptr,             nullptr },
+  { MenuItem::ERROR_VIEW,  "ERROR_VIEW",  HandleDrawErrorLog,     HandleUpError,     nullptr,             nullptr },
+  { MenuItem::CALIB_BME_T, "CALIB_BME_T", HandleDrawCalib,        HandleUpCalib,     HandleDownCalib,     nullptr },
+  { MenuItem::CALIB_BME_H, "CALIB_BME_H", HandleDrawCalib,        HandleUpCalib,     HandleDownCalib,     nullptr },
+  { MenuItem::CALIB_HTU_T, "CALIB_HTU_T", HandleDrawCalib,        HandleUpCalib,     HandleDownCalib,     nullptr },
+  { MenuItem::CALIB_HTU_H, "CALIB_HTU_H", HandleDrawCalib,        HandleUpCalib,     HandleDownCalib,     nullptr },
+  { MenuItem::CALIB_DS_T,  "CALIB_DS_T",  HandleDrawCalib,        HandleUpCalib,     HandleDownCalib,     nullptr }
+};
+
+const MenuItemDef* DisplayUI::FindItemDef(MenuItem id) {
+  for (const auto& def : kMenuDefs) {
+    if (def.id == id) return &def;
+  }
+  return nullptr;
+}
+
 // Конструктор: адрес 0x27 и размер 16x2
 DisplayUI::DisplayUI(Controller* c, SensorManager* s, TimeManager* t)
     : lcd_(0x27, 16, 2),
@@ -124,16 +240,10 @@ void DisplayUI::HandleButtons() {
           NextRoot();
         } else {
           // если в submenu: переключать MenuItem внутри раздела
-          if (current_root_ == MenuRoot::MANUAL) {
-            if (current_item_ == MenuItem::MANUAL_FAN) {
-              controller_->StartManualFan(30);
-              temp_message_ = "FAN STARTED";
-              message_timer_ = millis();
-            } else if (current_item_ == MenuItem::MANUAL_OZONE) {
-              controller_->StartManualOzone(15);
-              temp_message_ = "OZONE STARTED";
-              message_timer_ = millis();
-            }
+          const MenuItemDef* def = FindItemDef(current_item_);
+          if (def && def->on_menu) {
+            def->on_menu(this);
+            needs_redraw_ = true;
           } else {
             NextItem();
           }
@@ -166,94 +276,11 @@ void DisplayUI::HandleButtons() {
       last_btn_action_ = millis();
 
       if (in_submenu_) {
-        CalibrationData c = controller_->GetCalibration();
-        if (up) {
-          switch (current_item_) {
-            case MenuItem::TARGET_TEMP:
-              controller_->SetTargetTemp(controller_->GetTargetTemp() + 0.1f);
-              break;
-            case MenuItem::TARGET_HUM:
-              controller_->SetTargetRh(controller_->GetTargetRh() + 1.0f);
-              if (controller_->GetTargetRh() > 100.0f)
-                controller_->SetTargetRh(100.0f);
-              break;
-            case MenuItem::MANUAL_FAN:
-            case MenuItem::MANUAL_OZONE:
-              current_item_ = MenuItem::MANUAL_FAN;
-              break;
-            case MenuItem::CALIB_BME_T:
-              c.bmeTempOffset += 0.1f;
-              if (c.bmeTempOffset > 5.0f) c.bmeTempOffset = 5.0f;
-              controller_->SetCalibration(c);
-              break;
-            case MenuItem::CALIB_BME_H:
-              c.bmeHumOffset += 0.1f;
-              if (c.bmeHumOffset > 5.0f) c.bmeHumOffset = 5.0f;
-              controller_->SetCalibration(c);
-              break;
-            case MenuItem::CALIB_HTU_T:
-              c.htuTempOffset += 0.1f;
-              if (c.htuTempOffset > 5.0f) c.htuTempOffset = 5.0f;
-              controller_->SetCalibration(c);
-              break;
-            case MenuItem::CALIB_HTU_H:
-              c.htuHumOffset += 0.1f;
-              if (c.htuHumOffset > 5.0f) c.htuHumOffset = 5.0f;
-              controller_->SetCalibration(c);
-              break;
-            case MenuItem::CALIB_DS_T:
-              c.dsTempOffset += 0.1f;
-              if (c.dsTempOffset > 5.0f) c.dsTempOffset = 5.0f;
-              controller_->SetCalibration(c);
-              break;
-            case MenuItem::ERROR_VIEW:
-              controller_->ResetError();
-              break;
-            default:
-              break;
-          }
-        } else if (down) {
-          switch (current_item_) {
-            case MenuItem::TARGET_TEMP:
-              controller_->SetTargetTemp(controller_->GetTargetTemp() - 0.1f);
-              break;
-            case MenuItem::TARGET_HUM:
-              controller_->SetTargetRh(controller_->GetTargetRh() - 1.0f);
-              if (controller_->GetTargetRh() < 0.0f)
-                controller_->SetTargetRh(0.0f);
-              break;
-            case MenuItem::MANUAL_FAN:
-            case MenuItem::MANUAL_OZONE:
-              current_item_ = MenuItem::MANUAL_OZONE;
-              break;
-            case MenuItem::CALIB_BME_T:
-              c.bmeTempOffset -= 0.1f;
-              if (c.bmeTempOffset < -5.0f) c.bmeTempOffset = -5.0f;
-              controller_->SetCalibration(c);
-              break;
-            case MenuItem::CALIB_BME_H:
-              c.bmeHumOffset -= 0.1f;
-              if (c.bmeHumOffset < -5.0f) c.bmeHumOffset = -5.0f;
-              controller_->SetCalibration(c);
-              break;
-            case MenuItem::CALIB_HTU_T:
-              c.htuTempOffset -= 0.1f;
-              if (c.htuTempOffset < -5.0f) c.htuTempOffset = -5.0f;
-              controller_->SetCalibration(c);
-              break;
-            case MenuItem::CALIB_HTU_H:
-              c.htuHumOffset -= 0.1f;
-              if (c.htuHumOffset < -5.0f) c.htuHumOffset = -5.0f;
-              controller_->SetCalibration(c);
-              break;
-            case MenuItem::CALIB_DS_T:
-              c.dsTempOffset -= 0.1f;
-              if (c.dsTempOffset < -5.0f) c.dsTempOffset = -5.0f;
-              controller_->SetCalibration(c);
-              break;
-            default:
-              break;
-          }
+        const MenuItemDef* def = FindItemDef(current_item_);
+        if (def) {
+          if (up && def->on_up) def->on_up(this);
+          if (down && def->on_down) def->on_down(this);
+          needs_redraw_ = true;
         }
       }
     }
@@ -412,46 +439,9 @@ void DisplayUI::DrawRootPage() {
 }
 
 void DisplayUI::DrawSubPage() {
-  CalibrationData c = controller_->GetCalibration();
-  switch (current_item_) {
-    case MenuItem::STATUS_IN:
-      DrawStatusIn();
-      break;
-    case MenuItem::STATUS_OUT:
-      DrawStatusOut();
-      break;
-    case MenuItem::TARGET_TEMP:
-    case MenuItem::TARGET_HUM:
-      DrawTargets();
-      break;
-    case MenuItem::MANUAL_FAN:
-    case MenuItem::MANUAL_OZONE:
-      DrawManualModes();
-      break;
-    case MenuItem::STATS_VIEW:
-    case MenuItem::STATS_RESET:
-      DrawStats();
-      break;
-    case MenuItem::ERROR_VIEW:
-      DrawErrorLog();
-      break;
-    case MenuItem::CALIB_BME_T:
-      DrawCalibPage("BME TEMP", c.bmeTempOffset, true);
-      break;
-    case MenuItem::CALIB_BME_H:
-      DrawCalibPage("BME HUM", c.bmeHumOffset, false);
-      break;
-    case MenuItem::CALIB_HTU_T:
-      DrawCalibPage("HTU TEMP", c.htuTempOffset, true);
-      break;
-    case MenuItem::CALIB_HTU_H:
-      DrawCalibPage("HTU HUM", c.htuHumOffset, false);
-      break;
-    case MenuItem::CALIB_DS_T:
-      DrawCalibPage("DS TEMP", c.dsTempOffset, true);
-      break;
-    default:
-      break;
+  const MenuItemDef* def = FindItemDef(current_item_);
+  if (def && def->draw) {
+    def->draw(this);
   }
 }
 
