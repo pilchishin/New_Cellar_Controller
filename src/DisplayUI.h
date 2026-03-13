@@ -177,8 +177,6 @@ class DisplayUI {
   static void HandleUpCalib(DisplayUI* ui);
   static void HandleDownCalib(DisplayUI* ui);
 
-  static const MenuRootDef kRootDefs[];
-
  public:
   DisplayUI(Controller* c, SensorManager* s, TimeManager* t);
   void Init();

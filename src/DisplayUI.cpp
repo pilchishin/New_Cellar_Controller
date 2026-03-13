@@ -125,7 +125,7 @@ static const MenuItemDef kServiceItems[] = {
   { MenuItem::CALIB_DS_T,  "CALIB_DS_T",  DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, nullptr }
 };
 
-const MenuRootDef DisplayUI::kRootDefs[] = {
+static const MenuRootDef MENU_TABLE[] = {
   { MenuRoot::HOME,    "HOME",    nullptr,       0 },
   { MenuRoot::STATUS,  "STATUS",  kStatusItems,  2 },
   { MenuRoot::TARGETS, "TARGETS", kTargetsItems, 2 },
@@ -136,8 +136,8 @@ const MenuRootDef DisplayUI::kRootDefs[] = {
 };
 
 const MenuRootDef* DisplayUI::FindRootDef(MenuRoot id) {
-  for (uint8_t i = 0; i < 7; i++) {
-    if (kRootDefs[i].id == id) return &kRootDefs[i];
+  for (uint8_t i = 0; i < sizeof(MENU_TABLE) / sizeof(MENU_TABLE[0]); i++) {
+    if (MENU_TABLE[i].id == id) return &MENU_TABLE[i];
   }
   return nullptr;
 }
@@ -322,9 +322,17 @@ void DisplayUI::HandleButtons() {
 }
 
 void DisplayUI::NextRoot() {
-  int next = (int)current_root_ + 1;
-  if (next > (int)MenuRoot::SERVICE) next = 0;
-  current_root_ = (MenuRoot)next;
+  int idx = -1;
+  for (uint8_t i = 0; i < sizeof(MENU_TABLE) / sizeof(MENU_TABLE[0]); i++) {
+    if (MENU_TABLE[i].id == current_root_) {
+      idx = i;
+      break;
+    }
+  }
+
+  idx = (idx + 1) % (sizeof(MENU_TABLE) / sizeof(MENU_TABLE[0]));
+  current_root_ = MENU_TABLE[idx].id;
+
   in_submenu_ = false;
   SetDefaultItemForRoot();
   needs_redraw_ = true;
