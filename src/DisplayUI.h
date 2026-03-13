@@ -168,6 +168,8 @@ class DisplayUI {
   static void HandleDrawErrorLog(DisplayUI* ui);
   static void HandleDrawCalib(DisplayUI* ui);
 
+  static void HandleUpStatus(DisplayUI* ui);
+  static void HandleDownStatus(DisplayUI* ui);
   static void HandleUpTargets(DisplayUI* ui);
   static void HandleDownTargets(DisplayUI* ui);
   static void HandleUpManual(DisplayUI* ui);

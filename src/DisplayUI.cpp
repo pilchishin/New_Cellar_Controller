@@ -10,6 +10,9 @@ void DisplayUI::HandleDrawManualModes(DisplayUI* ui) { ui->DrawManualModes(); }
 void DisplayUI::HandleDrawStats(DisplayUI* ui) { ui->DrawStats(); }
 void DisplayUI::HandleDrawErrorLog(DisplayUI* ui) { ui->DrawErrorLog(); }
 
+void DisplayUI::HandleUpStatus(DisplayUI* ui) { ui->PrevItem(); }
+void DisplayUI::HandleDownStatus(DisplayUI* ui) { ui->NextItem(); }
+
 void DisplayUI::HandleDrawCalib(DisplayUI* ui) {
   CalibrationData c = ui->controller_->GetCalibration();
   switch (ui->current_item_) {
@@ -93,9 +96,9 @@ void DisplayUI::HandleDownCalib(DisplayUI* ui) {
   }
 }
 
-static const MenuItemDef kStatusItems[] = {
-  { MenuItem::STATUS_IN,   "STATUS_IN",   DisplayUI::HandleDrawStatusIn,  nullptr,            nullptr,              nullptr },
-  { MenuItem::STATUS_OUT,  "STATUS_OUT",  DisplayUI::HandleDrawStatusOut, nullptr,            nullptr,              nullptr }
+static const MenuItemDef STATUS_ITEMS[] = {
+  { MenuItem::STATUS_IN,   "STATUS_IN",   DisplayUI::HandleDrawStatusIn,  DisplayUI::HandleUpStatus, DisplayUI::HandleDownStatus, nullptr },
+  { MenuItem::STATUS_OUT,  "STATUS_OUT",  DisplayUI::HandleDrawStatusOut, DisplayUI::HandleUpStatus, DisplayUI::HandleDownStatus, nullptr }
 };
 
 static const MenuItemDef kTargetsItems[] = {
@@ -127,7 +130,7 @@ static const MenuItemDef kServiceItems[] = {
 
 static const MenuRootDef MENU_TABLE[] = {
   { MenuRoot::HOME,    "HOME",    nullptr,       0 },
-  { MenuRoot::STATUS,  "STATUS",  kStatusItems,  2 },
+  { MenuRoot::STATUS,  "STATUS",  STATUS_ITEMS,  2 },
   { MenuRoot::TARGETS, "TARGETS", kTargetsItems, 2 },
   { MenuRoot::MANUAL,  "MANUAL",  kManualItems,  2 },
   { MenuRoot::STATS,   "STATS",   kStatsItems,   2 },
