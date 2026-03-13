@@ -91,6 +91,7 @@ struct MenuItemDef {
   void (*on_up)(DisplayUI* ui);
   void (*on_down)(DisplayUI* ui);
   void (*on_menu)(DisplayUI* ui);
+  void (*on_long_menu)(DisplayUI* ui);
 };
 
 struct MenuRootDef {
@@ -168,13 +169,14 @@ class DisplayUI {
   static void HandleDrawErrorLog(DisplayUI* ui);
   static void HandleDrawCalib(DisplayUI* ui);
 
-  static void HandleUpStatus(DisplayUI* ui);
-  static void HandleDownStatus(DisplayUI* ui);
+  static void HandleUpPrevItem(DisplayUI* ui);
+  static void HandleDownNextItem(DisplayUI* ui);
   static void HandleUpTargets(DisplayUI* ui);
   static void HandleDownTargets(DisplayUI* ui);
   static void HandleUpManual(DisplayUI* ui);
   static void HandleDownManual(DisplayUI* ui);
   static void HandleMenuManual(DisplayUI* ui);
+  static void HandleLongMenuStats(DisplayUI* ui);
   static void HandleUpError(DisplayUI* ui);
   static void HandleUpCalib(DisplayUI* ui);
   static void HandleDownCalib(DisplayUI* ui);
