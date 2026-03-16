@@ -166,6 +166,9 @@ class DisplayUI {
   void DrawStats();         // Просмотр статистики наработки
   void DrawErrorLog();      // Просмотр лога ошибок
 
+  // Вспомогательный метод для маппинга элементов меню на параметры калибровки
+  float* GetCalibrationParam(MenuItemID id, CalibrationData& data, bool* is_temp = nullptr);
+
  public:
   // Получение определений текущего положения в меню
   const MenuRootDef* GetCurrentRootDef() const;

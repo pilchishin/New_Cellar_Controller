@@ -46,19 +46,24 @@ void DisplayUI::HandleDrawCalib(DisplayUI* ui) {
   if (!item) return;
 
   CalibrationData c = ui->controller_->GetCalibration();
-  float value = 0;
   bool is_temp = true;
+  float* val = ui->GetCalibrationParam(item->id, c, &is_temp);
 
-  switch (item->id) {
-    case MenuItemID::kCalibBmeTemp: value = c.bmeTempOffset; break;
-    case MenuItemID::kCalibBmeHum:  value = c.bmeHumOffset; is_temp = false; break;
-    case MenuItemID::kCalibHtuTemp: value = c.htuTempOffset; break;
-    case MenuItemID::kCalibHtuHum:  value = c.htuHumOffset; is_temp = false; break;
-    case MenuItemID::kCalibDsTemp:  value = c.dsTempOffset; break;
-    default: return;
+  if (val) {
+    ui->DrawCalibPage(item->label, *val, is_temp);
   }
+}
 
-  ui->DrawCalibPage(item->label, value, is_temp);
+float* DisplayUI::GetCalibrationParam(MenuItemID id, CalibrationData& data, bool* is_temp) {
+  if (is_temp) *is_temp = true;
+  switch (id) {
+    case MenuItemID::kCalibBmeTemp: return &data.bmeTempOffset;
+    case MenuItemID::kCalibBmeHum:  if (is_temp) *is_temp = false; return &data.bmeHumOffset;
+    case MenuItemID::kCalibHtuTemp: return &data.htuTempOffset;
+    case MenuItemID::kCalibHtuHum:  if (is_temp) *is_temp = false; return &data.htuHumOffset;
+    case MenuItemID::kCalibDsTemp:  return &data.dsTempOffset;
+    default: return nullptr;
+  }
 }
 
 /**
@@ -132,16 +137,7 @@ void DisplayUI::AdjustCalib(DisplayUI* ui, float delta) {
   if (!item) return;
 
   CalibrationData c = ui->controller_->GetCalibration();
-  float* val = nullptr;
-
-  switch (item->id) {
-    case MenuItemID::kCalibBmeTemp: val = &c.bmeTempOffset; break;
-    case MenuItemID::kCalibBmeHum:  val = &c.bmeHumOffset; break;
-    case MenuItemID::kCalibHtuTemp: val = &c.htuTempOffset; break;
-    case MenuItemID::kCalibHtuHum:  val = &c.htuHumOffset; break;
-    case MenuItemID::kCalibDsTemp:  val = &c.dsTempOffset; break;
-    default: return;
-  }
+  float* val = ui->GetCalibrationParam(item->id, c);
 
   if (val) {
     *val += delta;
