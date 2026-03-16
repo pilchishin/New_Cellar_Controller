@@ -13,7 +13,7 @@ void DisplayUI::HandleDrawErrorLog(DisplayUI* ui) { ui->DrawErrorLog(); }
 void DisplayUI::HandlePrevItem(DisplayUI* ui) {
   const MenuRootDef* root = ui->GetCurrentRootDef();
   if (root && root->item_count > 0) {
-    ui->item_index_ = (ui->item_index_ - 1 + root->item_count) % root->item_count;
+    ui->item_index_ = (ui->item_index_ + root->item_count - 1) % root->item_count;
   }
 }
 void DisplayUI::HandleNextItem(DisplayUI* ui) {
