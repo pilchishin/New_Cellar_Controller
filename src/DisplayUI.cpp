@@ -1,7 +1,8 @@
 #include "DisplayUI.h"
 #include "config.h"
 
-// --- Статические обработчики MenuItemDef ---
+// --- Статические обработчики отрисовки для MenuItemDef ---
+// Эти функции-обертки позволяют вызывать приватные методы отрисовки через указатели в таблицах меню
 
 void DisplayUI::HandleDrawStatusIn(DisplayUI* ui) { ui->DrawStatusIn(); }
 void DisplayUI::HandleDrawStatusOut(DisplayUI* ui) { ui->DrawStatusOut(); }
@@ -10,12 +11,19 @@ void DisplayUI::HandleDrawManualModes(DisplayUI* ui) { ui->DrawManualModes(); }
 void DisplayUI::HandleDrawStats(DisplayUI* ui) { ui->DrawStats(); }
 void DisplayUI::HandleDrawErrorLog(DisplayUI* ui) { ui->DrawErrorLog(); }
 
+/**
+ * @brief Переход к предыдущему элементу в текущем подменю.
+ */
 void DisplayUI::HandlePrevItem(DisplayUI* ui) {
   const MenuRootDef* root = ui->GetCurrentRootDef();
   if (root && root->item_count > 0) {
     ui->item_index_ = (ui->item_index_ + root->item_count - 1) % root->item_count;
   }
 }
+
+/**
+ * @brief Переход к следующему элементу в текущем подменю.
+ */
 void DisplayUI::HandleNextItem(DisplayUI* ui) {
   const MenuRootDef* root = ui->GetCurrentRootDef();
   if (root && root->item_count > 0) {
@@ -23,61 +31,84 @@ void DisplayUI::HandleNextItem(DisplayUI* ui) {
   }
 }
 
+// Строки меток для элементов калибровки в PROGMEM
+static const char lbl_bme_t[] PROGMEM = "BME TEMP";
+static const char lbl_bme_h[] PROGMEM = "BME HUM";
+static const char lbl_htu_t[] PROGMEM = "HTU TEMP";
+static const char lbl_htu_h[] PROGMEM = "HTU HUM";
+static const char lbl_ds_t[] PROGMEM = "DS TEMP";
+
+/**
+ * @brief Общий обработчик отрисовки страниц калибровки.
+ * Идентифицирует текущий датчик по указателю на метку в PROGMEM.
+ */
 void DisplayUI::HandleDrawCalib(DisplayUI* ui) {
-  CalibrationData c = ui->controller_->GetCalibration();
   const MenuItemDef* item = ui->GetCurrentItemDef();
   if (!item) return;
 
+  CalibrationData c = ui->controller_->GetCalibration();
   float value = 0;
   bool is_temp = true;
 
-  switch (ui->item_index_) {
-    case 0: value = c.bmeTempOffset; break;
-    case 1: value = c.bmeHumOffset; is_temp = false; break;
-    case 2: value = c.htuTempOffset; break;
-    case 3: value = c.htuHumOffset; is_temp = false; break;
-    case 4: value = c.dsTempOffset; break;
-    default: return;
-  }
+  // Эффективное сравнение указателей (оба указывают в PROGMEM)
+  if (item->label == lbl_bme_t) value = c.bmeTempOffset;
+  else if (item->label == lbl_bme_h) { value = c.bmeHumOffset; is_temp = false; }
+  else if (item->label == lbl_htu_t) value = c.htuTempOffset;
+  else if (item->label == lbl_htu_h) { value = c.htuHumOffset; is_temp = false; }
+  else if (item->label == lbl_ds_t) value = c.dsTempOffset;
 
   ui->DrawCalibPage(item->label, value, is_temp);
 }
 
+/**
+ * @brief Обработчик кнопки ВВЕРХ для настройки целевых значений (Targets).
+ */
 void DisplayUI::HandleUpTargets(DisplayUI* ui) {
-  if (ui->item_index_ == 0) // TARGET_TEMP
+  if (ui->item_index_ == 0) // Температура
     ui->controller_->SetTargetTemp(ui->controller_->GetTargetTemp() + 0.1f);
-  else {
+  else { // Влажность
     float h = ui->controller_->GetTargetRh() + 1.0f;
     if (h > 100.0f) h = 100.0f;
     ui->controller_->SetTargetRh(h);
   }
 }
+
+/**
+ * @brief Обработчик кнопки ВНИЗ для настройки целевых значений (Targets).
+ */
 void DisplayUI::HandleDownTargets(DisplayUI* ui) {
-  if (ui->item_index_ == 0) // TARGET_TEMP
+  if (ui->item_index_ == 0) // Температура
     ui->controller_->SetTargetTemp(ui->controller_->GetTargetTemp() - 0.1f);
-  else {
+  else { // Влажность
     float h = ui->controller_->GetTargetRh() - 1.0f;
     if (h < 0.0f) h = 0.0f;
     ui->controller_->SetTargetRh(h);
   }
 }
 
+// Обработчики навигации для ручного режима (используют общую логику элементов)
 void DisplayUI::HandleUpManual(DisplayUI* ui) { HandlePrevItem(ui); }
 void DisplayUI::HandleDownManual(DisplayUI* ui) { HandleNextItem(ui); }
 
+/**
+ * @brief Запуск выбранного исполнительного устройства в ручном режиме.
+ */
 void DisplayUI::HandleMenuManual(DisplayUI* ui) {
-  if (ui->item_index_ == 0) { // MANUAL_FAN
+  if (ui->item_index_ == 0) { // Вентилятор
     ui->controller_->StartManualFan(30);
     ui->temp_message_ = "FAN STARTED";
-  } else {
+  } else { // Озон
     ui->controller_->StartManualOzone(15);
     ui->temp_message_ = "OZONE STARTED";
   }
   ui->message_timer_ = millis();
 }
 
+/**
+ * @brief Сброс накопленной статистики при долгом нажатии МЕНЮ на странице сброса.
+ */
 void DisplayUI::HandleLongMenuStats(DisplayUI* ui) {
-  if (ui->item_index_ == 1) { // STATS_RESET
+  if (ui->item_index_ == 1) { // Страница STATS_RESET
     ui->controller_->ResetStats();
     ui->temp_message_ = "STATS RESET";
     ui->message_timer_ = millis();
@@ -87,8 +118,14 @@ void DisplayUI::HandleLongMenuStats(DisplayUI* ui) {
   }
 }
 
+/**
+ * @brief Сброс текущей системной ошибки.
+ */
 void DisplayUI::HandleUpError(DisplayUI* ui) { ui->controller_->ResetError(); }
 
+/**
+ * @brief Вспомогательный метод для изменения калибровочных смещений.
+ */
 void DisplayUI::AdjustCalib(DisplayUI* ui, float delta) {
   const MenuItemDef* item = ui->GetCurrentItemDef();
   if (!item) return;
@@ -96,87 +133,128 @@ void DisplayUI::AdjustCalib(DisplayUI* ui, float delta) {
   CalibrationData c = ui->controller_->GetCalibration();
   float* val = nullptr;
 
-  switch (ui->item_index_) {
-    case 0: val = &c.bmeTempOffset; break;
-    case 1: val = &c.bmeHumOffset; break;
-    case 2: val = &c.htuTempOffset; break;
-    case 3: val = &c.htuHumOffset; break;
-    case 4: val = &c.dsTempOffset; break;
-    default: return;
-  }
+  if (item->label == lbl_bme_t) val = &c.bmeTempOffset;
+  else if (item->label == lbl_bme_h) val = &c.bmeHumOffset;
+  else if (item->label == lbl_htu_t) val = &c.htuTempOffset;
+  else if (item->label == lbl_htu_h) val = &c.htuHumOffset;
+  else if (item->label == lbl_ds_t) val = &c.dsTempOffset;
 
-  *val += delta;
-  if (*val > 5.0f) *val = 5.0f;
-  if (*val < -5.0f) *val = -5.0f;
-  ui->controller_->SetCalibration(c);
+  if (val) {
+    *val += delta;
+    if (*val > 5.0f) *val = 5.0f;
+    if (*val < -5.0f) *val = -5.0f;
+    ui->controller_->SetCalibration(c);
+  }
 }
 
 void DisplayUI::HandleUpCalib(DisplayUI* ui) { AdjustCalib(ui, 0.1f); }
 void DisplayUI::HandleDownCalib(DisplayUI* ui) { AdjustCalib(ui, -0.1f); }
 
+/**
+ * @brief Вход в подменю текущего раздела.
+ */
 void DisplayUI::HandleEnterSubmenu(DisplayUI* ui) {
-  if (ui->root_index_ != 0) { // HOME
+  if (ui->root_index_ != 0) { // Раздел HOME не имеет подменю
     ui->in_submenu_ = true;
+    ui->item_index_ = 0;
   }
 }
+
+/**
+ * @brief Выход из подменю в корень.
+ */
 void DisplayUI::HandleExitSubmenu(DisplayUI* ui) { ui->in_submenu_ = false; }
 
+// --- Определения таблиц меню в PROGMEM ---
+
+static const char lbl_status_in[] PROGMEM = "STATUS_IN";
+static const char lbl_status_out[] PROGMEM = "STATUS_OUT";
 static const MenuItemDef STATUS_ITEMS[] PROGMEM = {
-  { "STATUS_IN",   DisplayUI::HandleDrawStatusIn,  DisplayUI::HandlePrevItem, DisplayUI::HandleNextItem, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
-  { "STATUS_OUT",  DisplayUI::HandleDrawStatusOut, DisplayUI::HandlePrevItem, DisplayUI::HandleNextItem, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu }
+  { lbl_status_in,   DisplayUI::HandleDrawStatusIn,  DisplayUI::HandlePrevItem, DisplayUI::HandleNextItem, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
+  { lbl_status_out,  DisplayUI::HandleDrawStatusOut, DisplayUI::HandlePrevItem, DisplayUI::HandleNextItem, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu }
 };
 
+static const char lbl_target_t[] PROGMEM = "TARGET_TEMP";
+static const char lbl_target_h[] PROGMEM = "TARGET_HUM";
 static const MenuItemDef TARGET_ITEMS[] PROGMEM = {
-  { "TARGET_TEMP", DisplayUI::HandleDrawTargets,   DisplayUI::HandleUpTargets, DisplayUI::HandleDownTargets, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
-  { "TARGET_HUM",  DisplayUI::HandleDrawTargets,   DisplayUI::HandleUpTargets, DisplayUI::HandleDownTargets, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu }
+  { lbl_target_t, DisplayUI::HandleDrawTargets,   DisplayUI::HandleUpTargets, DisplayUI::HandleDownTargets, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
+  { lbl_target_h, DisplayUI::HandleDrawTargets,   DisplayUI::HandleUpTargets, DisplayUI::HandleDownTargets, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu }
 };
 
+static const char lbl_man_fan[] PROGMEM = "MANUAL_FAN";
+static const char lbl_man_o3[] PROGMEM = "MANUAL_OZONE";
 static const MenuItemDef MANUAL_ITEMS[] PROGMEM = {
-  { "MANUAL_FAN",  DisplayUI::HandleDrawManualModes, DisplayUI::HandleUpManual, DisplayUI::HandleDownManual, DisplayUI::HandleMenuManual, DisplayUI::HandleExitSubmenu },
-  { "MANUAL_OZONE",DisplayUI::HandleDrawManualModes, DisplayUI::HandleUpManual, DisplayUI::HandleDownManual, DisplayUI::HandleMenuManual, DisplayUI::HandleExitSubmenu }
+  { lbl_man_fan,  DisplayUI::HandleDrawManualModes, DisplayUI::HandleUpManual, DisplayUI::HandleDownManual, DisplayUI::HandleMenuManual, DisplayUI::HandleExitSubmenu },
+  { lbl_man_o3,   DisplayUI::HandleDrawManualModes, DisplayUI::HandleUpManual, DisplayUI::HandleDownManual, DisplayUI::HandleMenuManual, DisplayUI::HandleExitSubmenu }
 };
 
+static const char lbl_stats_v[] PROGMEM = "STATS_VIEW";
+static const char lbl_stats_r[] PROGMEM = "STATS_RESET";
 static const MenuItemDef STATS_ITEMS[] PROGMEM = {
-  { "STATS_VIEW",  DisplayUI::HandleDrawStats,     DisplayUI::HandlePrevItem, DisplayUI::HandleNextItem, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
-  { "STATS_RESET", DisplayUI::HandleDrawStats,     DisplayUI::HandlePrevItem, DisplayUI::HandleNextItem, DisplayUI::HandleNextItem, DisplayUI::HandleLongMenuStats }
+  { lbl_stats_v,  DisplayUI::HandleDrawStats,     DisplayUI::HandlePrevItem, DisplayUI::HandleNextItem, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
+  { lbl_stats_r,  DisplayUI::HandleDrawStats,     DisplayUI::HandlePrevItem, DisplayUI::HandleNextItem, DisplayUI::HandleNextItem, DisplayUI::HandleLongMenuStats }
 };
 
+static const char lbl_err_v[] PROGMEM = "ERROR_VIEW";
 static const MenuItemDef ERROR_ITEMS[] PROGMEM = {
-  { "ERROR_VIEW",  DisplayUI::HandleDrawErrorLog,  DisplayUI::HandleUpError, nullptr,             DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu }
+  { lbl_err_v,  DisplayUI::HandleDrawErrorLog,  DisplayUI::HandleUpError, nullptr,             DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu }
 };
 
 static const MenuItemDef SERVICE_ITEMS[] PROGMEM = {
-  { "BME TEMP", DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
-  { "BME HUM",  DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
-  { "HTU TEMP", DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
-  { "HTU HUM",  DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
-  { "DS TEMP",  DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu }
+  { lbl_bme_t, DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
+  { lbl_bme_h, DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
+  { lbl_htu_t, DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
+  { lbl_htu_h, DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
+  { lbl_ds_t,  DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu }
 };
 
+// Текстовые метки корневых разделов
+static const char root_home[] PROGMEM = "HOME";
+static const char root_status[] PROGMEM = "STATUS";
+static const char root_targets[] PROGMEM = "TARGETS";
+static const char root_manual[] PROGMEM = "MANUAL";
+static const char root_stats[] PROGMEM = "STATS";
+static const char root_errors[] PROGMEM = "ERRORS";
+static const char root_service[] PROGMEM = "SERVICE";
+
+/**
+ * @brief Главная таблица разделов меню.
+ * Хранится во Flash-памяти для экономии RAM.
+ */
 static const MenuRootDef MENU_TABLE[] PROGMEM = {
-  { "HOME",    nullptr,       0, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, nullptr },
-  { "STATUS",  STATUS_ITEMS,  2, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu },
-  { "TARGETS", TARGET_ITEMS,  2, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu },
-  { "MANUAL",  MANUAL_ITEMS,  2, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu },
-  { "STATS",   STATS_ITEMS,   2, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu },
-  { "ERRORS",  ERROR_ITEMS,   1, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu },
-  { "SERVICE", SERVICE_ITEMS, 5, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu }
+  { root_home,    nullptr,       0, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, nullptr, 500 },
+  { root_status,  STATUS_ITEMS,  2, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu, 1000 },
+  { root_targets, TARGET_ITEMS,  2, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu, 1000 },
+  { root_manual,  MANUAL_ITEMS,  2, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu, 1000 },
+  { root_stats,   STATS_ITEMS,   2, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu, 1000 },
+  { root_errors,  ERROR_ITEMS,   1, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu, 1000 },
+  { root_service, SERVICE_ITEMS, 5, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu, 1000 }
 };
 
 static const uint8_t MENU_TABLE_SIZE = sizeof(MENU_TABLE) / sizeof(MENU_TABLE[0]);
 
+/**
+ * @brief Переход к предыдущему корневому разделу.
+ */
 void DisplayUI::HandlePrevRoot(DisplayUI* ui) {
   ui->root_index_ = (ui->root_index_ + MENU_TABLE_SIZE - 1) % MENU_TABLE_SIZE;
   ui->item_index_ = 0;
   ui->in_submenu_ = false;
 }
+
+/**
+ * @brief Переход к следующему корневому разделу.
+ */
 void DisplayUI::HandleNextRoot(DisplayUI* ui) {
   ui->root_index_ = (ui->root_index_ + 1) % MENU_TABLE_SIZE;
   ui->item_index_ = 0;
   ui->in_submenu_ = false;
 }
 
-// Конструктор: адрес 0x27 и размер 16x2
+/**
+ * @brief Конструктор UI.
+ * Инициализирует базовые параметры и очищает кэш строк.
+ */
 DisplayUI::DisplayUI(Controller* c, SensorManager* s, TimeManager* t)
     : lcd_(0x27, 16, 2),
       controller_(c),
@@ -197,6 +275,9 @@ DisplayUI::DisplayUI(Controller* c, SensorManager* s, TimeManager* t)
   memset(last_lines_, 0, sizeof(last_lines_));
 }
 
+/**
+ * @brief Первичная инициализация LCD и пинов кнопок.
+ */
 void DisplayUI::Init() {
   lcd_.init();
   lcd_.backlight();
@@ -206,6 +287,9 @@ void DisplayUI::Init() {
   last_activity_time_ = millis();
 }
 
+/**
+ * @brief Восстановление работы LCD после возможных сбоев I2C-шины.
+ */
 void DisplayUI::Reinit() {
   lcd_.init();
   if (backlight_on_)
@@ -214,39 +298,50 @@ void DisplayUI::Reinit() {
     lcd_.noBacklight();
 }
 
+// Статические буферы для временного хранения структур, прочитанных из Flash
 MenuRootDef DisplayUI::current_root_buf_;
 MenuItemDef DisplayUI::current_item_buf_;
 
+/**
+ * @brief Чтение определения текущего корневого раздела из PROGMEM в RAM-буфер.
+ */
 const MenuRootDef* DisplayUI::GetCurrentRootDef() const {
   memcpy_P(&current_root_buf_, &MENU_TABLE[root_index_], sizeof(MenuRootDef));
   return &current_root_buf_;
 }
 
+/**
+ * @brief Чтение определения текущего элемента подменю из PROGMEM в RAM-буфер.
+ */
 const MenuItemDef* DisplayUI::GetCurrentItemDef() const {
   const MenuRootDef* root = GetCurrentRootDef();
   if (root && root->items && item_index_ < root->item_count) {
-    const MenuItemDef* items = (const MenuItemDef*)pgm_read_ptr(&root->items);
-    memcpy_P(&current_item_buf_, &items[item_index_], sizeof(MenuItemDef));
+    memcpy_P(&current_item_buf_, &root->items[item_index_], sizeof(MenuItemDef));
     return &current_item_buf_;
   }
   return nullptr;
 }
 
+/**
+ * @brief Основной цикл обновления интерфейса.
+ * Обрабатывает кнопки, подсветку и перерисовку по таймеру или флагу.
+ */
 void DisplayUI::Update() {
   HandleButtons();    // Опрос кнопок
-  UpdateBacklight();  // Управление светом
+  UpdateBacklight();  // Управление тайм-аутом света
 
   static unsigned long last_draw = 0;
-  unsigned long interval = (root_index_ == 0 && !in_submenu_) ? 500 : 1000;
+  const MenuRootDef* root = GetCurrentRootDef();
+  unsigned long interval = root ? root->refresh_interval_ms : 1000;
 
+  // Перерисовка по таймеру или по событию (нажатие кнопки)
   if (needs_redraw_ || (millis() - last_draw >= interval)) {
     last_draw = millis();
     needs_redraw_ = false;
 
-    // Сбрасываем буферы
     screen_.Clear();
 
-    // Если отображается временное сообщение, заполняем буферы им
+    // Приоритет вывода - временное системное сообщение
     if (temp_message_ != nullptr && millis() - message_timer_ < 2000) {
       screen_.SetPos(0, 0);
       screen_.print(temp_message_);
@@ -254,15 +349,19 @@ void DisplayUI::Update() {
       screen_.print(F("                "));
     } else {
       if (temp_message_ != nullptr) {
-        temp_message_ = nullptr;  // Сброс сообщения по истечении времени
+        temp_message_ = nullptr;
       }
-      DrawPage(); // DrawPage теперь наполняет screen_
+      DrawPage(); // Наполнение буфера содержимым страницы
     }
 
-    Flush(); // Flush сравнивает с last_lines_ и выводит только изменения
+    Flush(); // Физический вывод изменений на LCD
   }
 }
 
+/**
+ * @brief Оптимизированный вывод на LCD.
+ * Печатает строку только если её содержимое изменилось по сравнению с предыдущим кадром.
+ */
 void DisplayUI::Flush() {
   for (int i = 0; i < 2; i++) {
     const char* line = screen_.GetLine(i);
@@ -275,31 +374,30 @@ void DisplayUI::Flush() {
 }
 
 /**
- * @brief Опрос кнопок и обработка нажатий (UP, DOWN, MENU).
- * Использует неблокирующий антидребезг и таймеры повтора.
+ * @brief Опрос физических кнопок с антидребезгом и распознаванием длинных нажатий.
  */
 void DisplayUI::HandleButtons() {
-  if (millis() - last_btn_check_ < 50) return;  // Базовая задержка антидребезга
+  if (millis() - last_btn_check_ < 50) return;
   last_btn_check_ = millis();
 
-  // Считывание состояний кнопок (инвертировано из-за INPUT_PULLUP)
+  // Инвертированная логика для INPUT_PULLUP
   bool up = !digitalRead(BT_UP);
   bool down = !digitalRead(BT_DOWN);
   bool menu = !digitalRead(BT_MENU);
 
-  // Сброс таймера гашения подсветки при любой активности
+  // Сброс таймера бездействия при любой активности
   if (up || down || menu) {
     needs_redraw_ = true;
-    controller_->NotifyUserActivity();  // Уведомляем контроллер о присутствии человека
+    controller_->NotifyUserActivity();
     last_activity_time_ = millis();
     if (!backlight_on_) {
       lcd_.backlight();
       backlight_on_ = true;
-      return;  // Первое нажатие при выключенном экране только включает свет
+      return; // Первое нажатие только пробуждает экран
     }
   }
 
-  // Логика кнопки MENU
+  // Логика кнопки MENU (короткое/длинное нажатие)
   if (menu) {
     if (!menu_btn_pressed_) {
       menu_btn_pressed_ = true;
@@ -332,7 +430,7 @@ void DisplayUI::HandleButtons() {
     }
   }
 
-  // Логика кнопок изменения значений (UP/DOWN)
+  // Логика кнопок UP/DOWN с автоповтором (150мс)
   if ((up || down) && !menu_btn_pressed_) {
     if (millis() - last_btn_action_ >= 150) {
       last_btn_action_ = millis();
@@ -354,11 +452,12 @@ void DisplayUI::HandleButtons() {
   }
 }
 
-
+/**
+ * @brief Автоматическое гашение подсветки при отсутствии активности.
+ */
 void DisplayUI::UpdateBacklight() {
-  // Если прошло более 30 секунд бездействия - гасим свет
-  // ИСКЛЮЧЕНИЕ: Manual Ozone (по ТЗ в ручном режиме подсветка может игнорироваться)
   if (backlight_on_ && (millis() - last_activity_time_ > 30000UL)) {
+    // В ручном режиме озонирования подсветка не гаснет для безопасности
     if (controller_->GetState() != SystemState::kManualOzone) {
       lcd_.noBacklight();
       backlight_on_ = false;
@@ -366,12 +465,15 @@ void DisplayUI::UpdateBacklight() {
   }
 }
 
+/**
+ * @brief Диспетчер отрисовки страниц.
+ */
 void DisplayUI::DrawPage() {
-  if (root_index_ == 0) { // HOME
+  if (root_index_ == 0) { // Главный экран
     DrawHomeScreen();
-  } else if (!in_submenu_) {
+  } else if (!in_submenu_) { // Экран выбора раздела
     DrawRootPage();
-  } else {
+  } else { // Экран конкретного элемента подменю
     const MenuItemDef* item = GetCurrentItemDef();
     if (item && item->draw) {
       item->draw(this);
@@ -379,8 +481,12 @@ void DisplayUI::DrawPage() {
   }
 }
 
+/**
+ * @brief Отрисовка страницы выбора раздела меню (корень).
+ */
 void DisplayUI::DrawRootPage() {
   const MenuRootDef* root = GetCurrentRootDef();
+  // HOME не считается за пронумерованный раздел в статус-баре
   uint8_t index = (root_index_ > 0) ? root_index_ - 1 : 0;
   DrawHeader((const __FlashStringHelper*)root->label, index, MENU_TABLE_SIZE - 1);
 
@@ -388,9 +494,14 @@ void DisplayUI::DrawRootPage() {
   screen_.print(F("  MENU ENTER"));
 }
 
+/**
+ * @brief Отрисовка стандартного заголовка раздела.
+ * Формат: [Метка] [текущий]/[всего]
+ */
 void DisplayUI::DrawHeader(const char* label, uint8_t index, uint8_t count) {
   screen_.SetPos(0, 0);
-  screen_.print(label);
+  // Приведение к FlashStringHelper, т.к. строки меток лежат в PROGMEM
+  screen_.print((const __FlashStringHelper*)label);
   screen_.print(F(" "));
   screen_.print(index + 1);
   screen_.print(F("/"));
@@ -406,13 +517,15 @@ void DisplayUI::DrawHeader(const __FlashStringHelper* label, uint8_t index, uint
   screen_.print(count);
 }
 
-
+/**
+ * @brief Главный экран: текущие показатели и статус работы.
+ */
 void DisplayUI::DrawHomeScreen() {
   SensorData in = sensors_->GetInside();
   SensorData out = sensors_->GetOutside();
   RelayManager* rm = controller_->GetRelayManager();
 
-  // Строка 1: IN temp humidity fan/ozone indicator
+  // Строка 1: Внутри [Т] [H] [Индикатор работы]
   screen_.SetPos(0, 0);
   screen_.print(F("IN "));
   screen_.print(in.temp, 1);
@@ -421,14 +534,11 @@ void DisplayUI::DrawHomeScreen() {
   screen_.print(F("%"));
 
   screen_.SetPos(0, 15);
-  if (rm->GetOzoneState())
-    screen_.print(F("O"));
-  else if (rm->GetFanState())
-    screen_.print(F("F"));
-  else
-    screen_.print(F(" "));
+  if (rm->GetOzoneState()) screen_.print(F("O"));
+  else if (rm->GetFanState()) screen_.print(F("F"));
+  else screen_.print(F(" "));
 
-  // Строка 2: OUT temp humidity режим системы
+  // Строка 2: Снаружи [Т] [H] [Режим системы]
   screen_.SetPos(1, 0);
   screen_.print(F("OUT "));
   screen_.print(out.temp, 1);
@@ -438,18 +548,18 @@ void DisplayUI::DrawHomeScreen() {
 
   screen_.SetPos(1, 15);
   SystemState state = controller_->GetState();
-  if (state == SystemState::kErrorState)
-    screen_.print(F("E"));
+  if (state == SystemState::kErrorState) screen_.print(F("E")); // Ошибка
   else if (state == SystemState::kAutoClimate ||
            state == SystemState::kOzoneStart ||
            state == SystemState::kOzoneActive ||
            state == SystemState::kOzoneHold ||
-           state == SystemState::kOzoneVent)
-    screen_.print(F("A"));
-  else
-    screen_.print(F("M"));
+           state == SystemState::kOzoneVent) screen_.print(F("A")); // Авто
+  else screen_.print(F("M")); // Ручной
 }
 
+/**
+ * @brief Отрисовка внутренних показателей (BME280).
+ */
 void DisplayUI::DrawStatusIn() {
   const MenuRootDef* root = GetCurrentRootDef();
   DrawHeader(F("STATUS"), item_index_, root->item_count);
@@ -463,6 +573,9 @@ void DisplayUI::DrawStatusIn() {
   screen_.print(F("%"));
 }
 
+/**
+ * @brief Отрисовка внешних показателей (HTU21D).
+ */
 void DisplayUI::DrawStatusOut() {
   const MenuRootDef* root = GetCurrentRootDef();
   DrawHeader(F("STATUS"), item_index_, root->item_count);
@@ -476,46 +589,47 @@ void DisplayUI::DrawStatusOut() {
   screen_.print(F("%"));
 }
 
+/**
+ * @brief Отрисовка страницы настройки целевых параметров.
+ */
 void DisplayUI::DrawTargets() {
   const MenuRootDef* root = GetCurrentRootDef();
   DrawHeader(F("TARGETS"), item_index_, root->item_count);
 
   screen_.SetPos(1, 0);
-  if (item_index_ == 0) // TARGET_TEMP
-    screen_.print(F(">"));
-  else
-    screen_.print(F(" "));
+  if (item_index_ == 0) screen_.print(F(">"));
+  else screen_.print(F(" "));
   screen_.print(F("T:"));
   screen_.print(controller_->GetTargetTemp(), 1);
 
   screen_.print(F(" "));
-  if (item_index_ == 1) // TARGET_HUM
-    screen_.print(F(">"));
-  else
-    screen_.print(F(" "));
+  if (item_index_ == 1) screen_.print(F(">"));
+  else screen_.print(F(" "));
   screen_.print(F("H:"));
   screen_.print(controller_->GetTargetRh(), 0);
   screen_.print(F("%"));
 }
 
+/**
+ * @brief Отрисовка страницы выбора устройства для ручного пуска.
+ */
 void DisplayUI::DrawManualModes() {
   const MenuRootDef* root = GetCurrentRootDef();
   DrawHeader(F("MANUAL"), item_index_, root->item_count);
 
   screen_.SetPos(1, 0);
-  if (item_index_ == 0) // MANUAL_FAN
-    screen_.print(F(">"));
-  else
-    screen_.print(F(" "));
+  if (item_index_ == 0) screen_.print(F(">"));
+  else screen_.print(F(" "));
   screen_.print(F("FAN   "));
 
-  if (item_index_ == 1) // MANUAL_OZONE
-    screen_.print(F(">"));
-  else
-    screen_.print(F(" "));
+  if (item_index_ == 1) screen_.print(F(">"));
+  else screen_.print(F(" "));
   screen_.print(F("OZONE"));
 }
 
+/**
+ * @brief Отрисовка страницы калибровки конкретного датчика.
+ */
 void DisplayUI::DrawCalibPage(const char* label, float value, bool is_temp) {
   const MenuRootDef* root = GetCurrentRootDef();
   DrawHeader(F("SERVICE"), item_index_, root->item_count);
@@ -528,12 +642,15 @@ void DisplayUI::DrawCalibPage(const char* label, float value, bool is_temp) {
   screen_.print(is_temp ? F("C") : F("%"));
 }
 
+/**
+ * @brief Отрисовка статистики наработки или страницы подтверждения сброса.
+ */
 void DisplayUI::DrawStats() {
   const MenuRootDef* root = GetCurrentRootDef();
   DrawHeader(F("STATS"), item_index_, root->item_count);
 
   screen_.SetPos(1, 0);
-  if (item_index_ == 0) { // STATS_VIEW
+  if (item_index_ == 0) { // Просмотр
     SystemStatistics s = controller_->GetStats();
     screen_.print(F("U"));
     screen_.print(s.uptimeMinutes / 60);
@@ -541,11 +658,14 @@ void DisplayUI::DrawStats() {
     screen_.print(s.fanMinutes / 60);
     screen_.print(F(" O3"));
     screen_.print(s.ozoneMinutes / 60);
-  } else if (item_index_ == 1) { // STATS_RESET
+  } else if (item_index_ == 1) { // Сброс
     screen_.print(F("MENU CONFIRM"));
   }
 }
 
+/**
+ * @brief Отрисовка лога текущих ошибок.
+ */
 void DisplayUI::DrawErrorLog() {
   const MenuRootDef* root = GetCurrentRootDef();
   DrawHeader(F("ERRORS"), item_index_, root->item_count);

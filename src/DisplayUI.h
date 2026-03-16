@@ -11,11 +11,15 @@ class DisplayUI;
 
 /**
  * @brief Класс для формирования содержимого экрана 16x2.
+ * Реализует интерфейс Print для удобного вывода текста в строковый буфер.
  */
 class ScreenBuffer : public Print {
  public:
   ScreenBuffer() { Clear(); }
 
+  /**
+   * @brief Очистка буфера (заполнение пробелами).
+   */
   void Clear() {
     memset(buffer[0], ' ', 16);
     buffer[0][16] = '\0';
@@ -25,11 +29,19 @@ class ScreenBuffer : public Print {
     col_ = 0;
   }
 
+  /**
+   * @brief Установка позиции курсора в буфере.
+   * @param row Строка (0-1).
+   * @param col Колонка (0-15).
+   */
   void SetPos(int row, int col) {
     if (row >= 0 && row < 2) row_ = row;
     if (col >= 0 && col < 16) col_ = col;
   }
 
+  /**
+   * @brief Запись одного символа в текущую позицию буфера.
+   */
   size_t write(uint8_t c) override {
     if (col_ < 16) {
       buffer[row_][col_++] = (char)c;
@@ -38,87 +50,106 @@ class ScreenBuffer : public Print {
     return 0;
   }
 
+  /**
+   * @brief Получение указателя на строку буфера.
+   * @param row Номер строки.
+   */
   const char* GetLine(int row) const {
     if (row < 0 || row >= 2) return "";
     return buffer[row];
   }
 
  private:
-  char buffer[2][17];
-  int row_, col_;
+  char buffer[2][17]; // 16 символов + терминатор для двух строк
+  int row_, col_;     // Текущая позиция курсора в буфере
 };
 
+/**
+ * @brief Определение элемента подменю.
+ */
 struct MenuItemDef {
-  const char* label;
-  void (*draw)(DisplayUI* ui);
-  void (*on_up)(DisplayUI* ui);
-  void (*on_down)(DisplayUI* ui);
-  void (*on_menu)(DisplayUI* ui);
-  void (*on_long_menu)(DisplayUI* ui);
+  const char* label;              // Метка элемента (в PROGMEM)
+  void (*draw)(DisplayUI* ui);    // Функция отрисовки содержимого
+  void (*on_up)(DisplayUI* ui);   // Обработчик кнопки ВВЕРХ
+  void (*on_down)(DisplayUI* ui); // Обработчик кнопки ВНИЗ
+  void (*on_menu)(DisplayUI* ui); // Обработчик короткого нажатия МЕНЮ
+  void (*on_long_menu)(DisplayUI* ui); // Обработчик долгого нажатия МЕНЮ
 };
 
+/**
+ * @brief Определение корневого раздела меню.
+ */
 struct MenuRootDef {
-  const char* label;
-  const MenuItemDef* items;
-  uint8_t item_count;
-  void (*on_up)(DisplayUI* ui);
-  void (*on_down)(DisplayUI* ui);
-  void (*on_menu)(DisplayUI* ui);
-  void (*on_long_menu)(DisplayUI* ui);
+  const char* label;              // Название раздела (в PROGMEM)
+  const MenuItemDef* items;       // Указатель на массив элементов подменю (в PROGMEM)
+  uint8_t item_count;             // Количество элементов в подразделе
+  void (*on_up)(DisplayUI* ui);   // Обработчик кнопки ВВЕРХ на уровне корня
+  void (*on_down)(DisplayUI* ui); // Обработчик кнопки ВНИЗ на уровне корня
+  void (*on_menu)(DisplayUI* ui); // Обработчик короткого нажатия МЕНЮ
+  void (*on_long_menu)(DisplayUI* ui); // Обработчик долгого нажатия МЕНЮ
+  uint16_t refresh_interval_ms;   // Интервал обновления экрана для этого раздела
 };
 
+/**
+ * @brief Класс управления пользовательским интерфейсом на базе LCD 16x2.
+ * Реализует древовидное меню, обработку кнопок и вывод данных датчиков.
+ */
 class DisplayUI {
  private:
-  LiquidCrystal_I2C lcd_;
-  Controller* controller_;
-  SensorManager* sensors_;
-  TimeManager* rtc_;
+  LiquidCrystal_I2C lcd_;       // Объект управления LCD по I2C
+  Controller* controller_;      // Ссылка на основной контроллер системы
+  SensorManager* sensors_;      // Ссылка на менеджер датчиков
+  TimeManager* rtc_;            // Ссылка на менеджер времени
 
-  uint8_t root_index_;
-  uint8_t item_index_;
-  bool in_submenu_;
+  uint8_t root_index_;          // Индекс текущего корневого раздела
+  uint8_t item_index_;          // Индекс текущего элемента внутри подменю
+  bool in_submenu_;             // Флаг нахождения внутри подменю
 
-  // Переменные для кнопок
-  unsigned long last_btn_check_;
-  unsigned long last_btn_action_;  // Таймер повтора для UP/DOWN
-  unsigned long menu_btn_timer_;
-  bool menu_btn_pressed_;
+  // Переменные для обработки кнопок
+  unsigned long last_btn_check_;   // Таймер антидребезга
+  unsigned long last_btn_action_;  // Таймер повтора для зажатых кнопок UP/DOWN
+  unsigned long menu_btn_timer_;   // Таймер замера длительности нажатия кнопки МЕНЮ
+  bool menu_btn_pressed_;          // Состояние нажатия кнопки МЕНЮ
 
-  // Временные сообщения на экране
-  unsigned long message_timer_;
-  const char* temp_message_;
+  // Временные уведомления на экране
+  unsigned long message_timer_;    // Таймер отображения сообщения
+  const char* temp_message_;       // Текст временного сообщения
 
-  // Таймер подсветки
-  unsigned long last_activity_time_;
-  bool backlight_on_;
+  // Управление подсветкой
+  unsigned long last_activity_time_; // Время последнего действия пользователя
+  bool backlight_on_;                // Флаг состояния подсветки
 
-  // Оптимизация вывода
-  ScreenBuffer screen_;
-  char last_lines_[2][17];
-  bool needs_redraw_;
-  void Flush();
+  // Оптимизация вывода (выводятся только изменившиеся строки)
+  ScreenBuffer screen_;              // Буфер текущего кадра
+  char last_lines_[2][17];           // Копия предыдущего кадра для сравнения
+  bool needs_redraw_;                // Флаг принудительной перерисовки
+  void Flush();                      // Перенос данных из буфера на физический экран
 
-  void HandleButtons();
-  void DrawPage();
-  void DrawRootPage();
-  void UpdateBacklight();
+  void HandleButtons();    // Опрос физических кнопок
+  void DrawPage();         // Определение того, какую страницу рисовать
+  void DrawRootPage();     // Отрисовка страницы выбора раздела
+  void UpdateBacklight();  // Управление тайм-аутом подсветки
 
+  // Вспомогательные методы отрисовки заголовков
   void DrawHeader(const char* label, uint8_t index, uint8_t count);
   void DrawHeader(const __FlashStringHelper* label, uint8_t index, uint8_t count);
 
-  // Вспомогательные методы отрисовки
-  void DrawHomeScreen();
-  void DrawStatusIn();
-  void DrawStatusOut();
-  void DrawTargets();
-  void DrawManualModes();
-  void DrawCalibPage(const char* label, float value, bool is_temp);
-  void DrawStats();
-  void DrawErrorLog();
+  // Методы отрисовки конкретных страниц
+  void DrawHomeScreen();    // Главный экран со статусом
+  void DrawStatusIn();      // Внутренние показатели
+  void DrawStatusOut();     // Внешние показатели
+  void DrawTargets();       // Уставки температуры и влажности
+  void DrawManualModes();   // Ручное управление устройствами
+  void DrawCalibPage(const char* label, float value, bool is_temp); // Страница калибровки
+  void DrawStats();         // Просмотр статистики наработки
+  void DrawErrorLog();      // Просмотр лога ошибок
 
  public:
+  // Получение определений текущего положения в меню
   const MenuRootDef* GetCurrentRootDef() const;
   const MenuItemDef* GetCurrentItemDef() const;
+
+  // Статические обработчики для коллбэков в таблицах меню
   static void HandleDrawStatusIn(DisplayUI* ui);
   static void HandleDrawStatusOut(DisplayUI* ui);
   static void HandleDrawTargets(DisplayUI* ui);
@@ -127,6 +158,7 @@ class DisplayUI {
   static void HandleDrawErrorLog(DisplayUI* ui);
   static void HandleDrawCalib(DisplayUI* ui);
 
+  // Обработчики кнопок внутри подменю
   static void HandlePrevItem(DisplayUI* ui);
   static void HandleNextItem(DisplayUI* ui);
   static void HandleUpTargets(DisplayUI* ui);
@@ -140,20 +172,25 @@ class DisplayUI {
   static void HandleDownCalib(DisplayUI* ui);
   static void AdjustCalib(DisplayUI* ui, float delta);
 
+  // Обработчики кнопок на уровне корневых разделов
   static void HandlePrevRoot(DisplayUI* ui);
   static void HandleNextRoot(DisplayUI* ui);
   static void HandleEnterSubmenu(DisplayUI* ui);
   static void HandleExitSubmenu(DisplayUI* ui);
 
+  // Буферы для чтения структур из Flash-памяти
   static MenuRootDef current_root_buf_;
   static MenuItemDef current_item_buf_;
 
  public:
   DisplayUI(Controller* c, SensorManager* s, TimeManager* t);
   void Init();
-  void Reinit();  // Повторная инициализация LCD после сбоя I2C
-  void Update();  // Вызывается в основном loop()
+  void Reinit();  // Повторная инициализация LCD (например, после сбоя I2C)
+  void Update();  // Основной цикл обновления UI (вызывается в loop)
 
+  /**
+   * @brief Проверка состояния подсветки.
+   */
   bool IsBacklightOn() const { return backlight_on_; }
 };
 
