@@ -141,6 +141,8 @@ class DisplayUI {
   void DrawRootPage();
   void UpdateBacklight();
 
+  void DrawHeader(const char* label, uint8_t index, uint8_t count);
+  void DrawHeader(const __FlashStringHelper* label, uint8_t index, uint8_t count);
   void SetDefaultItemForRoot();
 
   // Вспомогательные методы отрисовки

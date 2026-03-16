@@ -362,12 +362,28 @@ void DisplayUI::DrawPage() {
 
 void DisplayUI::DrawRootPage() {
   const MenuRootDef* root = GetCurrentRootDef();
-  screen_.SetPos(0, 0);
-  screen_.print(F("> "));
-  if (root) screen_.print(root->label);
+  DrawHeader(root ? root->label : "", root_index_, (sizeof(MENU_TABLE) / sizeof(MENU_TABLE[0])) - 1);
 
   screen_.SetPos(1, 0);
   screen_.print(F("  MENU ENTER"));
+}
+
+void DisplayUI::DrawHeader(const char* label, uint8_t index, uint8_t count) {
+  screen_.SetPos(0, 0);
+  screen_.print(label);
+  screen_.print(F(" "));
+  screen_.print(index + 1);
+  screen_.print(F("/"));
+  screen_.print(count);
+}
+
+void DisplayUI::DrawHeader(const __FlashStringHelper* label, uint8_t index, uint8_t count) {
+  screen_.SetPos(0, 0);
+  screen_.print(label);
+  screen_.print(F(" "));
+  screen_.print(index + 1);
+  screen_.print(F("/"));
+  screen_.print(count);
 }
 
 
@@ -416,11 +432,7 @@ void DisplayUI::DrawHomeScreen() {
 
 void DisplayUI::DrawStatusIn() {
   const MenuRootDef* root = GetCurrentRootDef();
-  screen_.SetPos(0, 0);
-  screen_.print(F("STATUS "));
-  screen_.print(item_index_ + 1);
-  screen_.print(F("/"));
-  screen_.print(root->item_count);
+  DrawHeader(F("STATUS"), item_index_, root->item_count);
 
   SensorData in = sensors_->GetInside();
   screen_.SetPos(1, 0);
@@ -433,11 +445,7 @@ void DisplayUI::DrawStatusIn() {
 
 void DisplayUI::DrawStatusOut() {
   const MenuRootDef* root = GetCurrentRootDef();
-  screen_.SetPos(0, 0);
-  screen_.print(F("STATUS "));
-  screen_.print(item_index_ + 1);
-  screen_.print(F("/"));
-  screen_.print(root->item_count);
+  DrawHeader(F("STATUS"), item_index_, root->item_count);
 
   SensorData out = sensors_->GetOutside();
   screen_.SetPos(1, 0);
@@ -450,11 +458,7 @@ void DisplayUI::DrawStatusOut() {
 
 void DisplayUI::DrawTargets() {
   const MenuRootDef* root = GetCurrentRootDef();
-  screen_.SetPos(0, 0);
-  screen_.print(F("TARGETS "));
-  screen_.print(item_index_ + 1);
-  screen_.print(F("/"));
-  screen_.print(root->item_count);
+  DrawHeader(F("TARGETS"), item_index_, root->item_count);
 
   screen_.SetPos(1, 0);
   if (item_index_ == 0) // TARGET_TEMP
@@ -476,11 +480,7 @@ void DisplayUI::DrawTargets() {
 
 void DisplayUI::DrawManualModes() {
   const MenuRootDef* root = GetCurrentRootDef();
-  screen_.SetPos(0, 0);
-  screen_.print(F("MANUAL "));
-  screen_.print(item_index_ + 1);
-  screen_.print(F("/"));
-  screen_.print(root->item_count);
+  DrawHeader(F("MANUAL"), item_index_, root->item_count);
 
   screen_.SetPos(1, 0);
   if (item_index_ == 0) // MANUAL_FAN
@@ -498,11 +498,7 @@ void DisplayUI::DrawManualModes() {
 
 void DisplayUI::DrawCalibPage(const char* label, float value, bool is_temp) {
   const MenuRootDef* root = GetCurrentRootDef();
-  screen_.SetPos(0, 0);
-  screen_.print(F("SERVICE "));
-  screen_.print(item_index_ + 1);
-  screen_.print(F("/"));
-  screen_.print(root->item_count);
+  DrawHeader(F("SERVICE"), item_index_, root->item_count);
 
   screen_.SetPos(1, 0);
   screen_.print(label);
@@ -514,11 +510,7 @@ void DisplayUI::DrawCalibPage(const char* label, float value, bool is_temp) {
 
 void DisplayUI::DrawStats() {
   const MenuRootDef* root = GetCurrentRootDef();
-  screen_.SetPos(0, 0);
-  screen_.print(F("STATS "));
-  screen_.print(item_index_ + 1);
-  screen_.print(F("/"));
-  screen_.print(root->item_count);
+  DrawHeader(F("STATS"), item_index_, root->item_count);
 
   screen_.SetPos(1, 0);
   if (item_index_ == 0) { // STATS_VIEW
@@ -536,11 +528,7 @@ void DisplayUI::DrawStats() {
 
 void DisplayUI::DrawErrorLog() {
   const MenuRootDef* root = GetCurrentRootDef();
-  screen_.SetPos(0, 0);
-  screen_.print(F("ERRORS "));
-  screen_.print(item_index_ + 1);
-  screen_.print(F("/"));
-  screen_.print(root->item_count);
+  DrawHeader(F("ERRORS"), item_index_, root->item_count);
 
   screen_.SetPos(1, 0);
   ErrorCode err = controller_->GetError();
