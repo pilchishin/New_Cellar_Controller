@@ -529,11 +529,11 @@ void DisplayUI::DrawStats() {
   screen_.SetPos(1, 0);
   if (item_index_ == 0) { // STATS_VIEW
     SystemStatistics s = controller_->GetStats();
-    screen_.print(F("U:"));
+    screen_.print(F("U"));
     screen_.print(s.uptimeMinutes / 60);
-    screen_.print(F(" F:"));
+    screen_.print(F(" F"));
     screen_.print(s.fanMinutes / 60);
-    screen_.print(F(" O3:"));
+    screen_.print(F(" O3"));
     screen_.print(s.ozoneMinutes / 60);
   } else if (item_index_ == 1) { // STATS_RESET
     screen_.print(F("MENU CONFIRM"));
