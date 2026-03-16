@@ -121,31 +121,31 @@ void DisplayUI::HandleEnterSubmenu(DisplayUI* ui) {
 }
 void DisplayUI::HandleExitSubmenu(DisplayUI* ui) { ui->in_submenu_ = false; }
 
-static const MenuItemDef STATUS_ITEMS[] = {
+static const MenuItemDef STATUS_ITEMS[] PROGMEM = {
   { "STATUS_IN",   DisplayUI::HandleDrawStatusIn,  DisplayUI::HandlePrevItem, DisplayUI::HandleNextItem, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
   { "STATUS_OUT",  DisplayUI::HandleDrawStatusOut, DisplayUI::HandlePrevItem, DisplayUI::HandleNextItem, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu }
 };
 
-static const MenuItemDef TARGET_ITEMS[] = {
+static const MenuItemDef TARGET_ITEMS[] PROGMEM = {
   { "TARGET_TEMP", DisplayUI::HandleDrawTargets,   DisplayUI::HandleUpTargets, DisplayUI::HandleDownTargets, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
   { "TARGET_HUM",  DisplayUI::HandleDrawTargets,   DisplayUI::HandleUpTargets, DisplayUI::HandleDownTargets, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu }
 };
 
-static const MenuItemDef MANUAL_ITEMS[] = {
+static const MenuItemDef MANUAL_ITEMS[] PROGMEM = {
   { "MANUAL_FAN",  DisplayUI::HandleDrawManualModes, DisplayUI::HandleUpManual, DisplayUI::HandleDownManual, DisplayUI::HandleMenuManual, DisplayUI::HandleExitSubmenu },
   { "MANUAL_OZONE",DisplayUI::HandleDrawManualModes, DisplayUI::HandleUpManual, DisplayUI::HandleDownManual, DisplayUI::HandleMenuManual, DisplayUI::HandleExitSubmenu }
 };
 
-static const MenuItemDef STATS_ITEMS[] = {
+static const MenuItemDef STATS_ITEMS[] PROGMEM = {
   { "STATS_VIEW",  DisplayUI::HandleDrawStats,     DisplayUI::HandlePrevItem, DisplayUI::HandleNextItem, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
   { "STATS_RESET", DisplayUI::HandleDrawStats,     DisplayUI::HandlePrevItem, DisplayUI::HandleNextItem, DisplayUI::HandleNextItem, DisplayUI::HandleLongMenuStats }
 };
 
-static const MenuItemDef ERROR_ITEMS[] = {
+static const MenuItemDef ERROR_ITEMS[] PROGMEM = {
   { "ERROR_VIEW",  DisplayUI::HandleDrawErrorLog,  DisplayUI::HandleUpError, nullptr,             DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu }
 };
 
-static const MenuItemDef SERVICE_ITEMS[] = {
+static const MenuItemDef SERVICE_ITEMS[] PROGMEM = {
   { "BME TEMP", DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
   { "BME HUM",  DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
   { "HTU TEMP", DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
@@ -153,7 +153,7 @@ static const MenuItemDef SERVICE_ITEMS[] = {
   { "DS TEMP",  DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu }
 };
 
-static const MenuRootDef MENU_TABLE[] = {
+static const MenuRootDef MENU_TABLE[] PROGMEM = {
   { "HOME",    nullptr,       0, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, nullptr },
   { "STATUS",  STATUS_ITEMS,  2, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu },
   { "TARGETS", TARGET_ITEMS,  2, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu },
@@ -214,14 +214,20 @@ void DisplayUI::Reinit() {
     lcd_.noBacklight();
 }
 
+MenuRootDef DisplayUI::current_root_buf_;
+MenuItemDef DisplayUI::current_item_buf_;
+
 const MenuRootDef* DisplayUI::GetCurrentRootDef() const {
-  return &MENU_TABLE[root_index_];
+  memcpy_P(&current_root_buf_, &MENU_TABLE[root_index_], sizeof(MenuRootDef));
+  return &current_root_buf_;
 }
 
 const MenuItemDef* DisplayUI::GetCurrentItemDef() const {
   const MenuRootDef* root = GetCurrentRootDef();
   if (root && root->items && item_index_ < root->item_count) {
-    return &root->items[item_index_];
+    const MenuItemDef* items = (const MenuItemDef*)pgm_read_ptr(&root->items);
+    memcpy_P(&current_item_buf_, &items[item_index_], sizeof(MenuItemDef));
+    return &current_item_buf_;
   }
   return nullptr;
 }
@@ -376,7 +382,7 @@ void DisplayUI::DrawPage() {
 void DisplayUI::DrawRootPage() {
   const MenuRootDef* root = GetCurrentRootDef();
   uint8_t index = (root_index_ > 0) ? root_index_ - 1 : 0;
-  DrawHeader(root ? root->label : "", index, MENU_TABLE_SIZE - 1);
+  DrawHeader((const __FlashStringHelper*)root->label, index, MENU_TABLE_SIZE - 1);
 
   screen_.SetPos(1, 0);
   screen_.print(F("  MENU ENTER"));
@@ -515,7 +521,7 @@ void DisplayUI::DrawCalibPage(const char* label, float value, bool is_temp) {
   DrawHeader(F("SERVICE"), item_index_, root->item_count);
 
   screen_.SetPos(1, 0);
-  screen_.print(label);
+  screen_.print((const __FlashStringHelper*)label);
   screen_.print(F(" "));
   if (value >= 0) screen_.print(F("+"));
   screen_.print(value, 1);

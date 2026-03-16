@@ -145,6 +145,9 @@ class DisplayUI {
   static void HandleEnterSubmenu(DisplayUI* ui);
   static void HandleExitSubmenu(DisplayUI* ui);
 
+  static MenuRootDef current_root_buf_;
+  static MenuItemDef current_item_buf_;
+
  public:
   DisplayUI(Controller* c, SensorManager* s, TimeManager* t);
   void Init();
