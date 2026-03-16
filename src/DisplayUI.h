@@ -137,7 +137,6 @@ class DisplayUI {
   void HandleButtons();
   void DrawPage();
   void DrawRootPage();
-  void DrawSubPage();
   void UpdateBacklight();
 
   // Навигация
@@ -182,6 +181,7 @@ class DisplayUI {
   static void HandleUpError(DisplayUI* ui);
   static void HandleUpCalib(DisplayUI* ui);
   static void HandleDownCalib(DisplayUI* ui);
+  static void AdjustCalib(DisplayUI* ui, float delta);
 
  public:
   DisplayUI(Controller* c, SensorManager* s, TimeManager* t);

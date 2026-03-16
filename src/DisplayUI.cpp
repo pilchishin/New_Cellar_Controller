@@ -15,13 +15,13 @@ void DisplayUI::HandleDownNextItem(DisplayUI* ui) { ui->NextItem(); }
 
 void DisplayUI::HandleDrawCalib(DisplayUI* ui) {
   CalibrationData c = ui->controller_->GetCalibration();
-  switch (ui->current_item_) {
-    case MenuItem::CALIB_BME_T: ui->DrawCalibPage("BME TEMP", c.bmeTempOffset, true); break;
-    case MenuItem::CALIB_BME_H: ui->DrawCalibPage("BME HUM", c.bmeHumOffset, false); break;
-    case MenuItem::CALIB_HTU_T: ui->DrawCalibPage("HTU TEMP", c.htuTempOffset, true); break;
-    case MenuItem::CALIB_HTU_H: ui->DrawCalibPage("HTU HUM", c.htuHumOffset, false); break;
-    case MenuItem::CALIB_DS_T:  ui->DrawCalibPage("DS TEMP", c.dsTempOffset, true); break;
-    default: break;
+  int idx = (int)ui->current_item_ - (int)MenuItem::CALIB_BME_T;
+  if (idx >= 0 && idx < 5) {
+    float* offsets[] = { &c.bmeTempOffset, &c.bmeHumOffset, &c.htuTempOffset, &c.htuHumOffset, &c.dsTempOffset };
+    const MenuItemDef* def = ui->GetCurrentItemDef();
+    if (def) {
+      ui->DrawCalibPage(def->label, *offsets[idx], (idx != 1 && idx != 3));
+    }
   }
 }
 
@@ -68,41 +68,21 @@ void DisplayUI::HandleLongMenuStats(DisplayUI* ui) {
 
 void DisplayUI::HandleUpError(DisplayUI* ui) { ui->controller_->ResetError(); }
 
-void DisplayUI::HandleUpCalib(DisplayUI* ui) {
+void DisplayUI::AdjustCalib(DisplayUI* ui, float delta) {
   CalibrationData c = ui->controller_->GetCalibration();
-  float* val = nullptr;
-  switch (ui->current_item_) {
-    case MenuItem::CALIB_BME_T: val = &c.bmeTempOffset; break;
-    case MenuItem::CALIB_BME_H: val = &c.bmeHumOffset; break;
-    case MenuItem::CALIB_HTU_T: val = &c.htuTempOffset; break;
-    case MenuItem::CALIB_HTU_H: val = &c.htuHumOffset; break;
-    case MenuItem::CALIB_DS_T:  val = &c.dsTempOffset; break;
-    default: break;
-  }
-  if (val) {
-    *val += 0.1f;
+  int idx = (int)ui->current_item_ - (int)MenuItem::CALIB_BME_T;
+  if (idx >= 0 && idx < 5) {
+    float* offsets[] = { &c.bmeTempOffset, &c.bmeHumOffset, &c.htuTempOffset, &c.htuHumOffset, &c.dsTempOffset };
+    float* val = offsets[idx];
+    *val += delta;
     if (*val > 5.0f) *val = 5.0f;
-    ui->controller_->SetCalibration(c);
-  }
-}
-
-void DisplayUI::HandleDownCalib(DisplayUI* ui) {
-  CalibrationData c = ui->controller_->GetCalibration();
-  float* val = nullptr;
-  switch (ui->current_item_) {
-    case MenuItem::CALIB_BME_T: val = &c.bmeTempOffset; break;
-    case MenuItem::CALIB_BME_H: val = &c.bmeHumOffset; break;
-    case MenuItem::CALIB_HTU_T: val = &c.htuTempOffset; break;
-    case MenuItem::CALIB_HTU_H: val = &c.htuHumOffset; break;
-    case MenuItem::CALIB_DS_T:  val = &c.dsTempOffset; break;
-    default: break;
-  }
-  if (val) {
-    *val -= 0.1f;
     if (*val < -5.0f) *val = -5.0f;
     ui->controller_->SetCalibration(c);
   }
 }
+
+void DisplayUI::HandleUpCalib(DisplayUI* ui) { AdjustCalib(ui, 0.1f); }
+void DisplayUI::HandleDownCalib(DisplayUI* ui) { AdjustCalib(ui, -0.1f); }
 
 static const MenuItemDef STATUS_ITEMS[] = {
   { MenuItem::STATUS_IN,   "STATUS_IN",   DisplayUI::HandleDrawStatusIn,  DisplayUI::HandleUpPrevItem, DisplayUI::HandleDownNextItem, nullptr, nullptr },
@@ -129,11 +109,11 @@ static const MenuItemDef ERROR_ITEMS[] = {
 };
 
 static const MenuItemDef SERVICE_ITEMS[] = {
-  { MenuItem::CALIB_BME_T, "CALIB_BME_T", DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, nullptr, nullptr },
-  { MenuItem::CALIB_BME_H, "CALIB_BME_H", DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, nullptr, nullptr },
-  { MenuItem::CALIB_HTU_T, "CALIB_HTU_T", DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, nullptr, nullptr },
-  { MenuItem::CALIB_HTU_H, "CALIB_HTU_H", DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, nullptr, nullptr },
-  { MenuItem::CALIB_DS_T,  "CALIB_DS_T",  DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, nullptr, nullptr }
+  { MenuItem::CALIB_BME_T, "BME TEMP", DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, nullptr, nullptr },
+  { MenuItem::CALIB_BME_H, "BME HUM",  DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, nullptr, nullptr },
+  { MenuItem::CALIB_HTU_T, "HTU TEMP", DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, nullptr, nullptr },
+  { MenuItem::CALIB_HTU_H, "HTU HUM",  DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, nullptr, nullptr },
+  { MenuItem::CALIB_DS_T,  "DS TEMP",  DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, nullptr, nullptr }
 };
 
 static const MenuRootDef MENU_TABLE[] = {
@@ -439,19 +419,19 @@ void DisplayUI::UpdateBacklight() {
 }
 
 void DisplayUI::DrawPage() {
-  if (!in_submenu_) {
+  if (current_root_ == MenuRoot::HOME) {
+    DrawHomeScreen();
+  } else if (!in_submenu_) {
     DrawRootPage();
   } else {
-    DrawSubPage();
+    const MenuItemDef* item = GetCurrentItemDef();
+    if (item && item->draw) {
+      item->draw(this);
+    }
   }
 }
 
 void DisplayUI::DrawRootPage() {
-  if (current_root_ == MenuRoot::HOME) {
-    DrawHomeScreen();
-    return;
-  }
-
   const MenuRootDef* root = FindRootDef(current_root_);
   screen_.SetPos(0, 0);
   screen_.print(F("> "));
@@ -461,12 +441,6 @@ void DisplayUI::DrawRootPage() {
   screen_.print(F("  MENU ENTER"));
 }
 
-void DisplayUI::DrawSubPage() {
-  const MenuItemDef* def = FindItemDef(current_item_);
-  if (def && def->draw) {
-    def->draw(this);
-  }
-}
 
 void DisplayUI::DrawHomeScreen() {
   SensorData in = sensors_->GetInside();
