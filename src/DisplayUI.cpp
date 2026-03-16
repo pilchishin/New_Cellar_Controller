@@ -206,6 +206,14 @@ const MenuRootDef* DisplayUI::GetCurrentRootDef() const {
   return FindRootDef(current_root_);
 }
 
+const MenuItemDef* DisplayUI::GetCurrentItemDef() const {
+  const MenuRootDef* root = GetCurrentRootDef();
+  if (root && root->items && submenu_index_ > 0 && submenu_index_ <= root->item_count) {
+    return &root->items[submenu_index_ - 1];
+  }
+  return nullptr;
+}
+
 void DisplayUI::Update() {
   HandleButtons();    // Опрос кнопок
   UpdateBacklight();  // Управление светом

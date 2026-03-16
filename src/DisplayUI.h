@@ -162,6 +162,7 @@ class DisplayUI {
 
  public:
   const MenuRootDef* GetCurrentRootDef() const;
+  const MenuItemDef* GetCurrentItemDef() const;
   static void HandleDrawStatusIn(DisplayUI* ui);
   static void HandleDrawStatusOut(DisplayUI* ui);
   static void HandleDrawTargets(DisplayUI* ui);

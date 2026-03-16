@@ -85,25 +85,25 @@ void SensorManager::Update() {
   unsigned long now = millis();
 
   // 1. ОПРОС И ФИЛЬТРАЦИЯ BME280 (ПОМЕЩЕНИЕ)
-  if (!bme_valid_ && bme_retries_ < kMaxRetries) {
-    if (now - last_bme_retry_ >= kRetryInterval) {
-      last_bme_retry_ = now;
-      bme_retries_++;
+  if (!bme_stat_.valid && bme_stat_.retries < kSensorMaxRetries) {
+    if (now - bme_stat_.lastRetry >= kSensorRetryInterval) {
+      bme_stat_.lastRetry = now;
+      bme_stat_.retries++;
 #ifdef DEBUG
       Serial.print(F("BME280 Retry "));
-      Serial.println(bme_retries_);
+      Serial.println(bme_stat_.retries);
 #endif
       InitBme();
     }
   }
 
-  if (bme_valid_) {
+  if (bme_stat_.valid) {
     float raw_temp = bme_.readTemperature();
     float raw_hum = bme_.readHumidity();
 
     // Проверка на NaN (ошибка чтения)
     if (isnan(raw_temp) || isnan(raw_hum)) {
-      bme_valid_ = false;
+      bme_stat_.valid = false;
       inside_data_.valid = false;
     } else {
       // Пропускаем сырые данные через фильтры (Медиана -> EMA)
@@ -120,25 +120,25 @@ void SensorManager::Update() {
   }
 
   // 2. ОПРОС И ФИЛЬТРАЦИЯ HTU21D (УЛИЦА)
-  if (!htu_valid_ && htu_retries_ < kMaxRetries) {
-    if (now - last_htu_retry_ >= kRetryInterval) {
-      last_htu_retry_ = now;
-      htu_retries_++;
+  if (!htu_stat_.valid && htu_stat_.retries < kSensorMaxRetries) {
+    if (now - htu_stat_.lastRetry >= kSensorRetryInterval) {
+      htu_stat_.lastRetry = now;
+      htu_stat_.retries++;
 #ifdef DEBUG
       Serial.print(F("HTU21D Retry "));
-      Serial.println(htu_retries_);
+      Serial.println(htu_stat_.retries);
 #endif
       InitHtu();
     }
   }
 
-  if (htu_valid_) {
+  if (htu_stat_.valid) {
     float raw_temp = htu_.readTemperature();
     float raw_hum = htu_.readHumidity();
 
     if (isnan(raw_temp) || isnan(raw_hum) ||
         raw_hum > 100.0f) {  // HTU иногда выдает >100% при ошибках
-      htu_valid_ = false;
+      htu_stat_.valid = false;
       outside_data_.valid = false;
     } else {
       outside_data_.temp = filter_htu_temp_.Update(raw_temp) + calib_.htuTempOffset;
@@ -153,6 +153,33 @@ void SensorManager::Update() {
     }
   }
 
+  // 3. ОПРОС DS18B20 (КОНТРОЛЬ)
+  if (!ds_stat_.valid && ds_stat_.retries < kSensorMaxRetries) {
+    if (now - ds_stat_.lastRetry >= kSensorRetryInterval) {
+      ds_stat_.lastRetry = now;
+      ds_stat_.retries++;
+#ifdef DEBUG
+      Serial.print(F("DS18B20 Retry "));
+      Serial.println(ds_stat_.retries);
+#endif
+      InitDs();
+    }
+  }
+
+  if (ds_stat_.valid) {
+    // Читаем значение из памяти датчика (результат предыдущего запроса)
+    float raw_ds_temp = ds_sensor_.getTempCByIndex(0);
+
+    if (raw_ds_temp == DEVICE_DISCONNECTED_C) {
+      ds_stat_.valid = false;
+    } else {
+      control_temp_ = filter_ds_temp_.Update(raw_ds_temp) + calib_.dsTempOffset;
+    }
+
+    // Сразу запрашиваем новую конверсию для следующего цикла опроса (через 10 сек)
+    ds_sensor_.requestTemperatures();
+  }
+
   // Логика обнаружения полного отказа I2C-шины
   if (i2c_success) {
     i2c_error_count_ = 0;
@@ -162,38 +189,6 @@ void SensorManager::Update() {
     Serial.print(F("I2C Error Count: "));
     Serial.println(i2c_error_count_);
 #endif
-  }
-}
-
-void SensorManager::HandleRetries() {
-  unsigned long now = millis();
-  auto check_retry = [&](SensorStatus& stat, void (SensorManager::*init_func)(),
-                         const char* name) {
-    if (!stat.valid && stat.retries < kSensorMaxRetries) {
-      if (now - stat.lastRetry >= kSensorRetryInterval) {
-        stat.lastRetry = now;
-        stat.retries++;
-#ifdef DEBUG
-        Serial.print(name);
-        Serial.print(F(" Retry "));
-        Serial.println(stat.retries);
-#endif
-      InitDs();
-    }
-  }
-
-  if (ds_valid_) {
-    // Читаем значение из памяти датчика (результат предыдущего запроса)
-    float raw_ds_temp = ds_sensor_.getTempCByIndex(0);
-
-    if (raw_ds_temp == DEVICE_DISCONNECTED_C) {
-      ds_valid_ = false;
-    } else {
-      control_temp_ = filter_ds_temp_.Update(raw_ds_temp) + calib_.dsTempOffset;
-    }
-
-    // Сразу запрашиваем новую конверсию для следующего цикла опроса (через 10 сек)
-    ds_sensor_.requestTemperatures();
   }
 }
 
