@@ -112,11 +112,9 @@ class DisplayUI {
   SensorManager* sensors_;
   TimeManager* rtc_;
 
-  MenuRoot current_root_;
-  MenuItem current_item_;
+  uint8_t root_index_;
+  uint8_t item_index_;
   bool in_submenu_;
-  int submenu_index_;
-  int submenu_count_;
 
   // Переменные для кнопок
   unsigned long last_btn_check_;
