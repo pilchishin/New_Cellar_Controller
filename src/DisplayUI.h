@@ -48,44 +48,7 @@ class ScreenBuffer : public Print {
   int row_, col_;
 };
 
-// Разделы меню верхнего уровня
-enum class MenuRoot {
-  HOME,
-  STATUS,
-  TARGETS,
-  MANUAL,
-  STATS,
-  ERRORS,
-  SERVICE
-};
-
-// Элементы подменю
-enum class MenuItem {
-  NONE,
-
-  STATUS_IN,
-  STATUS_OUT,
-
-  TARGET_TEMP,
-  TARGET_HUM,
-
-  MANUAL_FAN,
-  MANUAL_OZONE,
-
-  STATS_VIEW,
-  STATS_RESET,
-
-  ERROR_VIEW,
-
-  CALIB_BME_T,
-  CALIB_BME_H,
-  CALIB_HTU_T,
-  CALIB_HTU_H,
-  CALIB_DS_T
-};
-
 struct MenuItemDef {
-  MenuItem id;
   const char* label;
   void (*draw)(DisplayUI* ui);
   void (*on_up)(DisplayUI* ui);
@@ -95,7 +58,6 @@ struct MenuItemDef {
 };
 
 struct MenuRootDef {
-  MenuRoot id;
   const char* label;
   const MenuItemDef* items;
   uint8_t item_count;
