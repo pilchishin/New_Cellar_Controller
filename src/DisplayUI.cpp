@@ -362,7 +362,7 @@ void DisplayUI::DrawPage() {
 
 void DisplayUI::DrawRootPage() {
   const MenuRootDef* root = GetCurrentRootDef();
-  DrawHeader(root ? root->label : "", root_index_, (sizeof(MENU_TABLE) / sizeof(MENU_TABLE[0])) - 1);
+  DrawHeader(root ? root->label : "", root_index_ - 1, MENU_TABLE_SIZE - 1);
 
   screen_.SetPos(1, 0);
   screen_.print(F("  MENU ENTER"));
