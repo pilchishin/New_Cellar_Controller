@@ -99,6 +99,10 @@ struct MenuRootDef {
   const char* label;
   const MenuItemDef* items;
   uint8_t item_count;
+  void (*on_up)(DisplayUI* ui);
+  void (*on_down)(DisplayUI* ui);
+  void (*on_menu)(DisplayUI* ui);
+  void (*on_long_menu)(DisplayUI* ui);
 };
 
 class DisplayUI {
@@ -182,6 +186,10 @@ class DisplayUI {
   static void HandleUpCalib(DisplayUI* ui);
   static void HandleDownCalib(DisplayUI* ui);
   static void AdjustCalib(DisplayUI* ui, float delta);
+
+  static void HandleNextRoot(DisplayUI* ui);
+  static void HandleEnterSubmenu(DisplayUI* ui);
+  static void HandleExitSubmenu(DisplayUI* ui);
 
  public:
   DisplayUI(Controller* c, SensorManager* s, TimeManager* t);

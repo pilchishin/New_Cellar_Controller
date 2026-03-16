@@ -63,6 +63,9 @@ void DisplayUI::HandleLongMenuStats(DisplayUI* ui) {
     ui->controller_->ResetStats();
     ui->temp_message_ = "STATS RESET";
     ui->message_timer_ = millis();
+    ui->in_submenu_ = false;
+  } else {
+    ui->in_submenu_ = false;
   }
 }
 
@@ -84,46 +87,54 @@ void DisplayUI::AdjustCalib(DisplayUI* ui, float delta) {
 void DisplayUI::HandleUpCalib(DisplayUI* ui) { AdjustCalib(ui, 0.1f); }
 void DisplayUI::HandleDownCalib(DisplayUI* ui) { AdjustCalib(ui, -0.1f); }
 
+void DisplayUI::HandleNextRoot(DisplayUI* ui) { ui->NextRoot(); }
+void DisplayUI::HandleEnterSubmenu(DisplayUI* ui) {
+  if (ui->current_root_ != MenuRoot::HOME) {
+    ui->in_submenu_ = true;
+  }
+}
+void DisplayUI::HandleExitSubmenu(DisplayUI* ui) { ui->in_submenu_ = false; }
+
 static const MenuItemDef STATUS_ITEMS[] = {
-  { MenuItem::STATUS_IN,   "STATUS_IN",   DisplayUI::HandleDrawStatusIn,  DisplayUI::HandleUpPrevItem, DisplayUI::HandleDownNextItem, nullptr, nullptr },
-  { MenuItem::STATUS_OUT,  "STATUS_OUT",  DisplayUI::HandleDrawStatusOut, DisplayUI::HandleUpPrevItem, DisplayUI::HandleDownNextItem, nullptr, nullptr }
+  { MenuItem::STATUS_IN,   "STATUS_IN",   DisplayUI::HandleDrawStatusIn,  DisplayUI::HandleUpPrevItem, DisplayUI::HandleDownNextItem, DisplayUI::HandleDownNextItem, DisplayUI::HandleExitSubmenu },
+  { MenuItem::STATUS_OUT,  "STATUS_OUT",  DisplayUI::HandleDrawStatusOut, DisplayUI::HandleUpPrevItem, DisplayUI::HandleDownNextItem, DisplayUI::HandleDownNextItem, DisplayUI::HandleExitSubmenu }
 };
 
 static const MenuItemDef TARGET_ITEMS[] = {
-  { MenuItem::TARGET_TEMP, "TARGET_TEMP", DisplayUI::HandleDrawTargets,   DisplayUI::HandleUpTargets, DisplayUI::HandleDownTargets, nullptr, nullptr },
-  { MenuItem::TARGET_HUM,  "TARGET_HUM",  DisplayUI::HandleDrawTargets,   DisplayUI::HandleUpTargets, DisplayUI::HandleDownTargets, nullptr, nullptr }
+  { MenuItem::TARGET_TEMP, "TARGET_TEMP", DisplayUI::HandleDrawTargets,   DisplayUI::HandleUpTargets, DisplayUI::HandleDownTargets, DisplayUI::HandleDownNextItem, DisplayUI::HandleExitSubmenu },
+  { MenuItem::TARGET_HUM,  "TARGET_HUM",  DisplayUI::HandleDrawTargets,   DisplayUI::HandleUpTargets, DisplayUI::HandleDownTargets, DisplayUI::HandleDownNextItem, DisplayUI::HandleExitSubmenu }
 };
 
 static const MenuItemDef MANUAL_ITEMS[] = {
-  { MenuItem::MANUAL_FAN,  "MANUAL_FAN",  DisplayUI::HandleDrawManualModes, DisplayUI::HandleUpManual, DisplayUI::HandleDownManual, DisplayUI::HandleMenuManual, nullptr },
-  { MenuItem::MANUAL_OZONE,"MANUAL_OZONE",DisplayUI::HandleDrawManualModes, DisplayUI::HandleUpManual, DisplayUI::HandleDownManual, DisplayUI::HandleMenuManual, nullptr }
+  { MenuItem::MANUAL_FAN,  "MANUAL_FAN",  DisplayUI::HandleDrawManualModes, DisplayUI::HandleUpManual, DisplayUI::HandleDownManual, DisplayUI::HandleMenuManual, DisplayUI::HandleExitSubmenu },
+  { MenuItem::MANUAL_OZONE,"MANUAL_OZONE",DisplayUI::HandleDrawManualModes, DisplayUI::HandleUpManual, DisplayUI::HandleDownManual, DisplayUI::HandleMenuManual, DisplayUI::HandleExitSubmenu }
 };
 
 static const MenuItemDef STATS_ITEMS[] = {
-  { MenuItem::STATS_VIEW,  "STATS_VIEW",  DisplayUI::HandleDrawStats,     DisplayUI::HandleUpPrevItem, DisplayUI::HandleDownNextItem, nullptr, nullptr },
-  { MenuItem::STATS_RESET, "STATS_RESET", DisplayUI::HandleDrawStats,     DisplayUI::HandleUpPrevItem, DisplayUI::HandleDownNextItem, nullptr, DisplayUI::HandleLongMenuStats }
+  { MenuItem::STATS_VIEW,  "STATS_VIEW",  DisplayUI::HandleDrawStats,     DisplayUI::HandleUpPrevItem, DisplayUI::HandleDownNextItem, DisplayUI::HandleDownNextItem, DisplayUI::HandleExitSubmenu },
+  { MenuItem::STATS_RESET, "STATS_RESET", DisplayUI::HandleDrawStats,     DisplayUI::HandleUpPrevItem, DisplayUI::HandleDownNextItem, DisplayUI::HandleDownNextItem, DisplayUI::HandleLongMenuStats }
 };
 
 static const MenuItemDef ERROR_ITEMS[] = {
-  { MenuItem::ERROR_VIEW,  "ERROR_VIEW",  DisplayUI::HandleDrawErrorLog,  DisplayUI::HandleUpError, nullptr,             nullptr, nullptr }
+  { MenuItem::ERROR_VIEW,  "ERROR_VIEW",  DisplayUI::HandleDrawErrorLog,  DisplayUI::HandleUpError, nullptr,             DisplayUI::HandleDownNextItem, DisplayUI::HandleExitSubmenu }
 };
 
 static const MenuItemDef SERVICE_ITEMS[] = {
-  { MenuItem::CALIB_BME_T, "BME TEMP", DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, nullptr, nullptr },
-  { MenuItem::CALIB_BME_H, "BME HUM",  DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, nullptr, nullptr },
-  { MenuItem::CALIB_HTU_T, "HTU TEMP", DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, nullptr, nullptr },
-  { MenuItem::CALIB_HTU_H, "HTU HUM",  DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, nullptr, nullptr },
-  { MenuItem::CALIB_DS_T,  "DS TEMP",  DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, nullptr, nullptr }
+  { MenuItem::CALIB_BME_T, "BME TEMP", DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleDownNextItem, DisplayUI::HandleExitSubmenu },
+  { MenuItem::CALIB_BME_H, "BME HUM",  DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleDownNextItem, DisplayUI::HandleExitSubmenu },
+  { MenuItem::CALIB_HTU_T, "HTU TEMP", DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleDownNextItem, DisplayUI::HandleExitSubmenu },
+  { MenuItem::CALIB_HTU_H, "HTU HUM",  DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleDownNextItem, DisplayUI::HandleExitSubmenu },
+  { MenuItem::CALIB_DS_T,  "DS TEMP",  DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleDownNextItem, DisplayUI::HandleExitSubmenu }
 };
 
 static const MenuRootDef MENU_TABLE[] = {
-  { MenuRoot::HOME,    "HOME",    nullptr,       0 },
-  { MenuRoot::STATUS,  "STATUS",  STATUS_ITEMS,  2 },
-  { MenuRoot::TARGETS, "TARGETS", TARGET_ITEMS,  2 },
-  { MenuRoot::MANUAL,  "MANUAL",  MANUAL_ITEMS,  2 },
-  { MenuRoot::STATS,   "STATS",   STATS_ITEMS,   2 },
-  { MenuRoot::ERRORS,  "ERRORS",  ERROR_ITEMS,   1 },
-  { MenuRoot::SERVICE, "SERVICE", SERVICE_ITEMS, 5 }
+  { MenuRoot::HOME,    "HOME",    nullptr,       0, nullptr, nullptr, DisplayUI::HandleNextRoot, nullptr },
+  { MenuRoot::STATUS,  "STATUS",  STATUS_ITEMS,  2, nullptr, nullptr, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu },
+  { MenuRoot::TARGETS, "TARGETS", TARGET_ITEMS,  2, nullptr, nullptr, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu },
+  { MenuRoot::MANUAL,  "MANUAL",  MANUAL_ITEMS,  2, nullptr, nullptr, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu },
+  { MenuRoot::STATS,   "STATS",   STATS_ITEMS,   2, nullptr, nullptr, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu },
+  { MenuRoot::ERRORS,  "ERRORS",  ERROR_ITEMS,   1, nullptr, nullptr, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu },
+  { MenuRoot::SERVICE, "SERVICE", SERVICE_ITEMS, 5, nullptr, nullptr, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu }
 };
 
 const MenuRootDef* DisplayUI::FindRootDef(MenuRoot id) const {
@@ -270,56 +281,48 @@ void DisplayUI::HandleButtons() {
   } else {
     if (menu_btn_pressed_) {
       unsigned long press_duration = millis() - menu_btn_timer_;
-      if (press_duration < 600) {
-        // Короткое нажатие
-        if (!in_submenu_) {
-          // если не в submenu: переключать MenuRoot
-          NextRoot();
-        } else {
-          // если в submenu: переключать MenuItem внутри раздела
-          const MenuItemDef* def = FindItemDef(current_item_);
-          if (def && def->on_menu) {
-            def->on_menu(this);
-            needs_redraw_ = true;
+      if (!in_submenu_) {
+        const MenuRootDef* root = GetCurrentRootDef();
+        if (root) {
+          if (press_duration < 600) {
+            if (root->on_menu) root->on_menu(this);
           } else {
-            NextItem();
+            if (root->on_long_menu) root->on_long_menu(this);
           }
         }
       } else {
-        // Длинное нажатие
-        if (!in_submenu_) {
-          // если submenu закрыт: открыть submenu выбранного раздела
-          if (current_root_ != MenuRoot::HOME) {
-            in_submenu_ = true;
+        const MenuItemDef* item = GetCurrentItemDef();
+        if (item) {
+          if (press_duration < 600) {
+            if (item->on_menu) item->on_menu(this);
+          } else {
+            if (item->on_long_menu) item->on_long_menu(this);
           }
-        } else {
-          // если submenu открыт: выйти в root меню
-          const MenuItemDef* def = FindItemDef(current_item_);
-          if (def && def->on_long_menu) {
-            def->on_long_menu(this);
-            needs_redraw_ = true;
-          }
-          in_submenu_ = false;
         }
       }
       menu_btn_pressed_ = false;
+      needs_redraw_ = true;
     }
   }
 
   // Логика кнопок изменения значений (UP/DOWN)
   if ((up || down) && !menu_btn_pressed_) {
-    // Ограничение скорости изменения значений (150мс между шагами)
     if (millis() - last_btn_action_ >= 150) {
       last_btn_action_ = millis();
-
-      if (in_submenu_) {
-        const MenuItemDef* def = FindItemDef(current_item_);
-        if (def) {
-          if (up && def->on_up) def->on_up(this);
-          if (down && def->on_down) def->on_down(this);
-          needs_redraw_ = true;
+      if (!in_submenu_) {
+        const MenuRootDef* root = GetCurrentRootDef();
+        if (root) {
+          if (up && root->on_up) root->on_up(this);
+          if (down && root->on_down) root->on_down(this);
+        }
+      } else {
+        const MenuItemDef* item = GetCurrentItemDef();
+        if (item) {
+          if (up && item->on_up) item->on_up(this);
+          if (down && item->on_down) item->on_down(this);
         }
       }
+      needs_redraw_ = true;
     }
   }
 }
