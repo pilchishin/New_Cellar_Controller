@@ -17,10 +17,10 @@ class ScreenBuffer : public Print {
   ScreenBuffer() { Clear(); }
 
   void Clear() {
-    memset(lines_[0], ' ', 16);
-    lines_[0][16] = '\0';
-    memset(lines_[1], ' ', 16);
-    lines_[1][16] = '\0';
+    memset(buffer[0], ' ', 16);
+    buffer[0][16] = '\0';
+    memset(buffer[1], ' ', 16);
+    buffer[1][16] = '\0';
     row_ = 0;
     col_ = 0;
   }
@@ -32,7 +32,7 @@ class ScreenBuffer : public Print {
 
   size_t write(uint8_t c) override {
     if (col_ < 16) {
-      lines_[row_][col_++] = (char)c;
+      buffer[row_][col_++] = (char)c;
       return 1;
     }
     return 0;
@@ -40,11 +40,11 @@ class ScreenBuffer : public Print {
 
   const char* GetLine(int row) const {
     if (row < 0 || row >= 2) return "";
-    return lines_[row];
+    return buffer[row];
   }
 
  private:
-  char lines_[2][17];
+  char buffer[2][17];
   int row_, col_;
 };
 
