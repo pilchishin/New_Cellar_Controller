@@ -166,11 +166,16 @@ const MenuRootDef* DisplayUI::GetCurrentRootDef() const {
 
 /**
  * @brief Чтение определения текущего элемента подменю из PROGMEM в RAM-буфер.
+ * Использует pgm_read_ptr для получения адреса массива элементов.
  */
 const MenuItemDef* DisplayUI::GetCurrentItemDef() const {
-  const MenuRootDef* root = GetCurrentRootDef();
-  if (root && root->items && item_index_ < root->item_count) {
-    memcpy_P(&current_item_buf_, &root->items[item_index_], sizeof(MenuItemDef));
+  // Согласно лучшим практикам AVR, сначала читаем указатель из PROGMEM
+  const MenuItemDef* items_ptr = (const MenuItemDef*)pgm_read_ptr(&MENU_TABLE[root_index_].items);
+  uint8_t count = pgm_read_byte(&MENU_TABLE[root_index_].item_count);
+
+  if (items_ptr && item_index_ < count) {
+    // Затем копируем всю структуру элемента в RAM
+    memcpy_P(&current_item_buf_, &items_ptr[item_index_], sizeof(MenuItemDef));
     return &current_item_buf_;
   }
   return nullptr;
