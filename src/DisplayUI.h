@@ -7,6 +7,7 @@
 #include "SensorManager.h"
 #include "TimeManager.h"
 #include "MenuNavigator.h"
+#include "ButtonEngine.h"
 
 class DisplayUI;
 
@@ -124,12 +125,7 @@ class DisplayUI {
   SensorManager* sensors_;      // Ссылка на менеджер датчиков
   TimeManager* rtc_;            // Ссылка на менеджер времени
   MenuNavigator nav_;           // Состояние навигации по меню
-
-  // Переменные для обработки кнопок
-  unsigned long last_btn_check_;   // Таймер антидребезга
-  unsigned long last_btn_action_;  // Таймер повтора для зажатых кнопок UP/DOWN
-  unsigned long menu_btn_timer_;   // Таймер замера длительности нажатия кнопки МЕНЮ
-  bool menu_btn_pressed_;          // Состояние нажатия кнопки МЕНЮ
+  ButtonEngine buttons_;        // Обработчик кнопок
 
   // Временные уведомления на экране
   unsigned long message_timer_;    // Таймер отображения сообщения

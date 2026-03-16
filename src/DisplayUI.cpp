@@ -116,10 +116,7 @@ DisplayUI::DisplayUI(Controller* c, SensorManager* s, TimeManager* t)
       sensors_(s),
       rtc_(t),
       nav_(),
-      last_btn_check_(0),
-      last_btn_action_(0),
-      menu_btn_timer_(0),
-      menu_btn_pressed_(false),
+      buttons_(BT_UP, BT_DOWN, BT_MENU),
       message_timer_(0),
       temp_message_(nullptr),
       last_activity_time_(0),
@@ -134,9 +131,7 @@ DisplayUI::DisplayUI(Controller* c, SensorManager* s, TimeManager* t)
 void DisplayUI::Init() {
   lcd_.init();
   lcd_.backlight();
-  pinMode(BT_UP, INPUT_PULLUP);
-  pinMode(BT_DOWN, INPUT_PULLUP);
-  pinMode(BT_MENU, INPUT_PULLUP);
+  buttons_.Init();
   last_activity_time_ = millis();
 }
 
@@ -236,19 +231,11 @@ void DisplayUI::Flush() {
 }
 
 /**
- * @brief Опрос физических кнопок с антидребезгом и распознаванием длинных нажатий.
+ * @brief Обработка событий кнопок, полученных от ButtonEngine.
  */
 void DisplayUI::HandleButtons() {
-  if (millis() - last_btn_check_ < 50) return;
-  last_btn_check_ = millis();
-
-  // Инвертированная логика для INPUT_PULLUP
-  bool up = !digitalRead(BT_UP);
-  bool down = !digitalRead(BT_DOWN);
-  bool menu = !digitalRead(BT_MENU);
-
-  // Сброс таймера бездействия при любой активности
-  if (up || down || menu) {
+  // Сброс таймера бездействия и пробуждение подсветки
+  if (buttons_.AnyPressed()) {
     needs_redraw_ = true;
     controller_->NotifyUserActivity();
     last_activity_time_ = millis();
@@ -259,57 +246,32 @@ void DisplayUI::HandleButtons() {
     }
   }
 
-  // Логика кнопки MENU (короткое/длинное нажатие)
-  if (menu) {
-    if (!menu_btn_pressed_) {
-      menu_btn_pressed_ = true;
-      menu_btn_timer_ = millis();
+  ButtonEvent event = buttons_.Poll();
+  if (event == ButtonEvent::kNone) return;
+
+  needs_redraw_ = true;
+
+  if (!nav_.InSubmenu()) {
+    const MenuRootDef* root = GetCurrentRootDef();
+    if (root) {
+      switch (event) {
+        case ButtonEvent::kUp:   if (root->on_up) root->on_up(this); break;
+        case ButtonEvent::kDown: if (root->on_down) root->on_down(this); break;
+        case ButtonEvent::kMenu: if (root->on_menu) root->on_menu(this); break;
+        case ButtonEvent::kMenuLong: if (root->on_long_menu) root->on_long_menu(this); break;
+        default: break;
+      }
     }
   } else {
-    if (menu_btn_pressed_) {
-      unsigned long press_duration = millis() - menu_btn_timer_;
-      if (!nav_.InSubmenu()) {
-        const MenuRootDef* root = GetCurrentRootDef();
-        if (root) {
-          if (press_duration < 600) {
-            if (root->on_menu) root->on_menu(this);
-          } else {
-            if (root->on_long_menu) root->on_long_menu(this);
-          }
-        }
-      } else {
-        const MenuItemDef* item = GetCurrentItemDef();
-        if (item) {
-          if (press_duration < 600) {
-            if (item->on_menu) item->on_menu(this);
-          } else {
-            if (item->on_long_menu) item->on_long_menu(this);
-          }
-        }
+    const MenuItemDef* item = GetCurrentItemDef();
+    if (item) {
+      switch (event) {
+        case ButtonEvent::kUp:   if (item->on_up) item->on_up(this); break;
+        case ButtonEvent::kDown: if (item->on_down) item->on_down(this); break;
+        case ButtonEvent::kMenu: if (item->on_menu) item->on_menu(this); break;
+        case ButtonEvent::kMenuLong: if (item->on_long_menu) item->on_long_menu(this); break;
+        default: break;
       }
-      menu_btn_pressed_ = false;
-      needs_redraw_ = true;
-    }
-  }
-
-  // Логика кнопок UP/DOWN с автоповтором (150мс)
-  if ((up || down) && !menu_btn_pressed_) {
-    if (millis() - last_btn_action_ >= 150) {
-      last_btn_action_ = millis();
-      if (!nav_.InSubmenu()) {
-        const MenuRootDef* root = GetCurrentRootDef();
-        if (root) {
-          if (up && root->on_up) root->on_up(this);
-          if (down && root->on_down) root->on_down(this);
-        }
-      } else {
-        const MenuItemDef* item = GetCurrentItemDef();
-        if (item) {
-          if (up && item->on_up) item->on_up(this);
-          if (down && item->on_down) item->on_down(this);
-        }
-      }
-      needs_redraw_ = true;
     }
   }
 }
