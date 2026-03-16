@@ -225,10 +225,12 @@ void DisplayUI::Update() {
 void DisplayUI::Flush() {
   for (int i = 0; i < 2; i++) {
     const char* line = screen_.GetLine(i);
-    if (strcmp(line, last_lines_[i]) != 0) {
+    // Оптимизированное сравнение фиксированных 16 символов
+    if (memcmp(line, last_lines_[i], 16) != 0) {
       lcd_.setCursor(0, i);
       lcd_.print(line);
-      strcpy(last_lines_[i], line);
+      // Копируем все 16 символов + терминатор
+      memcpy(last_lines_[i], line, 17);
     }
   }
 }
