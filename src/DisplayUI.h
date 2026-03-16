@@ -143,7 +143,6 @@ class DisplayUI {
 
   void DrawHeader(const char* label, uint8_t index, uint8_t count);
   void DrawHeader(const __FlashStringHelper* label, uint8_t index, uint8_t count);
-  void SetDefaultItemForRoot();
 
   // Вспомогательные методы отрисовки
   void DrawHomeScreen();
@@ -154,9 +153,6 @@ class DisplayUI {
   void DrawCalibPage(const char* label, float value, bool is_temp);
   void DrawStats();
   void DrawErrorLog();
-
-  const MenuItemDef* FindItemDef(MenuItem id) const;
-  const MenuRootDef* FindRootDef(MenuRoot id) const;
 
  public:
   const MenuRootDef* GetCurrentRootDef() const;

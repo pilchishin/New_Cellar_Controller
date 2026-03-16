@@ -331,10 +331,6 @@ void DisplayUI::HandleButtons() {
   }
 }
 
-void DisplayUI::SetDefaultItemForRoot() {
-  item_index_ = 0;
-  needs_redraw_ = true;
-}
 
 void DisplayUI::UpdateBacklight() {
   // Если прошло более 30 секунд бездействия - гасим свет
