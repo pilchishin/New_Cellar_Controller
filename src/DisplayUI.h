@@ -6,6 +6,7 @@
 #include "Controller.h"
 #include "SensorManager.h"
 #include "TimeManager.h"
+#include "MenuNavigator.h"
 
 class DisplayUI;
 
@@ -122,10 +123,7 @@ class DisplayUI {
   Controller* controller_;      // Ссылка на основной контроллер системы
   SensorManager* sensors_;      // Ссылка на менеджер датчиков
   TimeManager* rtc_;            // Ссылка на менеджер времени
-
-  uint8_t root_index_;          // Индекс текущего корневого раздела
-  uint8_t item_index_;          // Индекс текущего элемента внутри подменю
-  bool in_submenu_;             // Флаг нахождения внутри подменю
+  MenuNavigator nav_;           // Состояние навигации по меню
 
   // Переменные для обработки кнопок
   unsigned long last_btn_check_;   // Таймер антидребезга

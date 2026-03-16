@@ -115,9 +115,7 @@ DisplayUI::DisplayUI(Controller* c, SensorManager* s, TimeManager* t)
       controller_(c),
       sensors_(s),
       rtc_(t),
-      root_index_(0),
-      item_index_(0),
-      in_submenu_(false),
+      nav_(),
       last_btn_check_(0),
       last_btn_action_(0),
       menu_btn_timer_(0),
@@ -161,7 +159,7 @@ MenuItemDef DisplayUI::current_item_buf_;
  * @brief Чтение определения текущего корневого раздела из PROGMEM в RAM-буфер.
  */
 const MenuRootDef* DisplayUI::GetCurrentRootDef() const {
-  memcpy_P(&current_root_buf_, &MENU_TABLE[root_index_], sizeof(MenuRootDef));
+  memcpy_P(&current_root_buf_, &MENU_TABLE[nav_.GetRootIndex()], sizeof(MenuRootDef));
   return &current_root_buf_;
 }
 
@@ -171,12 +169,14 @@ const MenuRootDef* DisplayUI::GetCurrentRootDef() const {
  */
 const MenuItemDef* DisplayUI::GetCurrentItemDef() const {
   // Согласно лучшим практикам AVR, сначала читаем указатель из PROGMEM
-  const MenuItemDef* items_ptr = (const MenuItemDef*)pgm_read_ptr(&MENU_TABLE[root_index_].items);
-  uint8_t count = pgm_read_byte(&MENU_TABLE[root_index_].item_count);
+  uint8_t root_idx = nav_.GetRootIndex();
+  uint8_t item_idx = nav_.GetItemIndex();
+  const MenuItemDef* items_ptr = (const MenuItemDef*)pgm_read_ptr(&MENU_TABLE[root_idx].items);
+  uint8_t count = pgm_read_byte(&MENU_TABLE[root_idx].item_count);
 
-  if (items_ptr && item_index_ < count) {
+  if (items_ptr && item_idx < count) {
     // Затем копируем всю структуру элемента в RAM
-    memcpy_P(&current_item_buf_, &items_ptr[item_index_], sizeof(MenuItemDef));
+    memcpy_P(&current_item_buf_, &items_ptr[item_idx], sizeof(MenuItemDef));
     return &current_item_buf_;
   }
   return nullptr;
@@ -268,7 +268,7 @@ void DisplayUI::HandleButtons() {
   } else {
     if (menu_btn_pressed_) {
       unsigned long press_duration = millis() - menu_btn_timer_;
-      if (!in_submenu_) {
+      if (!nav_.InSubmenu()) {
         const MenuRootDef* root = GetCurrentRootDef();
         if (root) {
           if (press_duration < 600) {
@@ -296,7 +296,7 @@ void DisplayUI::HandleButtons() {
   if ((up || down) && !menu_btn_pressed_) {
     if (millis() - last_btn_action_ >= 150) {
       last_btn_action_ = millis();
-      if (!in_submenu_) {
+      if (!nav_.InSubmenu()) {
         const MenuRootDef* root = GetCurrentRootDef();
         if (root) {
           if (up && root->on_up) root->on_up(this);
@@ -331,9 +331,9 @@ void DisplayUI::UpdateBacklight() {
  * @brief Диспетчер отрисовки страниц.
  */
 void DisplayUI::DrawPage() {
-  if (root_index_ == 0) { // Главный экран
+  if (nav_.GetRootIndex() == 0) { // Главный экран
     DrawHomeScreen();
-  } else if (!in_submenu_) { // Экран выбора раздела
+  } else if (!nav_.InSubmenu()) { // Экран выбора раздела
     DrawRootPage();
   } else { // Экран конкретного элемента подменю
     const MenuItemDef* item = GetCurrentItemDef();
@@ -349,7 +349,8 @@ void DisplayUI::DrawPage() {
 void DisplayUI::DrawRootPage() {
   const MenuRootDef* root = GetCurrentRootDef();
   // HOME не считается за пронумерованный раздел в статус-баре
-  uint8_t index = (root_index_ > 0) ? root_index_ - 1 : 0;
+  uint8_t root_idx = nav_.GetRootIndex();
+  uint8_t index = (root_idx > 0) ? root_idx - 1 : 0;
   DrawHeader((const __FlashStringHelper*)root->label, index, MENU_TABLE_SIZE - 1);
 
   screen_.SetPos(1, 0);
@@ -438,7 +439,7 @@ void DisplayUI::DrawStatusOut() {
  */
 void DisplayUI::DrawStatusPage(const SensorData& data, const __FlashStringHelper* label) {
   const MenuRootDef* root = GetCurrentRootDef();
-  DrawHeader(F("STATUS"), item_index_, root->item_count);
+  DrawHeader(F("STATUS"), nav_.GetItemIndex(), root->item_count);
 
   screen_.SetPos(1, 0);
   screen_.print(label);
@@ -453,16 +454,17 @@ void DisplayUI::DrawStatusPage(const SensorData& data, const __FlashStringHelper
  */
 void DisplayUI::DrawTargets() {
   const MenuRootDef* root = GetCurrentRootDef();
-  DrawHeader(F("TARGETS"), item_index_, root->item_count);
+  uint8_t item_idx = nav_.GetItemIndex();
+  DrawHeader(F("TARGETS"), item_idx, root->item_count);
 
   screen_.SetPos(1, 0);
-  if (item_index_ == 0) screen_.print(F(">"));
+  if (item_idx == 0) screen_.print(F(">"));
   else screen_.print(F(" "));
   screen_.print(F("T:"));
   screen_.print(controller_->GetTargetTemp(), 1);
 
   screen_.print(F(" "));
-  if (item_index_ == 1) screen_.print(F(">"));
+  if (item_idx == 1) screen_.print(F(">"));
   else screen_.print(F(" "));
   screen_.print(F("H:"));
   screen_.print(controller_->GetTargetRh(), 0);
@@ -474,14 +476,15 @@ void DisplayUI::DrawTargets() {
  */
 void DisplayUI::DrawManualModes() {
   const MenuRootDef* root = GetCurrentRootDef();
-  DrawHeader(F("MANUAL"), item_index_, root->item_count);
+  uint8_t item_idx = nav_.GetItemIndex();
+  DrawHeader(F("MANUAL"), item_idx, root->item_count);
 
   screen_.SetPos(1, 0);
-  if (item_index_ == 0) screen_.print(F(">"));
+  if (item_idx == 0) screen_.print(F(">"));
   else screen_.print(F(" "));
   screen_.print(F("FAN   "));
 
-  if (item_index_ == 1) screen_.print(F(">"));
+  if (item_idx == 1) screen_.print(F(">"));
   else screen_.print(F(" "));
   screen_.print(F("OZONE"));
 }
@@ -491,7 +494,7 @@ void DisplayUI::DrawManualModes() {
  */
 void DisplayUI::DrawCalibPage(const char* label, float value, bool is_temp) {
   const MenuRootDef* root = GetCurrentRootDef();
-  DrawHeader(F("SERVICE"), item_index_, root->item_count);
+  DrawHeader(F("SERVICE"), nav_.GetItemIndex(), root->item_count);
 
   screen_.SetPos(1, 0);
   screen_.print((const __FlashStringHelper*)label);
@@ -506,10 +509,11 @@ void DisplayUI::DrawCalibPage(const char* label, float value, bool is_temp) {
  */
 void DisplayUI::DrawStats() {
   const MenuRootDef* root = GetCurrentRootDef();
-  DrawHeader(F("STATS"), item_index_, root->item_count);
+  uint8_t item_idx = nav_.GetItemIndex();
+  DrawHeader(F("STATS"), item_idx, root->item_count);
 
   screen_.SetPos(1, 0);
-  if (item_index_ == 0) { // Просмотр
+  if (item_idx == 0) { // Просмотр
     SystemStatistics s = controller_->GetStats();
     screen_.print(F("U"));
     screen_.print(s.uptimeMinutes / 60);
@@ -517,7 +521,7 @@ void DisplayUI::DrawStats() {
     screen_.print(s.fanMinutes / 60);
     screen_.print(F(" O3"));
     screen_.print(s.ozoneMinutes / 60);
-  } else if (item_index_ == 1) { // Сброс
+  } else if (item_idx == 1) { // Сброс
     screen_.print(F("MENU CONFIRM"));
   }
 }
@@ -527,7 +531,7 @@ void DisplayUI::DrawStats() {
  */
 void DisplayUI::DrawErrorLog() {
   const MenuRootDef* root = GetCurrentRootDef();
-  DrawHeader(F("ERRORS"), item_index_, root->item_count);
+  DrawHeader(F("ERRORS"), nav_.GetItemIndex(), root->item_count);
 
   screen_.SetPos(1, 0);
   ErrorCode err = controller_->GetError();
