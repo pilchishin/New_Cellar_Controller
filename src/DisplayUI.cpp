@@ -25,14 +25,22 @@ void DisplayUI::HandleNextItem(DisplayUI* ui) {
 
 void DisplayUI::HandleDrawCalib(DisplayUI* ui) {
   CalibrationData c = ui->controller_->GetCalibration();
-  int idx = ui->item_index_;
-  if (idx >= 0 && idx < 5) {
-    float* offsets[] = { &c.bmeTempOffset, &c.bmeHumOffset, &c.htuTempOffset, &c.htuHumOffset, &c.dsTempOffset };
-    const MenuItemDef* def = ui->GetCurrentItemDef();
-    if (def) {
-      ui->DrawCalibPage(def->label, *offsets[idx], (idx != 1 && idx != 3));
-    }
+  const MenuItemDef* item = ui->GetCurrentItemDef();
+  if (!item) return;
+
+  float value = 0;
+  bool is_temp = true;
+
+  switch (item->id) {
+    case MenuItem::CALIB_BME_T: value = c.bmeTempOffset; break;
+    case MenuItem::CALIB_BME_H: value = c.bmeHumOffset; is_temp = false; break;
+    case MenuItem::CALIB_HTU_T: value = c.htuTempOffset; break;
+    case MenuItem::CALIB_HTU_H: value = c.htuHumOffset; is_temp = false; break;
+    case MenuItem::CALIB_DS_T:  value = c.dsTempOffset; break;
+    default: return;
   }
+
+  ui->DrawCalibPage(item->label, value, is_temp);
 }
 
 void DisplayUI::HandleUpTargets(DisplayUI* ui) {
@@ -82,16 +90,25 @@ void DisplayUI::HandleLongMenuStats(DisplayUI* ui) {
 void DisplayUI::HandleUpError(DisplayUI* ui) { ui->controller_->ResetError(); }
 
 void DisplayUI::AdjustCalib(DisplayUI* ui, float delta) {
+  const MenuItemDef* item = ui->GetCurrentItemDef();
+  if (!item) return;
+
   CalibrationData c = ui->controller_->GetCalibration();
-  int idx = ui->item_index_;
-  if (idx >= 0 && idx < 5) {
-    float* offsets[] = { &c.bmeTempOffset, &c.bmeHumOffset, &c.htuTempOffset, &c.htuHumOffset, &c.dsTempOffset };
-    float* val = offsets[idx];
-    *val += delta;
-    if (*val > 5.0f) *val = 5.0f;
-    if (*val < -5.0f) *val = -5.0f;
-    ui->controller_->SetCalibration(c);
+  float* val = nullptr;
+
+  switch (item->id) {
+    case MenuItem::CALIB_BME_T: val = &c.bmeTempOffset; break;
+    case MenuItem::CALIB_BME_H: val = &c.bmeHumOffset; break;
+    case MenuItem::CALIB_HTU_T: val = &c.htuTempOffset; break;
+    case MenuItem::CALIB_HTU_H: val = &c.htuHumOffset; break;
+    case MenuItem::CALIB_DS_T:  val = &c.dsTempOffset; break;
+    default: return;
   }
+
+  *val += delta;
+  if (*val > 5.0f) *val = 5.0f;
+  if (*val < -5.0f) *val = -5.0f;
+  ui->controller_->SetCalibration(c);
 }
 
 void DisplayUI::HandleUpCalib(DisplayUI* ui) { AdjustCalib(ui, 0.1f); }
