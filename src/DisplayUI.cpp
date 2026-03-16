@@ -19,7 +19,8 @@ void DisplayUI::AdjustCalib(float delta) {
   if (!item) return;
 
   CalibrationData c = controller_->GetCalibration();
-  float* val = GetCalibrationParam(item->id, c);
+  bool is_temp = true;
+  float* val = GetCalibrationParam(item->id, c, &is_temp);
 
   if (val) {
     *val += delta;
