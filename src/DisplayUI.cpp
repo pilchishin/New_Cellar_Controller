@@ -146,14 +146,14 @@ static const MenuRootDef MENU_TABLE[] = {
   { MenuRoot::SERVICE, "SERVICE", SERVICE_ITEMS, 5 }
 };
 
-const MenuRootDef* DisplayUI::FindRootDef(MenuRoot id) {
+const MenuRootDef* DisplayUI::FindRootDef(MenuRoot id) const {
   for (uint8_t i = 0; i < sizeof(MENU_TABLE) / sizeof(MENU_TABLE[0]); i++) {
     if (MENU_TABLE[i].id == id) return &MENU_TABLE[i];
   }
   return nullptr;
 }
 
-const MenuItemDef* DisplayUI::FindItemDef(MenuItem id) {
+const MenuItemDef* DisplayUI::FindItemDef(MenuItem id) const {
   const MenuRootDef* root = FindRootDef(current_root_);
   if (!root || !root->items) return nullptr;
   for (uint8_t i = 0; i < root->item_count; i++) {
@@ -200,6 +200,10 @@ void DisplayUI::Reinit() {
     lcd_.backlight();
   else
     lcd_.noBacklight();
+}
+
+const MenuRootDef* DisplayUI::GetCurrentRootDef() const {
+  return FindRootDef(current_root_);
 }
 
 void DisplayUI::Update() {

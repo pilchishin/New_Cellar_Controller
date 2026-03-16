@@ -157,10 +157,11 @@ class DisplayUI {
   void DrawStats();
   void DrawErrorLog();
 
-  const MenuItemDef* FindItemDef(MenuItem id);
-  const MenuRootDef* FindRootDef(MenuRoot id);
+  const MenuItemDef* FindItemDef(MenuItem id) const;
+  const MenuRootDef* FindRootDef(MenuRoot id) const;
 
  public:
+  const MenuRootDef* GetCurrentRootDef() const;
   static void HandleDrawStatusIn(DisplayUI* ui);
   static void HandleDrawStatusOut(DisplayUI* ui);
   static void HandleDrawTargets(DisplayUI* ui);
