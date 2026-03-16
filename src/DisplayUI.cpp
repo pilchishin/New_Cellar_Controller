@@ -54,8 +54,8 @@ void DisplayUI::HandleDownTargets(DisplayUI* ui) {
   }
 }
 
-void DisplayUI::HandleUpManual(DisplayUI* ui) { ui->item_index_ = 0; }
-void DisplayUI::HandleDownManual(DisplayUI* ui) { ui->item_index_ = 1; }
+void DisplayUI::HandleUpManual(DisplayUI* ui) { HandlePrevItem(ui); }
+void DisplayUI::HandleDownManual(DisplayUI* ui) { HandleNextItem(ui); }
 
 void DisplayUI::HandleMenuManual(DisplayUI* ui) {
   if (ui->item_index_ == 0) { // MANUAL_FAN
