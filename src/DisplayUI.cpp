@@ -1,58 +1,6 @@
 #include "DisplayUI.h"
+#include "MenuActions.h"
 #include "config.h"
-
-// --- Статические обработчики отрисовки для MenuItemDef ---
-// Эти функции-обертки позволяют вызывать приватные методы отрисовки через указатели в таблицах меню
-
-void DisplayUI::HandleDrawStatusIn(DisplayUI* ui) { ui->DrawStatusIn(); }
-void DisplayUI::HandleDrawStatusOut(DisplayUI* ui) { ui->DrawStatusOut(); }
-void DisplayUI::HandleDrawTargets(DisplayUI* ui) { ui->DrawTargets(); }
-void DisplayUI::HandleDrawManualModes(DisplayUI* ui) { ui->DrawManualModes(); }
-void DisplayUI::HandleDrawStats(DisplayUI* ui) { ui->DrawStats(); }
-void DisplayUI::HandleDrawErrorLog(DisplayUI* ui) { ui->DrawErrorLog(); }
-
-/**
- * @brief Переход к предыдущему элементу в текущем подменю.
- */
-void DisplayUI::HandlePrevItem(DisplayUI* ui) {
-  const MenuRootDef* root = ui->GetCurrentRootDef();
-  if (root && root->item_count > 0) {
-    ui->item_index_ = (ui->item_index_ + root->item_count - 1) % root->item_count;
-  }
-}
-
-/**
- * @brief Переход к следующему элементу в текущем подменю.
- */
-void DisplayUI::HandleNextItem(DisplayUI* ui) {
-  const MenuRootDef* root = ui->GetCurrentRootDef();
-  if (root && root->item_count > 0) {
-    ui->item_index_ = (ui->item_index_ + 1) % root->item_count;
-  }
-}
-
-// Строки меток для элементов калибровки в PROGMEM
-static const char lbl_bme_t[] PROGMEM = "BME TEMP";
-static const char lbl_bme_h[] PROGMEM = "BME HUM";
-static const char lbl_htu_t[] PROGMEM = "HTU TEMP";
-static const char lbl_htu_h[] PROGMEM = "HTU HUM";
-static const char lbl_ds_t[] PROGMEM = "DS TEMP";
-
-/**
- * @brief Общий обработчик отрисовки страниц калибровки.
- */
-void DisplayUI::HandleDrawCalib(DisplayUI* ui) {
-  const MenuItemDef* item = ui->GetCurrentItemDef();
-  if (!item) return;
-
-  CalibrationData c = ui->controller_->GetCalibration();
-  bool is_temp = true;
-  float* val = ui->GetCalibrationParam(item->id, c, &is_temp);
-
-  if (val) {
-    ui->DrawCalibPage(item->label, *val, is_temp);
-  }
-}
 
 float* DisplayUI::GetCalibrationParam(MenuItemID id, CalibrationData& data, bool* is_temp) {
   if (is_temp) *is_temp = true;
@@ -66,146 +14,68 @@ float* DisplayUI::GetCalibrationParam(MenuItemID id, CalibrationData& data, bool
   }
 }
 
-/**
- * @brief Обработчик кнопки ВВЕРХ для настройки целевых значений (Targets).
- */
-void DisplayUI::HandleUpTargets(DisplayUI* ui) {
-  if (ui->item_index_ == 0) // Температура
-    ui->controller_->SetTargetTemp(ui->controller_->GetTargetTemp() + 0.1f);
-  else { // Влажность
-    float h = ui->controller_->GetTargetRh() + 1.0f;
-    if (h > 100.0f) h = 100.0f;
-    ui->controller_->SetTargetRh(h);
-  }
-}
-
-/**
- * @brief Обработчик кнопки ВНИЗ для настройки целевых значений (Targets).
- */
-void DisplayUI::HandleDownTargets(DisplayUI* ui) {
-  if (ui->item_index_ == 0) // Температура
-    ui->controller_->SetTargetTemp(ui->controller_->GetTargetTemp() - 0.1f);
-  else { // Влажность
-    float h = ui->controller_->GetTargetRh() - 1.0f;
-    if (h < 0.0f) h = 0.0f;
-    ui->controller_->SetTargetRh(h);
-  }
-}
-
-// Обработчики навигации для ручного режима (используют общую логику элементов)
-void DisplayUI::HandleUpManual(DisplayUI* ui) { HandlePrevItem(ui); }
-void DisplayUI::HandleDownManual(DisplayUI* ui) { HandleNextItem(ui); }
-
-/**
- * @brief Запуск выбранного исполнительного устройства в ручном режиме.
- */
-void DisplayUI::HandleMenuManual(DisplayUI* ui) {
-  if (ui->item_index_ == 0) { // Вентилятор
-    ui->controller_->StartManualFan(30);
-    ui->temp_message_ = "FAN STARTED";
-  } else { // Озон
-    ui->controller_->StartManualOzone(15);
-    ui->temp_message_ = "OZONE STARTED";
-  }
-  ui->message_timer_ = millis();
-}
-
-/**
- * @brief Сброс накопленной статистики при долгом нажатии МЕНЮ на странице сброса.
- */
-void DisplayUI::HandleLongMenuStats(DisplayUI* ui) {
-  if (ui->item_index_ == 1) { // Страница STATS_RESET
-    ui->controller_->ResetStats();
-    ui->temp_message_ = "STATS RESET";
-    ui->message_timer_ = millis();
-    ui->in_submenu_ = false;
-  } else {
-    ui->in_submenu_ = false;
-  }
-}
-
-/**
- * @brief Сброс текущей системной ошибки.
- */
-void DisplayUI::HandleUpError(DisplayUI* ui) { ui->controller_->ResetError(); }
-
-/**
- * @brief Вспомогательный метод для изменения калибровочных смещений.
- */
-void DisplayUI::AdjustCalib(DisplayUI* ui, float delta) {
-  const MenuItemDef* item = ui->GetCurrentItemDef();
+void DisplayUI::AdjustCalib(float delta) {
+  const MenuItemDef* item = GetCurrentItemDef();
   if (!item) return;
 
-  CalibrationData c = ui->controller_->GetCalibration();
-  float* val = ui->GetCalibrationParam(item->id, c);
+  CalibrationData c = controller_->GetCalibration();
+  float* val = GetCalibrationParam(item->id, c);
 
   if (val) {
     *val += delta;
     if (*val > 5.0f) *val = 5.0f;
     if (*val < -5.0f) *val = -5.0f;
-    ui->controller_->SetCalibration(c);
+    controller_->SetCalibration(c);
   }
 }
-
-void DisplayUI::HandleUpCalib(DisplayUI* ui) { AdjustCalib(ui, 0.1f); }
-void DisplayUI::HandleDownCalib(DisplayUI* ui) { AdjustCalib(ui, -0.1f); }
-
-/**
- * @brief Вход в подменю текущего раздела.
- */
-void DisplayUI::HandleEnterSubmenu(DisplayUI* ui) {
-  if (ui->root_index_ != 0) { // Раздел HOME не имеет подменю
-    ui->in_submenu_ = true;
-    ui->item_index_ = 0;
-  }
-}
-
-/**
- * @brief Выход из подменю в корень.
- */
-void DisplayUI::HandleExitSubmenu(DisplayUI* ui) { ui->in_submenu_ = false; }
 
 // --- Определения таблиц меню в PROGMEM ---
 
 static const char lbl_status_in[] PROGMEM = "STATUS_IN";
 static const char lbl_status_out[] PROGMEM = "STATUS_OUT";
 static const MenuItemDef STATUS_ITEMS[] PROGMEM = {
-  { MenuItemID::kStatusIn,  lbl_status_in,  DisplayUI::HandleDrawStatusIn,  DisplayUI::HandlePrevItem, DisplayUI::HandleNextItem, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
-  { MenuItemID::kStatusOut, lbl_status_out, DisplayUI::HandleDrawStatusOut, DisplayUI::HandlePrevItem, DisplayUI::HandleNextItem, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu }
+  { MenuItemID::kStatusIn,  lbl_status_in,  MenuActions::HandleDrawStatusIn,  MenuActions::HandlePrevItem, MenuActions::HandleNextItem, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu },
+  { MenuItemID::kStatusOut, lbl_status_out, MenuActions::HandleDrawStatusOut, MenuActions::HandlePrevItem, MenuActions::HandleNextItem, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu }
 };
 
 static const char lbl_target_t[] PROGMEM = "TARGET_TEMP";
 static const char lbl_target_h[] PROGMEM = "TARGET_HUM";
 static const MenuItemDef TARGET_ITEMS[] PROGMEM = {
-  { MenuItemID::kTargetTemp, lbl_target_t, DisplayUI::HandleDrawTargets, DisplayUI::HandleUpTargets, DisplayUI::HandleDownTargets, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
-  { MenuItemID::kTargetHum,  lbl_target_h, DisplayUI::HandleDrawTargets, DisplayUI::HandleUpTargets, DisplayUI::HandleDownTargets, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu }
+  { MenuItemID::kTargetTemp, lbl_target_t, MenuActions::HandleDrawTargets, MenuActions::HandleUpTargets, MenuActions::HandleDownTargets, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu },
+  { MenuItemID::kTargetHum,  lbl_target_h, MenuActions::HandleDrawTargets, MenuActions::HandleUpTargets, MenuActions::HandleDownTargets, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu }
 };
 
 static const char lbl_man_fan[] PROGMEM = "MANUAL_FAN";
 static const char lbl_man_o3[] PROGMEM = "MANUAL_OZONE";
 static const MenuItemDef MANUAL_ITEMS[] PROGMEM = {
-  { MenuItemID::kManualFan,   lbl_man_fan, DisplayUI::HandleDrawManualModes, DisplayUI::HandleUpManual, DisplayUI::HandleDownManual, DisplayUI::HandleMenuManual, DisplayUI::HandleExitSubmenu },
-  { MenuItemID::kManualOzone, lbl_man_o3,  DisplayUI::HandleDrawManualModes, DisplayUI::HandleUpManual, DisplayUI::HandleDownManual, DisplayUI::HandleMenuManual, DisplayUI::HandleExitSubmenu }
+  { MenuItemID::kManualFan,   lbl_man_fan, MenuActions::HandleDrawManualModes, MenuActions::HandleUpManual, MenuActions::HandleDownManual, MenuActions::HandleMenuManual, MenuActions::HandleExitSubmenu },
+  { MenuItemID::kManualOzone, lbl_man_o3,  MenuActions::HandleDrawManualModes, MenuActions::HandleUpManual, MenuActions::HandleDownManual, MenuActions::HandleMenuManual, MenuActions::HandleExitSubmenu }
 };
 
 static const char lbl_stats_v[] PROGMEM = "STATS_VIEW";
 static const char lbl_stats_r[] PROGMEM = "STATS_RESET";
 static const MenuItemDef STATS_ITEMS[] PROGMEM = {
-  { MenuItemID::kStatsView,  lbl_stats_v, DisplayUI::HandleDrawStats, DisplayUI::HandlePrevItem, DisplayUI::HandleNextItem, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
-  { MenuItemID::kStatsReset, lbl_stats_r, DisplayUI::HandleDrawStats, DisplayUI::HandlePrevItem, DisplayUI::HandleNextItem, DisplayUI::HandleNextItem, DisplayUI::HandleLongMenuStats }
+  { MenuItemID::kStatsView,  lbl_stats_v, MenuActions::HandleDrawStats, MenuActions::HandlePrevItem, MenuActions::HandleNextItem, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu },
+  { MenuItemID::kStatsReset, lbl_stats_r, MenuActions::HandleDrawStats, MenuActions::HandlePrevItem, MenuActions::HandleNextItem, MenuActions::HandleNextItem, MenuActions::HandleLongMenuStats }
 };
 
 static const char lbl_err_v[] PROGMEM = "ERROR_VIEW";
 static const MenuItemDef ERROR_ITEMS[] PROGMEM = {
-  { MenuItemID::kErrorView, lbl_err_v, DisplayUI::HandleDrawErrorLog, DisplayUI::HandleUpError, nullptr, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu }
+  { MenuItemID::kErrorView, lbl_err_v, MenuActions::HandleDrawErrorLog, MenuActions::HandleUpError, nullptr, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu }
 };
 
+static const char lbl_bme_t[] PROGMEM = "BME TEMP";
+static const char lbl_bme_h[] PROGMEM = "BME HUM";
+static const char lbl_htu_t[] PROGMEM = "HTU TEMP";
+static const char lbl_htu_h[] PROGMEM = "HTU HUM";
+static const char lbl_ds_t[] PROGMEM = "DS TEMP";
+
 static const MenuItemDef SERVICE_ITEMS[] PROGMEM = {
-  { MenuItemID::kCalibBmeTemp, lbl_bme_t, DisplayUI::HandleDrawCalib, DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
-  { MenuItemID::kCalibBmeHum,  lbl_bme_h, DisplayUI::HandleDrawCalib, DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
-  { MenuItemID::kCalibHtuTemp, lbl_htu_t, DisplayUI::HandleDrawCalib, DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
-  { MenuItemID::kCalibHtuHum,  lbl_htu_h, DisplayUI::HandleDrawCalib, DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
-  { MenuItemID::kCalibDsTemp,  lbl_ds_t,  DisplayUI::HandleDrawCalib, DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu }
+  { MenuItemID::kCalibBmeTemp, lbl_bme_t, MenuActions::HandleDrawCalib, MenuActions::HandleUpCalib, MenuActions::HandleDownCalib, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu },
+  { MenuItemID::kCalibBmeHum,  lbl_bme_h, MenuActions::HandleDrawCalib, MenuActions::HandleUpCalib, MenuActions::HandleDownCalib, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu },
+  { MenuItemID::kCalibHtuTemp, lbl_htu_t, MenuActions::HandleDrawCalib, MenuActions::HandleUpCalib, MenuActions::HandleDownCalib, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu },
+  { MenuItemID::kCalibHtuHum,  lbl_htu_h, MenuActions::HandleDrawCalib, MenuActions::HandleUpCalib, MenuActions::HandleDownCalib, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu },
+  { MenuItemID::kCalibDsTemp,  lbl_ds_t,  MenuActions::HandleDrawCalib, MenuActions::HandleUpCalib, MenuActions::HandleDownCalib, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu }
 };
 
 // Текстовые метки корневых разделов
@@ -222,34 +92,18 @@ static const char root_service[] PROGMEM = "SERVICE";
  * Хранится во Flash-памяти для экономии RAM.
  */
 static const MenuRootDef MENU_TABLE[] PROGMEM = {
-  { root_home,    nullptr,       0, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, nullptr, 500 },
-  { root_status,  STATUS_ITEMS,  2, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu, 1000 },
-  { root_targets, TARGET_ITEMS,  2, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu, 1000 },
-  { root_manual,  MANUAL_ITEMS,  2, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu, 1000 },
-  { root_stats,   STATS_ITEMS,   2, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu, 1000 },
-  { root_errors,  ERROR_ITEMS,   1, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu, 1000 },
-  { root_service, SERVICE_ITEMS, 5, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu, 1000 }
+  { root_home,    nullptr,       0, MenuActions::HandlePrevRoot, MenuActions::HandleNextRoot, MenuActions::HandleNextRoot, nullptr, 500 },
+  { root_status,  STATUS_ITEMS,  2, MenuActions::HandlePrevRoot, MenuActions::HandleNextRoot, MenuActions::HandleNextRoot, MenuActions::HandleEnterSubmenu, 1000 },
+  { root_targets, TARGET_ITEMS,  2, MenuActions::HandlePrevRoot, MenuActions::HandleNextRoot, MenuActions::HandleNextRoot, MenuActions::HandleEnterSubmenu, 1000 },
+  { root_manual,  MANUAL_ITEMS,  2, MenuActions::HandlePrevRoot, MenuActions::HandleNextRoot, MenuActions::HandleNextRoot, MenuActions::HandleEnterSubmenu, 1000 },
+  { root_stats,   STATS_ITEMS,   2, MenuActions::HandlePrevRoot, MenuActions::HandleNextRoot, MenuActions::HandleNextRoot, MenuActions::HandleEnterSubmenu, 1000 },
+  { root_errors,  ERROR_ITEMS,   1, MenuActions::HandlePrevRoot, MenuActions::HandleNextRoot, MenuActions::HandleNextRoot, MenuActions::HandleEnterSubmenu, 1000 },
+  { root_service, SERVICE_ITEMS, 5, MenuActions::HandlePrevRoot, MenuActions::HandleNextRoot, MenuActions::HandleNextRoot, MenuActions::HandleEnterSubmenu, 1000 }
 };
 
 static const uint8_t MENU_TABLE_SIZE = sizeof(MENU_TABLE) / sizeof(MENU_TABLE[0]);
 
-/**
- * @brief Переход к предыдущему корневому разделу.
- */
-void DisplayUI::HandlePrevRoot(DisplayUI* ui) {
-  ui->root_index_ = (ui->root_index_ + MENU_TABLE_SIZE - 1) % MENU_TABLE_SIZE;
-  ui->item_index_ = 0;
-  ui->in_submenu_ = false;
-}
-
-/**
- * @brief Переход к следующему корневому разделу.
- */
-void DisplayUI::HandleNextRoot(DisplayUI* ui) {
-  ui->root_index_ = (ui->root_index_ + 1) % MENU_TABLE_SIZE;
-  ui->item_index_ = 0;
-  ui->in_submenu_ = false;
-}
+uint8_t DisplayUI::GetMenuTableSize() const { return MENU_TABLE_SIZE; }
 
 /**
  * @brief Конструктор UI.
