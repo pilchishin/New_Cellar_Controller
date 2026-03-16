@@ -65,9 +65,31 @@ class ScreenBuffer : public Print {
 };
 
 /**
+ * @brief Идентификаторы элементов меню для быстрой идентификации в коде.
+ */
+enum class MenuItemID : uint8_t {
+  kNone,
+  kStatusIn,
+  kStatusOut,
+  kTargetTemp,
+  kTargetHum,
+  kManualFan,
+  kManualOzone,
+  kStatsView,
+  kStatsReset,
+  kErrorView,
+  kCalibBmeTemp,
+  kCalibBmeHum,
+  kCalibHtuTemp,
+  kCalibHtuHum,
+  kCalibDsTemp
+};
+
+/**
  * @brief Определение элемента подменю.
  */
 struct MenuItemDef {
+  MenuItemID id;                  // Уникальный идентификатор элемента
   const char* label;              // Метка элемента (в PROGMEM)
   void (*draw)(DisplayUI* ui);    // Функция отрисовки содержимого
   void (*on_up)(DisplayUI* ui);   // Обработчик кнопки ВВЕРХ

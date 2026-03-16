@@ -40,7 +40,6 @@ static const char lbl_ds_t[] PROGMEM = "DS TEMP";
 
 /**
  * @brief Общий обработчик отрисовки страниц калибровки.
- * Идентифицирует текущий датчик по указателю на метку в PROGMEM.
  */
 void DisplayUI::HandleDrawCalib(DisplayUI* ui) {
   const MenuItemDef* item = ui->GetCurrentItemDef();
@@ -50,12 +49,14 @@ void DisplayUI::HandleDrawCalib(DisplayUI* ui) {
   float value = 0;
   bool is_temp = true;
 
-  // Эффективное сравнение указателей (оба указывают в PROGMEM)
-  if (item->label == lbl_bme_t) value = c.bmeTempOffset;
-  else if (item->label == lbl_bme_h) { value = c.bmeHumOffset; is_temp = false; }
-  else if (item->label == lbl_htu_t) value = c.htuTempOffset;
-  else if (item->label == lbl_htu_h) { value = c.htuHumOffset; is_temp = false; }
-  else if (item->label == lbl_ds_t) value = c.dsTempOffset;
+  switch (item->id) {
+    case MenuItemID::kCalibBmeTemp: value = c.bmeTempOffset; break;
+    case MenuItemID::kCalibBmeHum:  value = c.bmeHumOffset; is_temp = false; break;
+    case MenuItemID::kCalibHtuTemp: value = c.htuTempOffset; break;
+    case MenuItemID::kCalibHtuHum:  value = c.htuHumOffset; is_temp = false; break;
+    case MenuItemID::kCalibDsTemp:  value = c.dsTempOffset; break;
+    default: return;
+  }
 
   ui->DrawCalibPage(item->label, value, is_temp);
 }
@@ -133,11 +134,14 @@ void DisplayUI::AdjustCalib(DisplayUI* ui, float delta) {
   CalibrationData c = ui->controller_->GetCalibration();
   float* val = nullptr;
 
-  if (item->label == lbl_bme_t) val = &c.bmeTempOffset;
-  else if (item->label == lbl_bme_h) val = &c.bmeHumOffset;
-  else if (item->label == lbl_htu_t) val = &c.htuTempOffset;
-  else if (item->label == lbl_htu_h) val = &c.htuHumOffset;
-  else if (item->label == lbl_ds_t) val = &c.dsTempOffset;
+  switch (item->id) {
+    case MenuItemID::kCalibBmeTemp: val = &c.bmeTempOffset; break;
+    case MenuItemID::kCalibBmeHum:  val = &c.bmeHumOffset; break;
+    case MenuItemID::kCalibHtuTemp: val = &c.htuTempOffset; break;
+    case MenuItemID::kCalibHtuHum:  val = &c.htuHumOffset; break;
+    case MenuItemID::kCalibDsTemp:  val = &c.dsTempOffset; break;
+    default: return;
+  }
 
   if (val) {
     *val += delta;
@@ -170,42 +174,42 @@ void DisplayUI::HandleExitSubmenu(DisplayUI* ui) { ui->in_submenu_ = false; }
 static const char lbl_status_in[] PROGMEM = "STATUS_IN";
 static const char lbl_status_out[] PROGMEM = "STATUS_OUT";
 static const MenuItemDef STATUS_ITEMS[] PROGMEM = {
-  { lbl_status_in,   DisplayUI::HandleDrawStatusIn,  DisplayUI::HandlePrevItem, DisplayUI::HandleNextItem, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
-  { lbl_status_out,  DisplayUI::HandleDrawStatusOut, DisplayUI::HandlePrevItem, DisplayUI::HandleNextItem, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu }
+  { MenuItemID::kStatusIn,  lbl_status_in,  DisplayUI::HandleDrawStatusIn,  DisplayUI::HandlePrevItem, DisplayUI::HandleNextItem, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
+  { MenuItemID::kStatusOut, lbl_status_out, DisplayUI::HandleDrawStatusOut, DisplayUI::HandlePrevItem, DisplayUI::HandleNextItem, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu }
 };
 
 static const char lbl_target_t[] PROGMEM = "TARGET_TEMP";
 static const char lbl_target_h[] PROGMEM = "TARGET_HUM";
 static const MenuItemDef TARGET_ITEMS[] PROGMEM = {
-  { lbl_target_t, DisplayUI::HandleDrawTargets,   DisplayUI::HandleUpTargets, DisplayUI::HandleDownTargets, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
-  { lbl_target_h, DisplayUI::HandleDrawTargets,   DisplayUI::HandleUpTargets, DisplayUI::HandleDownTargets, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu }
+  { MenuItemID::kTargetTemp, lbl_target_t, DisplayUI::HandleDrawTargets, DisplayUI::HandleUpTargets, DisplayUI::HandleDownTargets, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
+  { MenuItemID::kTargetHum,  lbl_target_h, DisplayUI::HandleDrawTargets, DisplayUI::HandleUpTargets, DisplayUI::HandleDownTargets, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu }
 };
 
 static const char lbl_man_fan[] PROGMEM = "MANUAL_FAN";
 static const char lbl_man_o3[] PROGMEM = "MANUAL_OZONE";
 static const MenuItemDef MANUAL_ITEMS[] PROGMEM = {
-  { lbl_man_fan,  DisplayUI::HandleDrawManualModes, DisplayUI::HandleUpManual, DisplayUI::HandleDownManual, DisplayUI::HandleMenuManual, DisplayUI::HandleExitSubmenu },
-  { lbl_man_o3,   DisplayUI::HandleDrawManualModes, DisplayUI::HandleUpManual, DisplayUI::HandleDownManual, DisplayUI::HandleMenuManual, DisplayUI::HandleExitSubmenu }
+  { MenuItemID::kManualFan,   lbl_man_fan, DisplayUI::HandleDrawManualModes, DisplayUI::HandleUpManual, DisplayUI::HandleDownManual, DisplayUI::HandleMenuManual, DisplayUI::HandleExitSubmenu },
+  { MenuItemID::kManualOzone, lbl_man_o3,  DisplayUI::HandleDrawManualModes, DisplayUI::HandleUpManual, DisplayUI::HandleDownManual, DisplayUI::HandleMenuManual, DisplayUI::HandleExitSubmenu }
 };
 
 static const char lbl_stats_v[] PROGMEM = "STATS_VIEW";
 static const char lbl_stats_r[] PROGMEM = "STATS_RESET";
 static const MenuItemDef STATS_ITEMS[] PROGMEM = {
-  { lbl_stats_v,  DisplayUI::HandleDrawStats,     DisplayUI::HandlePrevItem, DisplayUI::HandleNextItem, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
-  { lbl_stats_r,  DisplayUI::HandleDrawStats,     DisplayUI::HandlePrevItem, DisplayUI::HandleNextItem, DisplayUI::HandleNextItem, DisplayUI::HandleLongMenuStats }
+  { MenuItemID::kStatsView,  lbl_stats_v, DisplayUI::HandleDrawStats, DisplayUI::HandlePrevItem, DisplayUI::HandleNextItem, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
+  { MenuItemID::kStatsReset, lbl_stats_r, DisplayUI::HandleDrawStats, DisplayUI::HandlePrevItem, DisplayUI::HandleNextItem, DisplayUI::HandleNextItem, DisplayUI::HandleLongMenuStats }
 };
 
 static const char lbl_err_v[] PROGMEM = "ERROR_VIEW";
 static const MenuItemDef ERROR_ITEMS[] PROGMEM = {
-  { lbl_err_v,  DisplayUI::HandleDrawErrorLog,  DisplayUI::HandleUpError, nullptr,             DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu }
+  { MenuItemID::kErrorView, lbl_err_v, DisplayUI::HandleDrawErrorLog, DisplayUI::HandleUpError, nullptr, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu }
 };
 
 static const MenuItemDef SERVICE_ITEMS[] PROGMEM = {
-  { lbl_bme_t, DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
-  { lbl_bme_h, DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
-  { lbl_htu_t, DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
-  { lbl_htu_h, DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
-  { lbl_ds_t,  DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu }
+  { MenuItemID::kCalibBmeTemp, lbl_bme_t, DisplayUI::HandleDrawCalib, DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
+  { MenuItemID::kCalibBmeHum,  lbl_bme_h, DisplayUI::HandleDrawCalib, DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
+  { MenuItemID::kCalibHtuTemp, lbl_htu_t, DisplayUI::HandleDrawCalib, DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
+  { MenuItemID::kCalibHtuHum,  lbl_htu_h, DisplayUI::HandleDrawCalib, DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
+  { MenuItemID::kCalibDsTemp,  lbl_ds_t,  DisplayUI::HandleDrawCalib, DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu }
 };
 
 // Текстовые метки корневых разделов
