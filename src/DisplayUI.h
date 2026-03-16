@@ -141,12 +141,7 @@ class DisplayUI {
   void DrawRootPage();
   void UpdateBacklight();
 
-  // Навигация
-  void NextRoot();
-  void NextItem();
-  void PrevItem();
   void SetDefaultItemForRoot();
-  void UpdateSubmenuIndex();
 
   // Вспомогательные методы отрисовки
   void DrawHomeScreen();
@@ -172,8 +167,8 @@ class DisplayUI {
   static void HandleDrawErrorLog(DisplayUI* ui);
   static void HandleDrawCalib(DisplayUI* ui);
 
-  static void HandleUpPrevItem(DisplayUI* ui);
-  static void HandleDownNextItem(DisplayUI* ui);
+  static void HandlePrevItem(DisplayUI* ui);
+  static void HandleNextItem(DisplayUI* ui);
   static void HandleUpTargets(DisplayUI* ui);
   static void HandleDownTargets(DisplayUI* ui);
   static void HandleUpManual(DisplayUI* ui);
@@ -185,6 +180,7 @@ class DisplayUI {
   static void HandleDownCalib(DisplayUI* ui);
   static void AdjustCalib(DisplayUI* ui, float delta);
 
+  static void HandlePrevRoot(DisplayUI* ui);
   static void HandleNextRoot(DisplayUI* ui);
   static void HandleEnterSubmenu(DisplayUI* ui);
   static void HandleExitSubmenu(DisplayUI* ui);

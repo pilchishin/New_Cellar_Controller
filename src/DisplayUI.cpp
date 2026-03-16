@@ -10,8 +10,18 @@ void DisplayUI::HandleDrawManualModes(DisplayUI* ui) { ui->DrawManualModes(); }
 void DisplayUI::HandleDrawStats(DisplayUI* ui) { ui->DrawStats(); }
 void DisplayUI::HandleDrawErrorLog(DisplayUI* ui) { ui->DrawErrorLog(); }
 
-void DisplayUI::HandleUpPrevItem(DisplayUI* ui) { ui->PrevItem(); }
-void DisplayUI::HandleDownNextItem(DisplayUI* ui) { ui->NextItem(); }
+void DisplayUI::HandlePrevItem(DisplayUI* ui) {
+  const MenuRootDef* root = ui->GetCurrentRootDef();
+  if (root && root->item_count > 0) {
+    ui->item_index_ = (ui->item_index_ - 1 + root->item_count) % root->item_count;
+  }
+}
+void DisplayUI::HandleNextItem(DisplayUI* ui) {
+  const MenuRootDef* root = ui->GetCurrentRootDef();
+  if (root && root->item_count > 0) {
+    ui->item_index_ = (ui->item_index_ + 1) % root->item_count;
+  }
+}
 
 void DisplayUI::HandleDrawCalib(DisplayUI* ui) {
   CalibrationData c = ui->controller_->GetCalibration();
@@ -87,7 +97,6 @@ void DisplayUI::AdjustCalib(DisplayUI* ui, float delta) {
 void DisplayUI::HandleUpCalib(DisplayUI* ui) { AdjustCalib(ui, 0.1f); }
 void DisplayUI::HandleDownCalib(DisplayUI* ui) { AdjustCalib(ui, -0.1f); }
 
-void DisplayUI::HandleNextRoot(DisplayUI* ui) { ui->NextRoot(); }
 void DisplayUI::HandleEnterSubmenu(DisplayUI* ui) {
   if (ui->root_index_ != 0) { // HOME
     ui->in_submenu_ = true;
@@ -96,13 +105,13 @@ void DisplayUI::HandleEnterSubmenu(DisplayUI* ui) {
 void DisplayUI::HandleExitSubmenu(DisplayUI* ui) { ui->in_submenu_ = false; }
 
 static const MenuItemDef STATUS_ITEMS[] = {
-  { MenuItem::STATUS_IN,   "STATUS_IN",   DisplayUI::HandleDrawStatusIn,  DisplayUI::HandleUpPrevItem, DisplayUI::HandleDownNextItem, DisplayUI::HandleDownNextItem, DisplayUI::HandleExitSubmenu },
-  { MenuItem::STATUS_OUT,  "STATUS_OUT",  DisplayUI::HandleDrawStatusOut, DisplayUI::HandleUpPrevItem, DisplayUI::HandleDownNextItem, DisplayUI::HandleDownNextItem, DisplayUI::HandleExitSubmenu }
+  { MenuItem::STATUS_IN,   "STATUS_IN",   DisplayUI::HandleDrawStatusIn,  DisplayUI::HandlePrevItem, DisplayUI::HandleNextItem, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
+  { MenuItem::STATUS_OUT,  "STATUS_OUT",  DisplayUI::HandleDrawStatusOut, DisplayUI::HandlePrevItem, DisplayUI::HandleNextItem, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu }
 };
 
 static const MenuItemDef TARGET_ITEMS[] = {
-  { MenuItem::TARGET_TEMP, "TARGET_TEMP", DisplayUI::HandleDrawTargets,   DisplayUI::HandleUpTargets, DisplayUI::HandleDownTargets, DisplayUI::HandleDownNextItem, DisplayUI::HandleExitSubmenu },
-  { MenuItem::TARGET_HUM,  "TARGET_HUM",  DisplayUI::HandleDrawTargets,   DisplayUI::HandleUpTargets, DisplayUI::HandleDownTargets, DisplayUI::HandleDownNextItem, DisplayUI::HandleExitSubmenu }
+  { MenuItem::TARGET_TEMP, "TARGET_TEMP", DisplayUI::HandleDrawTargets,   DisplayUI::HandleUpTargets, DisplayUI::HandleDownTargets, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
+  { MenuItem::TARGET_HUM,  "TARGET_HUM",  DisplayUI::HandleDrawTargets,   DisplayUI::HandleUpTargets, DisplayUI::HandleDownTargets, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu }
 };
 
 static const MenuItemDef MANUAL_ITEMS[] = {
@@ -111,31 +120,44 @@ static const MenuItemDef MANUAL_ITEMS[] = {
 };
 
 static const MenuItemDef STATS_ITEMS[] = {
-  { MenuItem::STATS_VIEW,  "STATS_VIEW",  DisplayUI::HandleDrawStats,     DisplayUI::HandleUpPrevItem, DisplayUI::HandleDownNextItem, DisplayUI::HandleDownNextItem, DisplayUI::HandleExitSubmenu },
-  { MenuItem::STATS_RESET, "STATS_RESET", DisplayUI::HandleDrawStats,     DisplayUI::HandleUpPrevItem, DisplayUI::HandleDownNextItem, DisplayUI::HandleDownNextItem, DisplayUI::HandleLongMenuStats }
+  { MenuItem::STATS_VIEW,  "STATS_VIEW",  DisplayUI::HandleDrawStats,     DisplayUI::HandlePrevItem, DisplayUI::HandleNextItem, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
+  { MenuItem::STATS_RESET, "STATS_RESET", DisplayUI::HandleDrawStats,     DisplayUI::HandlePrevItem, DisplayUI::HandleNextItem, DisplayUI::HandleNextItem, DisplayUI::HandleLongMenuStats }
 };
 
 static const MenuItemDef ERROR_ITEMS[] = {
-  { MenuItem::ERROR_VIEW,  "ERROR_VIEW",  DisplayUI::HandleDrawErrorLog,  DisplayUI::HandleUpError, nullptr,             DisplayUI::HandleDownNextItem, DisplayUI::HandleExitSubmenu }
+  { MenuItem::ERROR_VIEW,  "ERROR_VIEW",  DisplayUI::HandleDrawErrorLog,  DisplayUI::HandleUpError, nullptr,             DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu }
 };
 
 static const MenuItemDef SERVICE_ITEMS[] = {
-  { MenuItem::CALIB_BME_T, "BME TEMP", DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleDownNextItem, DisplayUI::HandleExitSubmenu },
-  { MenuItem::CALIB_BME_H, "BME HUM",  DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleDownNextItem, DisplayUI::HandleExitSubmenu },
-  { MenuItem::CALIB_HTU_T, "HTU TEMP", DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleDownNextItem, DisplayUI::HandleExitSubmenu },
-  { MenuItem::CALIB_HTU_H, "HTU HUM",  DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleDownNextItem, DisplayUI::HandleExitSubmenu },
-  { MenuItem::CALIB_DS_T,  "DS TEMP",  DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleDownNextItem, DisplayUI::HandleExitSubmenu }
+  { MenuItem::CALIB_BME_T, "BME TEMP", DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
+  { MenuItem::CALIB_BME_H, "BME HUM",  DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
+  { MenuItem::CALIB_HTU_T, "HTU TEMP", DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
+  { MenuItem::CALIB_HTU_H, "HTU HUM",  DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu },
+  { MenuItem::CALIB_DS_T,  "DS TEMP",  DisplayUI::HandleDrawCalib,     DisplayUI::HandleUpCalib, DisplayUI::HandleDownCalib, DisplayUI::HandleNextItem, DisplayUI::HandleExitSubmenu }
 };
 
 static const MenuRootDef MENU_TABLE[] = {
-  { MenuRoot::HOME,    "HOME",    nullptr,       0, nullptr, nullptr, DisplayUI::HandleNextRoot, nullptr },
-  { MenuRoot::STATUS,  "STATUS",  STATUS_ITEMS,  2, nullptr, nullptr, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu },
-  { MenuRoot::TARGETS, "TARGETS", TARGET_ITEMS,  2, nullptr, nullptr, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu },
-  { MenuRoot::MANUAL,  "MANUAL",  MANUAL_ITEMS,  2, nullptr, nullptr, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu },
-  { MenuRoot::STATS,   "STATS",   STATS_ITEMS,   2, nullptr, nullptr, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu },
-  { MenuRoot::ERRORS,  "ERRORS",  ERROR_ITEMS,   1, nullptr, nullptr, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu },
-  { MenuRoot::SERVICE, "SERVICE", SERVICE_ITEMS, 5, nullptr, nullptr, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu }
+  { MenuRoot::HOME,    "HOME",    nullptr,       0, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, nullptr },
+  { MenuRoot::STATUS,  "STATUS",  STATUS_ITEMS,  2, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu },
+  { MenuRoot::TARGETS, "TARGETS", TARGET_ITEMS,  2, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu },
+  { MenuRoot::MANUAL,  "MANUAL",  MANUAL_ITEMS,  2, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu },
+  { MenuRoot::STATS,   "STATS",   STATS_ITEMS,   2, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu },
+  { MenuRoot::ERRORS,  "ERRORS",  ERROR_ITEMS,   1, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu },
+  { MenuRoot::SERVICE, "SERVICE", SERVICE_ITEMS, 5, DisplayUI::HandlePrevRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleNextRoot, DisplayUI::HandleEnterSubmenu }
 };
+
+static const uint8_t MENU_TABLE_SIZE = sizeof(MENU_TABLE) / sizeof(MENU_TABLE[0]);
+
+void DisplayUI::HandlePrevRoot(DisplayUI* ui) {
+  ui->root_index_ = (ui->root_index_ - 1 + MENU_TABLE_SIZE) % MENU_TABLE_SIZE;
+  ui->item_index_ = 0;
+  ui->in_submenu_ = false;
+}
+void DisplayUI::HandleNextRoot(DisplayUI* ui) {
+  ui->root_index_ = (ui->root_index_ + 1) % MENU_TABLE_SIZE;
+  ui->item_index_ = 0;
+  ui->in_submenu_ = false;
+}
 
 // Конструктор: адрес 0x27 и размер 16x2
 DisplayUI::DisplayUI(Controller* c, SensorManager* s, TimeManager* t)
@@ -307,29 +329,6 @@ void DisplayUI::HandleButtons() {
       needs_redraw_ = true;
     }
   }
-}
-
-void DisplayUI::NextRoot() {
-  root_index_ = (root_index_ + 1) % (sizeof(MENU_TABLE) / sizeof(MENU_TABLE[0]));
-  in_submenu_ = false;
-  SetDefaultItemForRoot();
-  needs_redraw_ = true;
-}
-
-void DisplayUI::NextItem() {
-  const MenuRootDef* root = GetCurrentRootDef();
-  if (root && root->item_count > 0) {
-    item_index_ = (item_index_ + 1) % root->item_count;
-  }
-  needs_redraw_ = true;
-}
-
-void DisplayUI::PrevItem() {
-  const MenuRootDef* root = GetCurrentRootDef();
-  if (root && root->item_count > 0) {
-    item_index_ = (item_index_ - 1 + root->item_count) % root->item_count;
-  }
-  needs_redraw_ = true;
 }
 
 void DisplayUI::SetDefaultItemForRoot() {
