@@ -160,6 +160,7 @@ class DisplayUI {
   void DrawHomeScreen();    // Главный экран со статусом
   void DrawStatusIn();      // Внутренние показатели
   void DrawStatusOut();     // Внешние показатели
+  void DrawStatusPage(const SensorData& data, const __FlashStringHelper* label); // Общий метод отрисовки статуса
   void DrawTargets();       // Уставки температуры и влажности
   void DrawManualModes();   // Ручное управление устройствами
   void DrawCalibPage(const char* label, float value, bool is_temp); // Страница калибровки

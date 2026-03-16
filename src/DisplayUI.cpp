@@ -423,31 +423,28 @@ void DisplayUI::DrawHomeScreen() {
  * @brief Отрисовка внутренних показателей (BME280).
  */
 void DisplayUI::DrawStatusIn() {
-  const MenuRootDef* root = GetCurrentRootDef();
-  DrawHeader(F("STATUS"), item_index_, root->item_count);
-
-  SensorData in = sensors_->GetInside();
-  screen_.SetPos(1, 0);
-  screen_.print(F("IN "));
-  screen_.print(in.temp, 1);
-  screen_.print(F("C "));
-  screen_.print(in.rh, 0);
-  screen_.print(F("%"));
+  DrawStatusPage(sensors_->GetInside(), F("IN "));
 }
 
 /**
  * @brief Отрисовка внешних показателей (HTU21D).
  */
 void DisplayUI::DrawStatusOut() {
+  DrawStatusPage(sensors_->GetOutside(), F("OUT "));
+}
+
+/**
+ * @brief Общий метод отрисовки страницы статуса датчика.
+ */
+void DisplayUI::DrawStatusPage(const SensorData& data, const __FlashStringHelper* label) {
   const MenuRootDef* root = GetCurrentRootDef();
   DrawHeader(F("STATUS"), item_index_, root->item_count);
 
-  SensorData out = sensors_->GetOutside();
   screen_.SetPos(1, 0);
-  screen_.print(F("OUT "));
-  screen_.print(out.temp, 1);
+  screen_.print(label);
+  screen_.print(data.temp, 1);
   screen_.print(F("C "));
-  screen_.print(out.rh, 0);
+  screen_.print(data.rh, 0);
   screen_.print(F("%"));
 }
 
