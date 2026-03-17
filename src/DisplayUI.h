@@ -108,6 +108,7 @@ struct ValuePageDef {
 struct MenuItemDef {
   MenuItemID id;                  // Уникальный идентификатор элемента
   const char* label;              // Метка элемента (в PROGMEM)
+  const void* ctx;                // Контекстный указатель (может указывать на PROGMEM)
   void (*draw)(DisplayUI* ui);    // Функция отрисовки содержимого
   void (*on_up)(DisplayUI* ui);   // Обработчик кнопки ВВЕРХ
   void (*on_down)(DisplayUI* ui); // Обработчик кнопки ВНИЗ
@@ -169,8 +170,7 @@ class DisplayUI {
 
   // Методы отрисовки конкретных страниц
   void DrawHomeScreen();    // Главный экран со статусом
-  void DrawStatusIn();      // Внутренние показатели
-  void DrawStatusOut();     // Внешние показатели
+  void DrawStatus(int index); // Показатели (0 - IN, 1 - OUT)
   void DrawStatusPage(const SensorData& data, const __FlashStringHelper* label); // Общий метод отрисовки статуса
   void DrawManualModes();   // Ручное управление устройствами
   void DrawValuePage();     // Универсальная страница редактирования значения
@@ -178,8 +178,6 @@ class DisplayUI {
   void DrawErrorLog();      // Просмотр лога ошибок
 
   uint8_t GetMenuTableSize() const;
-
-  const ValuePageDef* GetValuePageDef(MenuItemID id) const;
 
   friend class MenuActions;
   friend class MenuDispatcher;

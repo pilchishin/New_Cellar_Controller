@@ -13,8 +13,7 @@ class DisplayUI;
 class MenuActions {
  public:
   // Обработчики отрисовки
-  static void HandleDrawStatusIn(DisplayUI* ui);
-  static void HandleDrawStatusOut(DisplayUI* ui);
+  static void HandleDrawStatus(DisplayUI* ui);
   static void HandleDrawManualModes(DisplayUI* ui);
   static void HandleDrawStats(DisplayUI* ui);
   static void HandleDrawErrorLog(DisplayUI* ui);

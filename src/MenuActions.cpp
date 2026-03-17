@@ -6,12 +6,21 @@
 // В идеале их тоже стоит перенести в MenuActions или сделать общими.
 // Для простоты пока объявим как внешние или перенесем.
 
-void MenuActions::HandleDrawStatusIn(DisplayUI* ui) { ui->DrawStatusIn(); }
-void MenuActions::HandleDrawStatusOut(DisplayUI* ui) { ui->DrawStatusOut(); }
+void MenuActions::HandleDrawStatus(DisplayUI* ui) {
+  const MenuItemDef* item = ui->GetCurrentItemDef();
+  if (item) ui->DrawStatus((int)item->ctx);
+}
+
 void MenuActions::HandleDrawManualModes(DisplayUI* ui) { ui->DrawManualModes(); }
 void MenuActions::HandleDrawStats(DisplayUI* ui) { ui->DrawStats(); }
 void MenuActions::HandleDrawErrorLog(DisplayUI* ui) { ui->DrawErrorLog(); }
 void MenuActions::HandleDrawValue(DisplayUI* ui) { ui->DrawValuePage(); }
+
+static void LoadValuePageDef(const void* flash_ptr, ValuePageDef* ram_buf) {
+  if (flash_ptr && ram_buf) {
+    memcpy_P(ram_buf, flash_ptr, sizeof(ValuePageDef));
+  }
+}
 
 void MenuActions::ApplyValueChange(DisplayUI* ui, MenuItemID id, float val) {
   if (id == MenuItemID::kTargetTemp) {
@@ -31,32 +40,35 @@ void MenuActions::ApplyValueChange(DisplayUI* ui, MenuItemID id, float val) {
 
 void MenuActions::AdjustValue(DisplayUI* ui, float delta) {
   const MenuItemDef* item = ui->GetCurrentItemDef();
-  if (!item) return;
+  if (!item || !item->ctx) return;
 
-  const ValuePageDef* vcfg = ui->GetValuePageDef(item->id);
-  if (!vcfg) return;
+  ValuePageDef vcfg;
+  LoadValuePageDef(item->ctx, &vcfg);
 
-  float val = ui->model_.*(vcfg->val_ptr);
+  // Для калибровки используем точность 1 знак, для других (например HUM) берем из конфига
+  float val = ui->model_.*(vcfg.val_ptr);
   val += delta;
 
-  if (val < vcfg->min_val) val = vcfg->min_val;
-  if (val > vcfg->max_val) val = vcfg->max_val;
+  if (val < vcfg.min_val) val = vcfg.min_val;
+  if (val > vcfg.max_val) val = vcfg.max_val;
 
   ApplyValueChange(ui, item->id, val);
 }
 
 void MenuActions::HandleUpValue(DisplayUI* ui) {
   const MenuItemDef* item = ui->GetCurrentItemDef();
-  if (!item) return;
-  const ValuePageDef* vcfg = ui->GetValuePageDef(item->id);
-  if (vcfg) AdjustValue(ui, vcfg->step);
+  if (!item || !item->ctx) return;
+  ValuePageDef vcfg;
+  LoadValuePageDef(item->ctx, &vcfg);
+  AdjustValue(ui, vcfg.step);
 }
 
 void MenuActions::HandleDownValue(DisplayUI* ui) {
   const MenuItemDef* item = ui->GetCurrentItemDef();
-  if (!item) return;
-  const ValuePageDef* vcfg = ui->GetValuePageDef(item->id);
-  if (vcfg) AdjustValue(ui, -vcfg->step);
+  if (!item || !item->ctx) return;
+  ValuePageDef vcfg;
+  LoadValuePageDef(item->ctx, &vcfg);
+  AdjustValue(ui, -vcfg.step);
 }
 
 void MenuActions::HandlePrevItem(DisplayUI* ui) {
