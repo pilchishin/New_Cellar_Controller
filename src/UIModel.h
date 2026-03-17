@@ -8,6 +8,21 @@ class Controller;
 class SensorManager;
 
 /**
+ * @enum ValueID
+ * @brief Идентификаторы числовых параметров для доступа через UIModel.
+ */
+enum class ValueID : uint8_t {
+  kNone,
+  kTargetTemp,
+  kTargetHum,
+  kCalibBmeTemp,
+  kCalibBmeHum,
+  kCalibHtuTemp,
+  kCalibHtuHum,
+  kCalibDsTemp
+};
+
+/**
  * @class UIModel
  * @brief Слой данных для отображения, отделяющий DisplayUI от логики Controller.
  * Хранит локальную копию всех данных, необходимых для отрисовки интерфейса.
@@ -22,6 +37,16 @@ class UIModel {
    * @param sensors Ссылка на менеджер датчиков для получения показаний.
    */
   void Sync(Controller* controller, SensorManager* sensors);
+
+  /**
+   * @brief Получение значения параметра по его ID.
+   */
+  float GetValue(ValueID id) const;
+
+  /**
+   * @brief Установка значения параметра (локально в модели).
+   */
+  void SetValue(ValueID id, float v);
 
   // Геттеры данных (публичные поля для простоты доступа из DisplayUI)
   SensorData inside;

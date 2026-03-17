@@ -94,7 +94,7 @@ enum class MenuItemID : uint8_t {
  */
 struct ValuePageDef {
   MenuItemID id;            // ID элемента меню
-  float UIModel::*val_ptr;  // Указатель на поле в UIModel
+  ValueID val_id;           // ID значения в UIModel
   float min_val;            // Минимальное значение
   float max_val;            // Максимальное значение
   float step;               // Шаг изменения

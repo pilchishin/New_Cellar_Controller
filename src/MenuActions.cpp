@@ -23,18 +23,26 @@ static void LoadValuePageDef(const void* flash_ptr, ValuePageDef* ram_buf) {
 }
 
 void MenuActions::ApplyValueChange(DisplayUI* ui, MenuItemID id, float val) {
+  ValueID vid = ValueID::kNone;
+
   if (id == MenuItemID::kTargetTemp) {
     ui->controller_->SetTargetTemp(val);
+    vid = ValueID::kTargetTemp;
   } else if (id == MenuItemID::kTargetHum) {
     ui->controller_->SetTargetRh(val);
+    vid = ValueID::kTargetHum;
   } else if (id >= MenuItemID::kCalibBmeTemp && id <= MenuItemID::kCalibDsTemp) {
     CalibrationData c = ui->model_.calib;
-    if (id == MenuItemID::kCalibBmeTemp) c.bmeTempOffset = val;
-    else if (id == MenuItemID::kCalibBmeHum) c.bmeHumOffset = val;
-    else if (id == MenuItemID::kCalibHtuTemp) c.htuTempOffset = val;
-    else if (id == MenuItemID::kCalibHtuHum) c.htuHumOffset = val;
-    else if (id == MenuItemID::kCalibDsTemp) c.dsTempOffset = val;
+    if (id == MenuItemID::kCalibBmeTemp) { c.bmeTempOffset = val; vid = ValueID::kCalibBmeTemp; }
+    else if (id == MenuItemID::kCalibBmeHum) { c.bmeHumOffset = val; vid = ValueID::kCalibBmeHum; }
+    else if (id == MenuItemID::kCalibHtuTemp) { c.htuTempOffset = val; vid = ValueID::kCalibHtuTemp; }
+    else if (id == MenuItemID::kCalibHtuHum) { c.htuHumOffset = val; vid = ValueID::kCalibHtuHum; }
+    else if (id == MenuItemID::kCalibDsTemp) { c.dsTempOffset = val; vid = ValueID::kCalibDsTemp; }
     ui->controller_->SetCalibration(c);
+  }
+
+  if (vid != ValueID::kNone) {
+    ui->model_.SetValue(vid, val);
   }
 }
 
@@ -46,7 +54,7 @@ void MenuActions::AdjustValue(DisplayUI* ui, float delta) {
   LoadValuePageDef(item->ctx, &vcfg);
 
   // Для калибровки используем точность 1 знак, для других (например HUM) берем из конфига
-  float val = ui->model_.*(vcfg.val_ptr);
+  float val = ui->model_.GetValue(vcfg.val_id);
   val += delta;
 
   if (val < vcfg.min_val) val = vcfg.min_val;

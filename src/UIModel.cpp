@@ -55,3 +55,29 @@ void UIModel::Sync(Controller* controller, SensorManager* sensors) {
                   state == SystemState::kOzoneHold ||
                   state == SystemState::kOzoneVent);
 }
+
+float UIModel::GetValue(ValueID id) const {
+  switch (id) {
+    case ValueID::kTargetTemp:   return target_temp;
+    case ValueID::kTargetHum:    return target_rh;
+    case ValueID::kCalibBmeTemp: return calib_bme_t;
+    case ValueID::kCalibBmeHum:  return calib_bme_h;
+    case ValueID::kCalibHtuTemp: return calib_htu_t;
+    case ValueID::kCalibHtuHum:  return calib_htu_h;
+    case ValueID::kCalibDsTemp:  return calib_ds_t;
+    default: return 0.0f;
+  }
+}
+
+void UIModel::SetValue(ValueID id, float v) {
+  switch (id) {
+    case ValueID::kTargetTemp:   target_temp = v; break;
+    case ValueID::kTargetHum:    target_rh = v; break;
+    case ValueID::kCalibBmeTemp: calib_bme_t = v; break;
+    case ValueID::kCalibBmeHum:  calib_bme_h = v; break;
+    case ValueID::kCalibHtuTemp: calib_htu_t = v; break;
+    case ValueID::kCalibHtuHum:  calib_htu_h = v; break;
+    case ValueID::kCalibDsTemp:  calib_ds_t = v; break;
+    default: break;
+  }
+}

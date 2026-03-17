@@ -18,13 +18,13 @@ static const char unit_c[] PROGMEM = "C";
 static const char unit_pct[] PROGMEM = "%";
 
 static const ValuePageDef VALUE_PAGES[] PROGMEM = {
-  { MenuItemID::kTargetTemp,   &UIModel::target_temp, 5.0f,  35.0f, 0.1f, unit_c,   1 },
-  { MenuItemID::kTargetHum,    &UIModel::target_rh,   0.0f, 100.0f, 1.0f, unit_pct, 0 },
-  { MenuItemID::kCalibBmeTemp, &UIModel::calib_bme_t, -5.0f,  5.0f, 0.1f, unit_c,   1 },
-  { MenuItemID::kCalibBmeHum,  &UIModel::calib_bme_h, -5.0f,  5.0f, 0.1f, unit_pct, 1 },
-  { MenuItemID::kCalibHtuTemp, &UIModel::calib_htu_t, -5.0f,  5.0f, 0.1f, unit_c,   1 },
-  { MenuItemID::kCalibHtuHum,  &UIModel::calib_htu_h, -5.0f,  5.0f, 0.1f, unit_pct, 1 },
-  { MenuItemID::kCalibDsTemp,  &UIModel::calib_ds_t,  -5.0f,  5.0f, 0.1f, unit_c,   1 }
+  { MenuItemID::kTargetTemp,   ValueID::kTargetTemp,   5.0f,  35.0f, 0.1f, unit_c,   1 },
+  { MenuItemID::kTargetHum,    ValueID::kTargetHum,    0.0f, 100.0f, 1.0f, unit_pct, 0 },
+  { MenuItemID::kCalibBmeTemp, ValueID::kCalibBmeTemp, -5.0f,  5.0f, 0.1f, unit_c,   1 },
+  { MenuItemID::kCalibBmeHum,  ValueID::kCalibBmeHum,  -5.0f,  5.0f, 0.1f, unit_pct, 1 },
+  { MenuItemID::kCalibHtuTemp, ValueID::kCalibHtuTemp, -5.0f,  5.0f, 0.1f, unit_c,   1 },
+  { MenuItemID::kCalibHtuHum,  ValueID::kCalibHtuHum,  -5.0f,  5.0f, 0.1f, unit_pct, 1 },
+  { MenuItemID::kCalibDsTemp,  ValueID::kCalibDsTemp,  -5.0f,  5.0f, 0.1f, unit_c,   1 }
 };
 
 static const uint8_t VALUE_PAGES_COUNT = sizeof(VALUE_PAGES) / sizeof(VALUE_PAGES[0]);
@@ -392,7 +392,7 @@ void DisplayUI::DrawValuePage() {
   const MenuRootDef* root = GetCurrentRootDef();
   DrawHeader((const __FlashStringHelper*)root->label, nav_.GetItemIndex(), root->item_count);
 
-  float val = model_.*(vcfg.val_ptr);
+  float val = model_.GetValue(vcfg.val_id);
 
   screen_.SetPos(1, 0);
   screen_.print(F(">"));
