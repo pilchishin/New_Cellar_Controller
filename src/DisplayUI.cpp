@@ -247,32 +247,9 @@ void DisplayUI::HandleButtons() {
   }
 
   ButtonEvent event = buttons_.Poll();
-  if (event == ButtonEvent::kNone) return;
-
-  needs_redraw_ = true;
-
-  if (!nav_.InSubmenu()) {
-    const MenuRootDef* root = GetCurrentRootDef();
-    if (root) {
-      switch (event) {
-        case ButtonEvent::kUp:   if (root->on_up) root->on_up(this); break;
-        case ButtonEvent::kDown: if (root->on_down) root->on_down(this); break;
-        case ButtonEvent::kMenu: if (root->on_menu) root->on_menu(this); break;
-        case ButtonEvent::kMenuLong: if (root->on_long_menu) root->on_long_menu(this); break;
-        default: break;
-      }
-    }
-  } else {
-    const MenuItemDef* item = GetCurrentItemDef();
-    if (item) {
-      switch (event) {
-        case ButtonEvent::kUp:   if (item->on_up) item->on_up(this); break;
-        case ButtonEvent::kDown: if (item->on_down) item->on_down(this); break;
-        case ButtonEvent::kMenu: if (item->on_menu) item->on_menu(this); break;
-        case ButtonEvent::kMenuLong: if (item->on_long_menu) item->on_long_menu(this); break;
-        default: break;
-      }
-    }
+  if (event != ButtonEvent::kNone) {
+    needs_redraw_ = true;
+    dispatcher_.Dispatch(this, event);
   }
 }
 

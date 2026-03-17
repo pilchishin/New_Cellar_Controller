@@ -8,6 +8,7 @@
 #include "TimeManager.h"
 #include "MenuNavigator.h"
 #include "ButtonEngine.h"
+#include "MenuDispatcher.h"
 
 class DisplayUI;
 
@@ -126,6 +127,7 @@ class DisplayUI {
   TimeManager* rtc_;            // Ссылка на менеджер времени
   MenuNavigator nav_;           // Состояние навигации по меню
   ButtonEngine buttons_;        // Обработчик кнопок
+  MenuDispatcher dispatcher_;   // Маршрутизатор событий меню
 
   // Временные уведомления на экране
   unsigned long message_timer_;    // Таймер отображения сообщения
@@ -172,6 +174,7 @@ class DisplayUI {
   uint8_t GetMenuTableSize() const;
 
   friend class MenuActions;
+  friend class MenuDispatcher;
 
  public:
   // Получение определений текущего положения в меню
