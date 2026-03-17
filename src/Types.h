@@ -1,6 +1,8 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+#include <stdint.h>
+
 /**
  * @enum SystemState
  * @brief Возможные состояния конечного автомата (FSM) системы.

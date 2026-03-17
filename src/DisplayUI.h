@@ -9,6 +9,7 @@
 #include "MenuNavigator.h"
 #include "ButtonEngine.h"
 #include "MenuDispatcher.h"
+#include "UIModel.h"
 
 class DisplayUI;
 
@@ -128,6 +129,7 @@ class DisplayUI {
   MenuNavigator nav_;           // Состояние навигации по меню
   ButtonEngine buttons_;        // Обработчик кнопок
   MenuDispatcher dispatcher_;   // Маршрутизатор событий меню
+  UIModel model_;               // Локальная копия данных для отображения
 
   // Временные уведомления на экране
   unsigned long message_timer_;    // Таймер отображения сообщения

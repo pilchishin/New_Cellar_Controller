@@ -30,7 +30,7 @@ void MenuActions::HandleDrawCalib(DisplayUI* ui) {
   const MenuItemDef* item = ui->GetCurrentItemDef();
   if (!item) return;
 
-  CalibrationData c = ui->controller_->GetCalibration();
+  CalibrationData c = ui->model_.calib;
   bool is_temp = true;
   float* val = ui->GetCalibrationParam(item->id, c, &is_temp);
 
@@ -41,9 +41,9 @@ void MenuActions::HandleDrawCalib(DisplayUI* ui) {
 
 void MenuActions::HandleUpTargets(DisplayUI* ui) {
   if (ui->nav_.GetItemIndex() == 0) // Температура
-    ui->controller_->SetTargetTemp(ui->controller_->GetTargetTemp() + 0.1f);
+    ui->controller_->SetTargetTemp(ui->model_.target_temp + 0.1f);
   else { // Влажность
-    float h = ui->controller_->GetTargetRh() + 1.0f;
+    float h = ui->model_.target_rh + 1.0f;
     if (h > 100.0f) h = 100.0f;
     ui->controller_->SetTargetRh(h);
   }
@@ -51,9 +51,9 @@ void MenuActions::HandleUpTargets(DisplayUI* ui) {
 
 void MenuActions::HandleDownTargets(DisplayUI* ui) {
   if (ui->nav_.GetItemIndex() == 0) // Температура
-    ui->controller_->SetTargetTemp(ui->controller_->GetTargetTemp() - 0.1f);
+    ui->controller_->SetTargetTemp(ui->model_.target_temp - 0.1f);
   else { // Влажность
-    float h = ui->controller_->GetTargetRh() - 1.0f;
+    float h = ui->model_.target_rh - 1.0f;
     if (h < 0.0f) h = 0.0f;
     ui->controller_->SetTargetRh(h);
   }

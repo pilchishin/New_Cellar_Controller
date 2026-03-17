@@ -18,7 +18,7 @@ void DisplayUI::AdjustCalib(float delta) {
   const MenuItemDef* item = GetCurrentItemDef();
   if (!item) return;
 
-  CalibrationData c = controller_->GetCalibration();
+  CalibrationData c = model_.calib;
   bool is_temp = true;
   float* val = GetCalibrationParam(item->id, c, &is_temp);
 
@@ -182,6 +182,7 @@ const MenuItemDef* DisplayUI::GetCurrentItemDef() const {
  * Обрабатывает кнопки, подсветку и перерисовку по таймеру или флагу.
  */
 void DisplayUI::Update() {
+  model_.Sync(controller_, sensors_);
   HandleButtons();    // Опрос кнопок
   UpdateBacklight();  // Управление тайм-аутом света
 
@@ -259,7 +260,7 @@ void DisplayUI::HandleButtons() {
 void DisplayUI::UpdateBacklight() {
   if (backlight_on_ && (millis() - last_activity_time_ > 30000UL)) {
     // В ручном режиме озонирования подсветка не гаснет для безопасности
-    if (controller_->GetState() != SystemState::kManualOzone) {
+    if (model_.state != SystemState::kManualOzone) {
       lcd_.noBacklight();
       backlight_on_ = false;
     }
@@ -323,39 +324,30 @@ void DisplayUI::DrawHeader(const __FlashStringHelper* label, uint8_t index, uint
  * @brief Главный экран: текущие показатели и статус работы.
  */
 void DisplayUI::DrawHomeScreen() {
-  SensorData in = sensors_->GetInside();
-  SensorData out = sensors_->GetOutside();
-  RelayManager* rm = controller_->GetRelayManager();
-
   // Строка 1: Внутри [Т] [H] [Индикатор работы]
   screen_.SetPos(0, 0);
   screen_.print(F("IN "));
-  screen_.print(in.temp, 1);
+  screen_.print(model_.inside.temp, 1);
   screen_.print(F("C "));
-  screen_.print(in.rh, 0);
+  screen_.print(model_.inside.rh, 0);
   screen_.print(F("%"));
 
   screen_.SetPos(0, 15);
-  if (rm->GetOzoneState()) screen_.print(F("O"));
-  else if (rm->GetFanState()) screen_.print(F("F"));
+  if (model_.ozone_on) screen_.print(F("O"));
+  else if (model_.fan_on) screen_.print(F("F"));
   else screen_.print(F(" "));
 
   // Строка 2: Снаружи [Т] [H] [Режим системы]
   screen_.SetPos(1, 0);
   screen_.print(F("OUT "));
-  screen_.print(out.temp, 1);
+  screen_.print(model_.outside.temp, 1);
   screen_.print(F("C "));
-  screen_.print(out.rh, 0);
+  screen_.print(model_.outside.rh, 0);
   screen_.print(F("%"));
 
   screen_.SetPos(1, 15);
-  SystemState state = controller_->GetState();
-  if (state == SystemState::kErrorState) screen_.print(F("E")); // Ошибка
-  else if (state == SystemState::kAutoClimate ||
-           state == SystemState::kOzoneStart ||
-           state == SystemState::kOzoneActive ||
-           state == SystemState::kOzoneHold ||
-           state == SystemState::kOzoneVent) screen_.print(F("A")); // Авто
+  if (model_.state == SystemState::kErrorState) screen_.print(F("E")); // Ошибка
+  else if (model_.is_auto_mode) screen_.print(F("A")); // Авто
   else screen_.print(F("M")); // Ручной
 }
 
@@ -363,14 +355,14 @@ void DisplayUI::DrawHomeScreen() {
  * @brief Отрисовка внутренних показателей (BME280).
  */
 void DisplayUI::DrawStatusIn() {
-  DrawStatusPage(sensors_->GetInside(), F("IN "));
+  DrawStatusPage(model_.inside, F("IN "));
 }
 
 /**
  * @brief Отрисовка внешних показателей (HTU21D).
  */
 void DisplayUI::DrawStatusOut() {
-  DrawStatusPage(sensors_->GetOutside(), F("OUT "));
+  DrawStatusPage(model_.outside, F("OUT "));
 }
 
 /**
@@ -400,13 +392,13 @@ void DisplayUI::DrawTargets() {
   if (item_idx == 0) screen_.print(F(">"));
   else screen_.print(F(" "));
   screen_.print(F("T:"));
-  screen_.print(controller_->GetTargetTemp(), 1);
+  screen_.print(model_.target_temp, 1);
 
   screen_.print(F(" "));
   if (item_idx == 1) screen_.print(F(">"));
   else screen_.print(F(" "));
   screen_.print(F("H:"));
-  screen_.print(controller_->GetTargetRh(), 0);
+  screen_.print(model_.target_rh, 0);
   screen_.print(F("%"));
 }
 
@@ -453,13 +445,12 @@ void DisplayUI::DrawStats() {
 
   screen_.SetPos(1, 0);
   if (item_idx == 0) { // Просмотр
-    SystemStatistics s = controller_->GetStats();
     screen_.print(F("U"));
-    screen_.print(s.uptimeMinutes / 60);
+    screen_.print(model_.stats.uptimeMinutes / 60);
     screen_.print(F(" F"));
-    screen_.print(s.fanMinutes / 60);
+    screen_.print(model_.stats.fanMinutes / 60);
     screen_.print(F(" O3"));
-    screen_.print(s.ozoneMinutes / 60);
+    screen_.print(model_.stats.ozoneMinutes / 60);
   } else if (item_idx == 1) { // Сброс
     screen_.print(F("MENU CONFIRM"));
   }
@@ -473,11 +464,10 @@ void DisplayUI::DrawErrorLog() {
   DrawHeader(F("ERRORS"), nav_.GetItemIndex(), root->item_count);
 
   screen_.SetPos(1, 0);
-  ErrorCode err = controller_->GetError();
-  if (err == ErrorCode::kNone) {
+  if (model_.error == ErrorCode::kNone) {
     screen_.print(F("SYSTEM OK"));
   } else {
-    screen_.print(ErrorToString(err));
+    screen_.print(ErrorToString(model_.error));
     screen_.SetPos(1, 12);
     screen_.print(F("UP:R"));
   }
