@@ -8,7 +8,7 @@
 
 void MenuActions::HandleDrawStatus(DisplayUI* ui) {
   const MenuItemDef* item = ui->GetCurrentItemDef();
-  if (item) ui->DrawStatus((int)item->ctx);
+  if (item) ui->DrawStatus(item->ctx_index);
 }
 
 void MenuActions::HandleDrawManualModes(DisplayUI* ui) { ui->DrawManualModes(); }
@@ -16,9 +16,9 @@ void MenuActions::HandleDrawStats(DisplayUI* ui) { ui->DrawStats(); }
 void MenuActions::HandleDrawErrorLog(DisplayUI* ui) { ui->DrawErrorLog(); }
 void MenuActions::HandleDrawValue(DisplayUI* ui) { ui->DrawValuePage(); }
 
-static void LoadValuePageDef(const void* flash_ptr, ValuePageDef* ram_buf) {
-  if (flash_ptr && ram_buf) {
-    memcpy_P(ram_buf, flash_ptr, sizeof(ValuePageDef));
+static void LoadValuePageDef(uint8_t index, ValuePageDef* ram_buf) {
+  if (ram_buf) {
+    memcpy_P(ram_buf, &VALUE_PAGES[index], sizeof(ValuePageDef));
   }
 }
 
@@ -48,10 +48,10 @@ void MenuActions::ApplyValueChange(DisplayUI* ui, MenuItemID id, float val) {
 
 void MenuActions::AdjustValue(DisplayUI* ui, float delta) {
   const MenuItemDef* item = ui->GetCurrentItemDef();
-  if (!item || !item->ctx) return;
+  if (!item) return;
 
   ValuePageDef vcfg;
-  LoadValuePageDef(item->ctx, &vcfg);
+  LoadValuePageDef(item->ctx_index, &vcfg);
 
   // Для калибровки используем точность 1 знак, для других (например HUM) берем из конфига
   float val = ui->model_.GetValue(vcfg.val_id);
@@ -65,17 +65,17 @@ void MenuActions::AdjustValue(DisplayUI* ui, float delta) {
 
 void MenuActions::HandleUpValue(DisplayUI* ui) {
   const MenuItemDef* item = ui->GetCurrentItemDef();
-  if (!item || !item->ctx) return;
+  if (!item) return;
   ValuePageDef vcfg;
-  LoadValuePageDef(item->ctx, &vcfg);
+  LoadValuePageDef(item->ctx_index, &vcfg);
   AdjustValue(ui, vcfg.step);
 }
 
 void MenuActions::HandleDownValue(DisplayUI* ui) {
   const MenuItemDef* item = ui->GetCurrentItemDef();
-  if (!item || !item->ctx) return;
+  if (!item) return;
   ValuePageDef vcfg;
-  LoadValuePageDef(item->ctx, &vcfg);
+  LoadValuePageDef(item->ctx_index, &vcfg);
   AdjustValue(ui, -vcfg.step);
 }
 

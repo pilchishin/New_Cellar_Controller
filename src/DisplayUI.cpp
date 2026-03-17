@@ -8,8 +8,8 @@
 static const char lbl_status_in[] PROGMEM = "STATUS_IN";
 static const char lbl_status_out[] PROGMEM = "STATUS_OUT";
 static const MenuItemDef STATUS_ITEMS[] PROGMEM = {
-  { MenuItemID::kStatusIn,  lbl_status_in,  (const void*)0, MenuActions::HandleDrawStatus, MenuActions::HandlePrevItem, MenuActions::HandleNextItem, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu },
-  { MenuItemID::kStatusOut, lbl_status_out, (const void*)1, MenuActions::HandleDrawStatus, MenuActions::HandlePrevItem, MenuActions::HandleNextItem, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu }
+  { MenuItemID::kStatusIn,  lbl_status_in,  0, MenuActions::HandleDrawStatus, MenuActions::HandlePrevItem, MenuActions::HandleNextItem, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu },
+  { MenuItemID::kStatusOut, lbl_status_out, 1, MenuActions::HandleDrawStatus, MenuActions::HandlePrevItem, MenuActions::HandleNextItem, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu }
 };
 
 // --- Определения страниц редактирования значений ---
@@ -17,7 +17,7 @@ static const MenuItemDef STATUS_ITEMS[] PROGMEM = {
 static const char unit_c[] PROGMEM = "C";
 static const char unit_pct[] PROGMEM = "%";
 
-static const ValuePageDef VALUE_PAGES[] PROGMEM = {
+const ValuePageDef VALUE_PAGES[] PROGMEM = {
   { MenuItemID::kTargetTemp,   ValueID::kTargetTemp,   5.0f,  35.0f, 0.1f, unit_c,   1 },
   { MenuItemID::kTargetHum,    ValueID::kTargetHum,    0.0f, 100.0f, 1.0f, unit_pct, 0 },
   { MenuItemID::kCalibBmeTemp, ValueID::kCalibBmeTemp, -5.0f,  5.0f, 0.1f, unit_c,   1 },
@@ -32,27 +32,27 @@ static const uint8_t VALUE_PAGES_COUNT = sizeof(VALUE_PAGES) / sizeof(VALUE_PAGE
 static const char lbl_target_t[] PROGMEM = "TEMP";
 static const char lbl_target_h[] PROGMEM = "HUM";
 static const MenuItemDef TARGET_ITEMS[] PROGMEM = {
-  { MenuItemID::kTargetTemp, lbl_target_t, &VALUE_PAGES[0], MenuActions::HandleDrawValue, MenuActions::HandleUpValue, MenuActions::HandleDownValue, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu },
-  { MenuItemID::kTargetHum,  lbl_target_h, &VALUE_PAGES[1], MenuActions::HandleDrawValue, MenuActions::HandleUpValue, MenuActions::HandleDownValue, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu }
+  { MenuItemID::kTargetTemp, lbl_target_t, 0, MenuActions::HandleDrawValue, MenuActions::HandleUpValue, MenuActions::HandleDownValue, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu },
+  { MenuItemID::kTargetHum,  lbl_target_h, 1, MenuActions::HandleDrawValue, MenuActions::HandleUpValue, MenuActions::HandleDownValue, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu }
 };
 
 static const char lbl_man_fan[] PROGMEM = "MANUAL_FAN";
 static const char lbl_man_o3[] PROGMEM = "MANUAL_OZONE";
 static const MenuItemDef MANUAL_ITEMS[] PROGMEM = {
-  { MenuItemID::kManualFan,   lbl_man_fan,   nullptr, MenuActions::HandleDrawManualModes, MenuActions::HandleUpManual, MenuActions::HandleDownManual, MenuActions::HandleMenuManual, MenuActions::HandleExitSubmenu },
-  { MenuItemID::kManualOzone, lbl_man_o3,    nullptr, MenuActions::HandleDrawManualModes, MenuActions::HandleUpManual, MenuActions::HandleDownManual, MenuActions::HandleMenuManual, MenuActions::HandleExitSubmenu }
+  { MenuItemID::kManualFan,   lbl_man_fan,   0, MenuActions::HandleDrawManualModes, MenuActions::HandleUpManual, MenuActions::HandleDownManual, MenuActions::HandleMenuManual, MenuActions::HandleExitSubmenu },
+  { MenuItemID::kManualOzone, lbl_man_o3,    0, MenuActions::HandleDrawManualModes, MenuActions::HandleUpManual, MenuActions::HandleDownManual, MenuActions::HandleMenuManual, MenuActions::HandleExitSubmenu }
 };
 
 static const char lbl_stats_v[] PROGMEM = "STATS_VIEW";
 static const char lbl_stats_r[] PROGMEM = "STATS_RESET";
 static const MenuItemDef STATS_ITEMS[] PROGMEM = {
-  { MenuItemID::kStatsView,  lbl_stats_v, nullptr, MenuActions::HandleDrawStats, MenuActions::HandlePrevItem, MenuActions::HandleNextItem, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu },
-  { MenuItemID::kStatsReset, lbl_stats_r, nullptr, MenuActions::HandleDrawStats, MenuActions::HandlePrevItem, MenuActions::HandleNextItem, MenuActions::HandleNextItem, MenuActions::HandleLongMenuStats }
+  { MenuItemID::kStatsView,  lbl_stats_v, 0, MenuActions::HandleDrawStats, MenuActions::HandlePrevItem, MenuActions::HandleNextItem, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu },
+  { MenuItemID::kStatsReset, lbl_stats_r, 0, MenuActions::HandleDrawStats, MenuActions::HandlePrevItem, MenuActions::HandleNextItem, MenuActions::HandleNextItem, MenuActions::HandleLongMenuStats }
 };
 
 static const char lbl_err_v[] PROGMEM = "ERROR_VIEW";
 static const MenuItemDef ERROR_ITEMS[] PROGMEM = {
-  { MenuItemID::kErrorView, lbl_err_v, nullptr, MenuActions::HandleDrawErrorLog, MenuActions::HandleUpError, nullptr, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu }
+  { MenuItemID::kErrorView, lbl_err_v, 0, MenuActions::HandleDrawErrorLog, MenuActions::HandleUpError, nullptr, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu }
 };
 
 static const char lbl_bme_t[] PROGMEM = "BME T";
@@ -62,11 +62,11 @@ static const char lbl_htu_h[] PROGMEM = "HTU H";
 static const char lbl_ds_t[] PROGMEM = "DS T";
 
 static const MenuItemDef SERVICE_ITEMS[] PROGMEM = {
-  { MenuItemID::kCalibBmeTemp, lbl_bme_t, &VALUE_PAGES[2], MenuActions::HandleDrawValue, MenuActions::HandleUpValue, MenuActions::HandleDownValue, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu },
-  { MenuItemID::kCalibBmeHum,  lbl_bme_h, &VALUE_PAGES[3], MenuActions::HandleDrawValue, MenuActions::HandleUpValue, MenuActions::HandleDownValue, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu },
-  { MenuItemID::kCalibHtuTemp, lbl_htu_t, &VALUE_PAGES[4], MenuActions::HandleDrawValue, MenuActions::HandleUpValue, MenuActions::HandleDownValue, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu },
-  { MenuItemID::kCalibHtuHum,  lbl_htu_h, &VALUE_PAGES[5], MenuActions::HandleDrawValue, MenuActions::HandleUpValue, MenuActions::HandleDownValue, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu },
-  { MenuItemID::kCalibDsTemp,  lbl_ds_t,  &VALUE_PAGES[6], MenuActions::HandleDrawValue, MenuActions::HandleUpValue, MenuActions::HandleDownValue, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu }
+  { MenuItemID::kCalibBmeTemp, lbl_bme_t, 2, MenuActions::HandleDrawValue, MenuActions::HandleUpValue, MenuActions::HandleDownValue, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu },
+  { MenuItemID::kCalibBmeHum,  lbl_bme_h, 3, MenuActions::HandleDrawValue, MenuActions::HandleUpValue, MenuActions::HandleDownValue, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu },
+  { MenuItemID::kCalibHtuTemp, lbl_htu_t, 4, MenuActions::HandleDrawValue, MenuActions::HandleUpValue, MenuActions::HandleDownValue, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu },
+  { MenuItemID::kCalibHtuHum,  lbl_htu_h, 5, MenuActions::HandleDrawValue, MenuActions::HandleUpValue, MenuActions::HandleDownValue, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu },
+  { MenuItemID::kCalibDsTemp,  lbl_ds_t,  6, MenuActions::HandleDrawValue, MenuActions::HandleUpValue, MenuActions::HandleDownValue, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu }
 };
 
 // Текстовые метки корневых разделов
@@ -384,10 +384,10 @@ void DisplayUI::DrawManualModes() {
 
 void DisplayUI::DrawValuePage() {
   const MenuItemDef* item = GetCurrentItemDef();
-  if (!item || !item->ctx) return;
+  if (!item) return;
 
   ValuePageDef vcfg;
-  memcpy_P(&vcfg, item->ctx, sizeof(ValuePageDef));
+  memcpy_P(&vcfg, &VALUE_PAGES[item->ctx_index], sizeof(ValuePageDef));
 
   const MenuRootDef* root = GetCurrentRootDef();
   DrawHeader((const __FlashStringHelper*)root->label, nav_.GetItemIndex(), root->item_count);

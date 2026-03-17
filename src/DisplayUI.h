@@ -108,7 +108,7 @@ struct ValuePageDef {
 struct MenuItemDef {
   MenuItemID id;                  // Уникальный идентификатор элемента
   const char* label;              // Метка элемента (в PROGMEM)
-  const void* ctx;                // Контекстный указатель (может указывать на PROGMEM)
+  uint8_t ctx_index;              // Индекс контекста (для VALUE_PAGES или сенсоров)
   void (*draw)(DisplayUI* ui);    // Функция отрисовки содержимого
   void (*on_up)(DisplayUI* ui);   // Обработчик кнопки ВВЕРХ
   void (*on_down)(DisplayUI* ui); // Обработчик кнопки ВНИЗ
@@ -202,5 +202,7 @@ class DisplayUI {
    */
   bool IsBacklightOn() const { return backlight_on_; }
 };
+
+extern const ValuePageDef VALUE_PAGES[] PROGMEM;
 
 #endif
