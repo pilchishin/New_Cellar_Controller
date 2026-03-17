@@ -1,5 +1,6 @@
 #include "MenuActions.h"
 #include "DisplayUI.h"
+#include "MenuNavigator.h"
 
 // Переменные из DisplayUI.cpp, которые нужны здесь для идентификации калибровок
 // В идеале их тоже стоит перенести в MenuActions или сделать общими.
@@ -7,10 +8,56 @@
 
 void MenuActions::HandleDrawStatusIn(DisplayUI* ui) { ui->DrawStatusIn(); }
 void MenuActions::HandleDrawStatusOut(DisplayUI* ui) { ui->DrawStatusOut(); }
-void MenuActions::HandleDrawTargets(DisplayUI* ui) { ui->DrawTargets(); }
 void MenuActions::HandleDrawManualModes(DisplayUI* ui) { ui->DrawManualModes(); }
 void MenuActions::HandleDrawStats(DisplayUI* ui) { ui->DrawStats(); }
 void MenuActions::HandleDrawErrorLog(DisplayUI* ui) { ui->DrawErrorLog(); }
+void MenuActions::HandleDrawValue(DisplayUI* ui) { ui->DrawValuePage(); }
+
+void MenuActions::ApplyValueChange(DisplayUI* ui, MenuItemID id, float val) {
+  if (id == MenuItemID::kTargetTemp) {
+    ui->controller_->SetTargetTemp(val);
+  } else if (id == MenuItemID::kTargetHum) {
+    ui->controller_->SetTargetRh(val);
+  } else if (id >= MenuItemID::kCalibBmeTemp && id <= MenuItemID::kCalibDsTemp) {
+    CalibrationData c = ui->model_.calib;
+    if (id == MenuItemID::kCalibBmeTemp) c.bmeTempOffset = val;
+    else if (id == MenuItemID::kCalibBmeHum) c.bmeHumOffset = val;
+    else if (id == MenuItemID::kCalibHtuTemp) c.htuTempOffset = val;
+    else if (id == MenuItemID::kCalibHtuHum) c.htuHumOffset = val;
+    else if (id == MenuItemID::kCalibDsTemp) c.dsTempOffset = val;
+    ui->controller_->SetCalibration(c);
+  }
+}
+
+void MenuActions::AdjustValue(DisplayUI* ui, float delta) {
+  const MenuItemDef* item = ui->GetCurrentItemDef();
+  if (!item) return;
+
+  const ValuePageDef* vcfg = ui->GetValuePageDef(item->id);
+  if (!vcfg) return;
+
+  float val = ui->model_.*(vcfg->val_ptr);
+  val += delta;
+
+  if (val < vcfg->min_val) val = vcfg->min_val;
+  if (val > vcfg->max_val) val = vcfg->max_val;
+
+  ApplyValueChange(ui, item->id, val);
+}
+
+void MenuActions::HandleUpValue(DisplayUI* ui) {
+  const MenuItemDef* item = ui->GetCurrentItemDef();
+  if (!item) return;
+  const ValuePageDef* vcfg = ui->GetValuePageDef(item->id);
+  if (vcfg) AdjustValue(ui, vcfg->step);
+}
+
+void MenuActions::HandleDownValue(DisplayUI* ui) {
+  const MenuItemDef* item = ui->GetCurrentItemDef();
+  if (!item) return;
+  const ValuePageDef* vcfg = ui->GetValuePageDef(item->id);
+  if (vcfg) AdjustValue(ui, -vcfg->step);
+}
 
 void MenuActions::HandlePrevItem(DisplayUI* ui) {
   const MenuRootDef* root = ui->GetCurrentRootDef();
@@ -26,38 +73,6 @@ void MenuActions::HandleNextItem(DisplayUI* ui) {
   }
 }
 
-void MenuActions::HandleDrawCalib(DisplayUI* ui) {
-  const MenuItemDef* item = ui->GetCurrentItemDef();
-  if (!item) return;
-
-  CalibrationData c = ui->model_.calib;
-  bool is_temp = true;
-  float* val = ui->GetCalibrationParam(item->id, c, &is_temp);
-
-  if (val) {
-    ui->DrawCalibPage(item->label, *val, is_temp);
-  }
-}
-
-void MenuActions::HandleUpTargets(DisplayUI* ui) {
-  if (ui->nav_.GetItemIndex() == 0) // Температура
-    ui->controller_->SetTargetTemp(ui->model_.target_temp + 0.1f);
-  else { // Влажность
-    float h = ui->model_.target_rh + 1.0f;
-    if (h > 100.0f) h = 100.0f;
-    ui->controller_->SetTargetRh(h);
-  }
-}
-
-void MenuActions::HandleDownTargets(DisplayUI* ui) {
-  if (ui->nav_.GetItemIndex() == 0) // Температура
-    ui->controller_->SetTargetTemp(ui->model_.target_temp - 0.1f);
-  else { // Влажность
-    float h = ui->model_.target_rh - 1.0f;
-    if (h < 0.0f) h = 0.0f;
-    ui->controller_->SetTargetRh(h);
-  }
-}
 
 void MenuActions::HandleUpManual(DisplayUI* ui) { HandlePrevItem(ui); }
 void MenuActions::HandleDownManual(DisplayUI* ui) { HandleNextItem(ui); }
@@ -85,9 +100,6 @@ void MenuActions::HandleLongMenuStats(DisplayUI* ui) {
 }
 
 void MenuActions::HandleUpError(DisplayUI* ui) { ui->controller_->ResetError(); }
-
-void MenuActions::HandleUpCalib(DisplayUI* ui) { ui->AdjustCalib(0.1f); }
-void MenuActions::HandleDownCalib(DisplayUI* ui) { ui->AdjustCalib(-0.1f); }
 
 void MenuActions::HandlePrevRoot(DisplayUI* ui) {
   ui->nav_.PrevRoot(ui->GetMenuTableSize());

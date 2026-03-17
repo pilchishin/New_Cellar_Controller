@@ -33,6 +33,12 @@ class UIModel {
   float target_rh;
 
   CalibrationData calib;
+  float calib_bme_t;
+  float calib_bme_h;
+  float calib_htu_t;
+  float calib_htu_h;
+  float calib_ds_t;
+
   SystemStatistics stats;
 
   bool fan_on;

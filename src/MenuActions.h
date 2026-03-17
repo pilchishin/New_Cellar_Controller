@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 
+enum class MenuItemID : uint8_t;
 class DisplayUI;
 
 /**
@@ -14,24 +15,25 @@ class MenuActions {
   // Обработчики отрисовки
   static void HandleDrawStatusIn(DisplayUI* ui);
   static void HandleDrawStatusOut(DisplayUI* ui);
-  static void HandleDrawTargets(DisplayUI* ui);
   static void HandleDrawManualModes(DisplayUI* ui);
   static void HandleDrawStats(DisplayUI* ui);
   static void HandleDrawErrorLog(DisplayUI* ui);
-  static void HandleDrawCalib(DisplayUI* ui);
+  static void HandleDrawValue(DisplayUI* ui);
 
   // Обработчики кнопок внутри подменю
   static void HandlePrevItem(DisplayUI* ui);
   static void HandleNextItem(DisplayUI* ui);
-  static void HandleUpTargets(DisplayUI* ui);
-  static void HandleDownTargets(DisplayUI* ui);
+  static void HandleUpValue(DisplayUI* ui);
+  static void HandleDownValue(DisplayUI* ui);
   static void HandleUpManual(DisplayUI* ui);
   static void HandleDownManual(DisplayUI* ui);
   static void HandleMenuManual(DisplayUI* ui);
   static void HandleLongMenuStats(DisplayUI* ui);
   static void HandleUpError(DisplayUI* ui);
-  static void HandleUpCalib(DisplayUI* ui);
-  static void HandleDownCalib(DisplayUI* ui);
+
+  // Вспомогательные методы
+  static void AdjustValue(DisplayUI* ui, float delta);
+  static void ApplyValueChange(DisplayUI* ui, MenuItemID id, float val);
 
   // Обработчики кнопок на уровне корневых разделов
   static void HandlePrevRoot(DisplayUI* ui);

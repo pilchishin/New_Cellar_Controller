@@ -10,6 +10,11 @@ UIModel::UIModel()
       target_temp(0),
       target_rh(0),
       calib{0,0,0,0,0},
+      calib_bme_t(0),
+      calib_bme_h(0),
+      calib_htu_t(0),
+      calib_htu_h(0),
+      calib_ds_t(0),
       stats{0,0,0},
       fan_on(false),
       ozone_on(false),
@@ -29,6 +34,12 @@ void UIModel::Sync(Controller* controller, SensorManager* sensors) {
   target_rh = controller->GetTargetRh();
 
   calib = controller->GetCalibration();
+  calib_bme_t = calib.bmeTempOffset;
+  calib_bme_h = calib.bmeHumOffset;
+  calib_htu_t = calib.htuTempOffset;
+  calib_htu_h = calib.htuHumOffset;
+  calib_ds_t = calib.dsTempOffset;
+
   stats = controller->GetStats();
 
   RelayManager* rm = controller->GetRelayManager();

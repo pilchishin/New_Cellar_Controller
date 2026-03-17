@@ -90,6 +90,19 @@ enum class MenuItemID : uint8_t {
 };
 
 /**
+ * @brief Определение параметров страницы редактирования числового значения.
+ */
+struct ValuePageDef {
+  MenuItemID id;            // ID элемента меню
+  float UIModel::*val_ptr;  // Указатель на поле в UIModel
+  float min_val;            // Минимальное значение
+  float max_val;            // Максимальное значение
+  float step;               // Шаг изменения
+  const char* unit;         // Единица измерения (в PROGMEM)
+  uint8_t precision;        // Количество знаков после запятой
+};
+
+/**
  * @brief Определение элемента подменю.
  */
 struct MenuItemDef {
@@ -159,21 +172,14 @@ class DisplayUI {
   void DrawStatusIn();      // Внутренние показатели
   void DrawStatusOut();     // Внешние показатели
   void DrawStatusPage(const SensorData& data, const __FlashStringHelper* label); // Общий метод отрисовки статуса
-  void DrawTargets();       // Уставки температуры и влажности
   void DrawManualModes();   // Ручное управление устройствами
-  void DrawCalibPage(const char* label, float value, bool is_temp); // Страница калибровки
+  void DrawValuePage();     // Универсальная страница редактирования значения
   void DrawStats();         // Просмотр статистики наработки
   void DrawErrorLog();      // Просмотр лога ошибок
 
-  // Вспомогательный метод для маппинга элементов меню на параметры калибровки
-  float* GetCalibrationParam(MenuItemID id, CalibrationData& data, bool* is_temp = nullptr);
-
-  /**
-   * @brief Вспомогательный метод для изменения калибровочных смещений.
-   */
-  void AdjustCalib(float delta);
-
   uint8_t GetMenuTableSize() const;
+
+  const ValuePageDef* GetValuePageDef(MenuItemID id) const;
 
   friend class MenuActions;
   friend class MenuDispatcher;
