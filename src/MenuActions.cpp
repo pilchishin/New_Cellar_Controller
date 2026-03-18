@@ -50,16 +50,6 @@ void MenuActions::Execute(DisplayUI* ui, ActionID action) {
   }
 }
 
-void MenuActions::HandleDrawStatus(DisplayUI* ui) {
-  const MenuItemDef* item = ui->GetCurrentItemDef();
-  if (item) ui->DrawStatus(item->ctx_index);
-}
-
-void MenuActions::HandleDrawManualModes(DisplayUI* ui) { ui->DrawManualModes(); }
-void MenuActions::HandleDrawStats(DisplayUI* ui) { ui->DrawStats(); }
-void MenuActions::HandleDrawErrorLog(DisplayUI* ui) { ui->DrawErrorLog(); }
-void MenuActions::HandleDrawValue(DisplayUI* ui) { ui->DrawValuePage(); }
-
 static void LoadValuePageDef(uint8_t index, ValuePageDef* ram_buf) {
   if (ram_buf) {
     memcpy_P(ram_buf, &VALUE_PAGES[index], sizeof(ValuePageDef));

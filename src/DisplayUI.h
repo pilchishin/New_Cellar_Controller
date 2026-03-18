@@ -89,6 +89,17 @@ enum class ActionID : uint8_t {
 /**
  * @brief Идентификаторы элементов меню для быстрой идентификации в коде.
  */
+/**
+ * @brief Типы элементов меню для определения способа отрисовки и взаимодействия.
+ */
+enum class MenuItemType : uint8_t {
+  kView,    // Только просмотр (например, показатели датчиков или лог ошибок)
+  kValue,   // Редактируемое числовое значение
+  kAction,  // Выполнение действия (например, запуск ручного режима)
+  kToggle,  // Переключатель (вкл/выкл)
+  kStats    // Специальный тип для статистики
+};
+
 enum class MenuItemID : uint8_t {
   kNone,
   kStatusIn,
@@ -126,8 +137,8 @@ struct ValuePageDef {
 struct MenuItemDef {
   MenuItemID id;                  // Уникальный идентификатор элемента
   const char* label;              // Метка элемента (в PROGMEM)
+  MenuItemType type;              // Тип элемента для отрисовки
   uint8_t ctx_index;              // Индекс контекста (для VALUE_PAGES или сенсоров)
-  void (*draw)(DisplayUI* ui);    // Функция отрисовки содержимого
   ActionID up_action;             // Действие кнопки ВВЕРХ
   ActionID down_action;           // Действие кнопки ВНИЗ
   ActionID menu_action;           // Действие короткого нажатия МЕНЮ
@@ -188,6 +199,7 @@ class DisplayUI {
 
   // Методы отрисовки конкретных страниц
   void DrawHomeScreen();    // Главный экран со статусом
+  void RenderItem(const MenuItemDef* item); // Централизованный рендерер элементов
   void DrawStatus(int index); // Показатели (0 - IN, 1 - OUT)
   void DrawStatusPage(const SensorData& data, const __FlashStringHelper* label); // Общий метод отрисовки статуса
   void DrawManualModes();   // Ручное управление устройствами

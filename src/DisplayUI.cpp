@@ -8,8 +8,8 @@
 static const char lbl_status_in[] PROGMEM = "STATUS_IN";
 static const char lbl_status_out[] PROGMEM = "STATUS_OUT";
 static const MenuItemDef STATUS_ITEMS[] PROGMEM = {
-  { MenuItemID::kStatusIn,  lbl_status_in,  0, MenuActions::HandleDrawStatus, ActionID::kNavPrev, ActionID::kNavNext, ActionID::kNavNext, ActionID::kExitSubmenu },
-  { MenuItemID::kStatusOut, lbl_status_out, 1, MenuActions::HandleDrawStatus, ActionID::kNavPrev, ActionID::kNavNext, ActionID::kNavNext, ActionID::kExitSubmenu }
+  { MenuItemID::kStatusIn,  lbl_status_in,  MenuItemType::kView, 0, ActionID::kNavPrev, ActionID::kNavNext, ActionID::kNavNext, ActionID::kExitSubmenu },
+  { MenuItemID::kStatusOut, lbl_status_out, MenuItemType::kView, 1, ActionID::kNavPrev, ActionID::kNavNext, ActionID::kNavNext, ActionID::kExitSubmenu }
 };
 
 // --- Определения страниц редактирования значений ---
@@ -32,27 +32,27 @@ static const uint8_t VALUE_PAGES_COUNT = sizeof(VALUE_PAGES) / sizeof(VALUE_PAGE
 static const char lbl_target_t[] PROGMEM = "TEMP";
 static const char lbl_target_h[] PROGMEM = "HUM";
 static const MenuItemDef TARGET_ITEMS[] PROGMEM = {
-  { MenuItemID::kTargetTemp, lbl_target_t, 0, MenuActions::HandleDrawValue, ActionID::kValueInc, ActionID::kValueDec, ActionID::kNavNext, ActionID::kExitSubmenu },
-  { MenuItemID::kTargetHum,  lbl_target_h, 1, MenuActions::HandleDrawValue, ActionID::kValueInc, ActionID::kValueDec, ActionID::kNavNext, ActionID::kExitSubmenu }
+  { MenuItemID::kTargetTemp, lbl_target_t, MenuItemType::kValue, 0, ActionID::kValueInc, ActionID::kValueDec, ActionID::kNavNext, ActionID::kExitSubmenu },
+  { MenuItemID::kTargetHum,  lbl_target_h, MenuItemType::kValue, 1, ActionID::kValueInc, ActionID::kValueDec, ActionID::kNavNext, ActionID::kExitSubmenu }
 };
 
 static const char lbl_man_fan[] PROGMEM = "MANUAL_FAN";
 static const char lbl_man_o3[] PROGMEM = "MANUAL_OZONE";
 static const MenuItemDef MANUAL_ITEMS[] PROGMEM = {
-  { MenuItemID::kManualFan,   lbl_man_fan,   0, MenuActions::HandleDrawManualModes, ActionID::kNavPrev, ActionID::kNavNext, ActionID::kManualStart, ActionID::kExitSubmenu },
-  { MenuItemID::kManualOzone, lbl_man_o3,    0, MenuActions::HandleDrawManualModes, ActionID::kNavPrev, ActionID::kNavNext, ActionID::kManualStart, ActionID::kExitSubmenu }
+  { MenuItemID::kManualFan,   lbl_man_fan,   MenuItemType::kAction, 0, ActionID::kNavPrev, ActionID::kNavNext, ActionID::kManualStart, ActionID::kExitSubmenu },
+  { MenuItemID::kManualOzone, lbl_man_o3,    MenuItemType::kAction, 0, ActionID::kNavPrev, ActionID::kNavNext, ActionID::kManualStart, ActionID::kExitSubmenu }
 };
 
 static const char lbl_stats_v[] PROGMEM = "STATS_VIEW";
 static const char lbl_stats_r[] PROGMEM = "STATS_RESET";
 static const MenuItemDef STATS_ITEMS[] PROGMEM = {
-  { MenuItemID::kStatsView,  lbl_stats_v, 0, MenuActions::HandleDrawStats, ActionID::kNavPrev,    ActionID::kNavNext, ActionID::kNavNext,     ActionID::kExitSubmenu },
-  { MenuItemID::kStatsReset, lbl_stats_r, 0, MenuActions::HandleDrawStats, ActionID::kNavPrev,    ActionID::kNavNext, ActionID::kNavNext,     ActionID::kStatsReset }
+  { MenuItemID::kStatsView,  lbl_stats_v, MenuItemType::kStats, 0, ActionID::kNavPrev,    ActionID::kNavNext, ActionID::kNavNext,     ActionID::kExitSubmenu },
+  { MenuItemID::kStatsReset, lbl_stats_r, MenuItemType::kStats, 0, ActionID::kNavPrev,    ActionID::kNavNext, ActionID::kNavNext,     ActionID::kStatsReset }
 };
 
 static const char lbl_err_v[] PROGMEM = "ERROR_VIEW";
 static const MenuItemDef ERROR_ITEMS[] PROGMEM = {
-  { MenuItemID::kErrorView, lbl_err_v, 0, MenuActions::HandleDrawErrorLog, ActionID::kErrorReset, ActionID::kNone,    ActionID::kNavNext,     ActionID::kExitSubmenu }
+  { MenuItemID::kErrorView, lbl_err_v, MenuItemType::kView, 0, ActionID::kErrorReset, ActionID::kNone,    ActionID::kNavNext,     ActionID::kExitSubmenu }
 };
 
 static const char lbl_bme_t[] PROGMEM = "BME T";
@@ -62,11 +62,11 @@ static const char lbl_htu_h[] PROGMEM = "HTU H";
 static const char lbl_ds_t[] PROGMEM = "DS T";
 
 static const MenuItemDef SERVICE_ITEMS[] PROGMEM = {
-  { MenuItemID::kCalibBmeTemp, lbl_bme_t, 2, MenuActions::HandleDrawValue, ActionID::kValueInc, ActionID::kValueDec, ActionID::kNavNext, ActionID::kExitSubmenu },
-  { MenuItemID::kCalibBmeHum,  lbl_bme_h, 3, MenuActions::HandleDrawValue, ActionID::kValueInc, ActionID::kValueDec, ActionID::kNavNext, ActionID::kExitSubmenu },
-  { MenuItemID::kCalibHtuTemp, lbl_htu_t, 4, MenuActions::HandleDrawValue, ActionID::kValueInc, ActionID::kValueDec, ActionID::kNavNext, ActionID::kExitSubmenu },
-  { MenuItemID::kCalibHtuHum,  lbl_htu_h, 5, MenuActions::HandleDrawValue, ActionID::kValueInc, ActionID::kValueDec, ActionID::kNavNext, ActionID::kExitSubmenu },
-  { MenuItemID::kCalibDsTemp,  lbl_ds_t,  6, MenuActions::HandleDrawValue, ActionID::kValueInc, ActionID::kValueDec, ActionID::kNavNext, ActionID::kExitSubmenu }
+  { MenuItemID::kCalibBmeTemp, lbl_bme_t, MenuItemType::kValue, 2, ActionID::kValueInc, ActionID::kValueDec, ActionID::kNavNext, ActionID::kExitSubmenu },
+  { MenuItemID::kCalibBmeHum,  lbl_bme_h, MenuItemType::kValue, 3, ActionID::kValueInc, ActionID::kValueDec, ActionID::kNavNext, ActionID::kExitSubmenu },
+  { MenuItemID::kCalibHtuTemp, lbl_htu_t, MenuItemType::kValue, 4, ActionID::kValueInc, ActionID::kValueDec, ActionID::kNavNext, ActionID::kExitSubmenu },
+  { MenuItemID::kCalibHtuHum,  lbl_htu_h, MenuItemType::kValue, 5, ActionID::kValueInc, ActionID::kValueDec, ActionID::kNavNext, ActionID::kExitSubmenu },
+  { MenuItemID::kCalibDsTemp,  lbl_ds_t,  MenuItemType::kValue, 6, ActionID::kValueInc, ActionID::kValueDec, ActionID::kNavNext, ActionID::kExitSubmenu }
 };
 
 // Текстовые метки корневых разделов
@@ -268,9 +268,29 @@ void DisplayUI::DrawPage() {
     DrawRootPage();
   } else { // Экран конкретного элемента подменю
     const MenuItemDef* item = GetCurrentItemDef();
-    if (item && item->draw) {
-      item->draw(this);
+    if (item) {
+      RenderItem(item);
     }
+  }
+}
+
+void DisplayUI::RenderItem(const MenuItemDef* item) {
+  switch (item->type) {
+    case MenuItemType::kView:
+      if (item->id == MenuItemID::kErrorView) DrawErrorLog();
+      else DrawStatus(item->ctx_index);
+      break;
+    case MenuItemType::kValue:
+      DrawValuePage();
+      break;
+    case MenuItemType::kAction:
+      DrawManualModes();
+      break;
+    case MenuItemType::kStats:
+      DrawStats();
+      break;
+    default:
+      break;
   }
 }
 

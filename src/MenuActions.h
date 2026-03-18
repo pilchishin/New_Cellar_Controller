@@ -16,13 +16,6 @@ class MenuActions {
   // Центральный исполнитель действий
   static void Execute(DisplayUI* ui, ActionID action);
 
-  // Обработчики отрисовки
-  static void HandleDrawStatus(DisplayUI* ui);
-  static void HandleDrawManualModes(DisplayUI* ui);
-  static void HandleDrawStats(DisplayUI* ui);
-  static void HandleDrawErrorLog(DisplayUI* ui);
-  static void HandleDrawValue(DisplayUI* ui);
-
   // Обработчики кнопок внутри подменю
   static void HandleUpValue(DisplayUI* ui);
   static void HandleDownValue(DisplayUI* ui);
