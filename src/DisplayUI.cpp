@@ -8,8 +8,8 @@
 static const char lbl_status_in[] PROGMEM = "STATUS_IN";
 static const char lbl_status_out[] PROGMEM = "STATUS_OUT";
 static const MenuItemDef STATUS_ITEMS[] PROGMEM = {
-  { MenuItemID::kStatusIn,  lbl_status_in,  0, MenuActions::HandleDrawStatus, MenuActions::HandlePrevItem, MenuActions::HandleNextItem, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu },
-  { MenuItemID::kStatusOut, lbl_status_out, 1, MenuActions::HandleDrawStatus, MenuActions::HandlePrevItem, MenuActions::HandleNextItem, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu }
+  { MenuItemID::kStatusIn,  lbl_status_in,  0, MenuActions::HandleDrawStatus, ActionID::kNavPrev, ActionID::kNavNext, ActionID::kNavNext, ActionID::kExitSubmenu },
+  { MenuItemID::kStatusOut, lbl_status_out, 1, MenuActions::HandleDrawStatus, ActionID::kNavPrev, ActionID::kNavNext, ActionID::kNavNext, ActionID::kExitSubmenu }
 };
 
 // --- Определения страниц редактирования значений ---
@@ -32,27 +32,27 @@ static const uint8_t VALUE_PAGES_COUNT = sizeof(VALUE_PAGES) / sizeof(VALUE_PAGE
 static const char lbl_target_t[] PROGMEM = "TEMP";
 static const char lbl_target_h[] PROGMEM = "HUM";
 static const MenuItemDef TARGET_ITEMS[] PROGMEM = {
-  { MenuItemID::kTargetTemp, lbl_target_t, 0, MenuActions::HandleDrawValue, MenuActions::HandleUpValue, MenuActions::HandleDownValue, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu },
-  { MenuItemID::kTargetHum,  lbl_target_h, 1, MenuActions::HandleDrawValue, MenuActions::HandleUpValue, MenuActions::HandleDownValue, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu }
+  { MenuItemID::kTargetTemp, lbl_target_t, 0, MenuActions::HandleDrawValue, ActionID::kValueInc, ActionID::kValueDec, ActionID::kNavNext, ActionID::kExitSubmenu },
+  { MenuItemID::kTargetHum,  lbl_target_h, 1, MenuActions::HandleDrawValue, ActionID::kValueInc, ActionID::kValueDec, ActionID::kNavNext, ActionID::kExitSubmenu }
 };
 
 static const char lbl_man_fan[] PROGMEM = "MANUAL_FAN";
 static const char lbl_man_o3[] PROGMEM = "MANUAL_OZONE";
 static const MenuItemDef MANUAL_ITEMS[] PROGMEM = {
-  { MenuItemID::kManualFan,   lbl_man_fan,   0, MenuActions::HandleDrawManualModes, MenuActions::HandleUpManual, MenuActions::HandleDownManual, MenuActions::HandleMenuManual, MenuActions::HandleExitSubmenu },
-  { MenuItemID::kManualOzone, lbl_man_o3,    0, MenuActions::HandleDrawManualModes, MenuActions::HandleUpManual, MenuActions::HandleDownManual, MenuActions::HandleMenuManual, MenuActions::HandleExitSubmenu }
+  { MenuItemID::kManualFan,   lbl_man_fan,   0, MenuActions::HandleDrawManualModes, ActionID::kNavPrev, ActionID::kNavNext, ActionID::kManualStart, ActionID::kExitSubmenu },
+  { MenuItemID::kManualOzone, lbl_man_o3,    0, MenuActions::HandleDrawManualModes, ActionID::kNavPrev, ActionID::kNavNext, ActionID::kManualStart, ActionID::kExitSubmenu }
 };
 
 static const char lbl_stats_v[] PROGMEM = "STATS_VIEW";
 static const char lbl_stats_r[] PROGMEM = "STATS_RESET";
 static const MenuItemDef STATS_ITEMS[] PROGMEM = {
-  { MenuItemID::kStatsView,  lbl_stats_v, 0, MenuActions::HandleDrawStats, MenuActions::HandlePrevItem, MenuActions::HandleNextItem, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu },
-  { MenuItemID::kStatsReset, lbl_stats_r, 0, MenuActions::HandleDrawStats, MenuActions::HandlePrevItem, MenuActions::HandleNextItem, MenuActions::HandleNextItem, MenuActions::HandleLongMenuStats }
+  { MenuItemID::kStatsView,  lbl_stats_v, 0, MenuActions::HandleDrawStats, ActionID::kNavPrev,    ActionID::kNavNext, ActionID::kNavNext,     ActionID::kExitSubmenu },
+  { MenuItemID::kStatsReset, lbl_stats_r, 0, MenuActions::HandleDrawStats, ActionID::kNavPrev,    ActionID::kNavNext, ActionID::kNavNext,     ActionID::kStatsReset }
 };
 
 static const char lbl_err_v[] PROGMEM = "ERROR_VIEW";
 static const MenuItemDef ERROR_ITEMS[] PROGMEM = {
-  { MenuItemID::kErrorView, lbl_err_v, 0, MenuActions::HandleDrawErrorLog, MenuActions::HandleUpError, nullptr, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu }
+  { MenuItemID::kErrorView, lbl_err_v, 0, MenuActions::HandleDrawErrorLog, ActionID::kErrorReset, ActionID::kNone,    ActionID::kNavNext,     ActionID::kExitSubmenu }
 };
 
 static const char lbl_bme_t[] PROGMEM = "BME T";
@@ -62,11 +62,11 @@ static const char lbl_htu_h[] PROGMEM = "HTU H";
 static const char lbl_ds_t[] PROGMEM = "DS T";
 
 static const MenuItemDef SERVICE_ITEMS[] PROGMEM = {
-  { MenuItemID::kCalibBmeTemp, lbl_bme_t, 2, MenuActions::HandleDrawValue, MenuActions::HandleUpValue, MenuActions::HandleDownValue, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu },
-  { MenuItemID::kCalibBmeHum,  lbl_bme_h, 3, MenuActions::HandleDrawValue, MenuActions::HandleUpValue, MenuActions::HandleDownValue, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu },
-  { MenuItemID::kCalibHtuTemp, lbl_htu_t, 4, MenuActions::HandleDrawValue, MenuActions::HandleUpValue, MenuActions::HandleDownValue, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu },
-  { MenuItemID::kCalibHtuHum,  lbl_htu_h, 5, MenuActions::HandleDrawValue, MenuActions::HandleUpValue, MenuActions::HandleDownValue, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu },
-  { MenuItemID::kCalibDsTemp,  lbl_ds_t,  6, MenuActions::HandleDrawValue, MenuActions::HandleUpValue, MenuActions::HandleDownValue, MenuActions::HandleNextItem, MenuActions::HandleExitSubmenu }
+  { MenuItemID::kCalibBmeTemp, lbl_bme_t, 2, MenuActions::HandleDrawValue, ActionID::kValueInc, ActionID::kValueDec, ActionID::kNavNext, ActionID::kExitSubmenu },
+  { MenuItemID::kCalibBmeHum,  lbl_bme_h, 3, MenuActions::HandleDrawValue, ActionID::kValueInc, ActionID::kValueDec, ActionID::kNavNext, ActionID::kExitSubmenu },
+  { MenuItemID::kCalibHtuTemp, lbl_htu_t, 4, MenuActions::HandleDrawValue, ActionID::kValueInc, ActionID::kValueDec, ActionID::kNavNext, ActionID::kExitSubmenu },
+  { MenuItemID::kCalibHtuHum,  lbl_htu_h, 5, MenuActions::HandleDrawValue, ActionID::kValueInc, ActionID::kValueDec, ActionID::kNavNext, ActionID::kExitSubmenu },
+  { MenuItemID::kCalibDsTemp,  lbl_ds_t,  6, MenuActions::HandleDrawValue, ActionID::kValueInc, ActionID::kValueDec, ActionID::kNavNext, ActionID::kExitSubmenu }
 };
 
 // Текстовые метки корневых разделов
@@ -83,13 +83,13 @@ static const char root_service[] PROGMEM = "SERVICE";
  * Хранится во Flash-памяти для экономии RAM.
  */
 static const MenuRootDef MENU_TABLE[] PROGMEM = {
-  { root_home,    nullptr,       0, MenuActions::HandlePrevRoot, MenuActions::HandleNextRoot, MenuActions::HandleNextRoot, nullptr, 500 },
-  { root_status,  STATUS_ITEMS,  2, MenuActions::HandlePrevRoot, MenuActions::HandleNextRoot, MenuActions::HandleNextRoot, MenuActions::HandleEnterSubmenu, 1000 },
-  { root_targets, TARGET_ITEMS,  2, MenuActions::HandlePrevRoot, MenuActions::HandleNextRoot, MenuActions::HandleNextRoot, MenuActions::HandleEnterSubmenu, 1000 },
-  { root_manual,  MANUAL_ITEMS,  2, MenuActions::HandlePrevRoot, MenuActions::HandleNextRoot, MenuActions::HandleNextRoot, MenuActions::HandleEnterSubmenu, 1000 },
-  { root_stats,   STATS_ITEMS,   2, MenuActions::HandlePrevRoot, MenuActions::HandleNextRoot, MenuActions::HandleNextRoot, MenuActions::HandleEnterSubmenu, 1000 },
-  { root_errors,  ERROR_ITEMS,   1, MenuActions::HandlePrevRoot, MenuActions::HandleNextRoot, MenuActions::HandleNextRoot, MenuActions::HandleEnterSubmenu, 1000 },
-  { root_service, SERVICE_ITEMS, 5, MenuActions::HandlePrevRoot, MenuActions::HandleNextRoot, MenuActions::HandleNextRoot, MenuActions::HandleEnterSubmenu, 1000 }
+  { root_home,    nullptr,       0, ActionID::kNavPrevRoot, ActionID::kNavNextRoot, ActionID::kNavNextRoot, ActionID::kNone,          500 },
+  { root_status,  STATUS_ITEMS,  2, ActionID::kNavPrevRoot, ActionID::kNavNextRoot, ActionID::kNavNextRoot, ActionID::kEnterSubmenu, 1000 },
+  { root_targets, TARGET_ITEMS,  2, ActionID::kNavPrevRoot, ActionID::kNavNextRoot, ActionID::kNavNextRoot, ActionID::kEnterSubmenu, 1000 },
+  { root_manual,  MANUAL_ITEMS,  2, ActionID::kNavPrevRoot, ActionID::kNavNextRoot, ActionID::kNavNextRoot, ActionID::kEnterSubmenu, 1000 },
+  { root_stats,   STATS_ITEMS,   2, ActionID::kNavPrevRoot, ActionID::kNavNextRoot, ActionID::kNavNextRoot, ActionID::kEnterSubmenu, 1000 },
+  { root_errors,  ERROR_ITEMS,   1, ActionID::kNavPrevRoot, ActionID::kNavNextRoot, ActionID::kNavNextRoot, ActionID::kEnterSubmenu, 1000 },
+  { root_service, SERVICE_ITEMS, 5, ActionID::kNavPrevRoot, ActionID::kNavNextRoot, ActionID::kNavNextRoot, ActionID::kEnterSubmenu, 1000 }
 };
 
 static const uint8_t MENU_TABLE_SIZE = sizeof(MENU_TABLE) / sizeof(MENU_TABLE[0]);

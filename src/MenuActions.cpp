@@ -6,6 +6,50 @@
 // В идеале их тоже стоит перенести в MenuActions или сделать общими.
 // Для простоты пока объявим как внешние или перенесем.
 
+void MenuActions::Execute(DisplayUI* ui, ActionID action) {
+  if (action == ActionID::kNone) return;
+
+  const MenuRootDef* root = ui->GetCurrentRootDef();
+
+  switch (action) {
+    case ActionID::kNavNext:
+      if (root) ui->nav_.NextItem(root->item_count);
+      break;
+    case ActionID::kNavPrev:
+      if (root) ui->nav_.PrevItem(root->item_count);
+      break;
+    case ActionID::kNavNextRoot:
+      ui->nav_.NextRoot(ui->GetMenuTableSize());
+      break;
+    case ActionID::kNavPrevRoot:
+      ui->nav_.PrevRoot(ui->GetMenuTableSize());
+      break;
+    case ActionID::kValueInc:
+      HandleUpValue(ui);
+      break;
+    case ActionID::kValueDec:
+      HandleDownValue(ui);
+      break;
+    case ActionID::kEnterSubmenu:
+      ui->nav_.EnterSubmenu();
+      break;
+    case ActionID::kExitSubmenu:
+      ui->nav_.ExitSubmenu();
+      break;
+    case ActionID::kManualStart:
+      HandleMenuManual(ui);
+      break;
+    case ActionID::kStatsReset:
+      HandleLongMenuStats(ui);
+      break;
+    case ActionID::kErrorReset:
+      ui->controller_->ResetError();
+      break;
+    default:
+      break;
+  }
+}
+
 void MenuActions::HandleDrawStatus(DisplayUI* ui) {
   const MenuItemDef* item = ui->GetCurrentItemDef();
   if (item) ui->DrawStatus(item->ctx_index);
@@ -79,24 +123,6 @@ void MenuActions::HandleDownValue(DisplayUI* ui) {
   AdjustValue(ui, -vcfg.step);
 }
 
-void MenuActions::HandlePrevItem(DisplayUI* ui) {
-  const MenuRootDef* root = ui->GetCurrentRootDef();
-  if (root) {
-    ui->nav_.PrevItem(root->item_count);
-  }
-}
-
-void MenuActions::HandleNextItem(DisplayUI* ui) {
-  const MenuRootDef* root = ui->GetCurrentRootDef();
-  if (root) {
-    ui->nav_.NextItem(root->item_count);
-  }
-}
-
-
-void MenuActions::HandleUpManual(DisplayUI* ui) { HandlePrevItem(ui); }
-void MenuActions::HandleDownManual(DisplayUI* ui) { HandleNextItem(ui); }
-
 void MenuActions::HandleMenuManual(DisplayUI* ui) {
   if (ui->nav_.GetItemIndex() == 0) { // Вентилятор
     ui->controller_->StartManualFan(30);
@@ -117,22 +143,4 @@ void MenuActions::HandleLongMenuStats(DisplayUI* ui) {
   } else {
     ui->nav_.ExitSubmenu();
   }
-}
-
-void MenuActions::HandleUpError(DisplayUI* ui) { ui->controller_->ResetError(); }
-
-void MenuActions::HandlePrevRoot(DisplayUI* ui) {
-  ui->nav_.PrevRoot(ui->GetMenuTableSize());
-}
-
-void MenuActions::HandleNextRoot(DisplayUI* ui) {
-  ui->nav_.NextRoot(ui->GetMenuTableSize());
-}
-
-void MenuActions::HandleEnterSubmenu(DisplayUI* ui) {
-  ui->nav_.EnterSubmenu();
-}
-
-void MenuActions::HandleExitSubmenu(DisplayUI* ui) {
-  ui->nav_.ExitSubmenu();
 }

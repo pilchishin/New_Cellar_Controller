@@ -69,6 +69,24 @@ class ScreenBuffer : public Print {
 };
 
 /**
+ * @brief Идентификаторы действий, которые могут быть привязаны к кнопкам в меню.
+ */
+enum class ActionID : uint8_t {
+  kNone,
+  kNavNext,
+  kNavPrev,
+  kNavNextRoot,
+  kNavPrevRoot,
+  kValueInc,
+  kValueDec,
+  kEnterSubmenu,
+  kExitSubmenu,
+  kManualStart,
+  kStatsReset,
+  kErrorReset
+};
+
+/**
  * @brief Идентификаторы элементов меню для быстрой идентификации в коде.
  */
 enum class MenuItemID : uint8_t {
@@ -110,10 +128,10 @@ struct MenuItemDef {
   const char* label;              // Метка элемента (в PROGMEM)
   uint8_t ctx_index;              // Индекс контекста (для VALUE_PAGES или сенсоров)
   void (*draw)(DisplayUI* ui);    // Функция отрисовки содержимого
-  void (*on_up)(DisplayUI* ui);   // Обработчик кнопки ВВЕРХ
-  void (*on_down)(DisplayUI* ui); // Обработчик кнопки ВНИЗ
-  void (*on_menu)(DisplayUI* ui); // Обработчик короткого нажатия МЕНЮ
-  void (*on_long_menu)(DisplayUI* ui); // Обработчик долгого нажатия МЕНЮ
+  ActionID up_action;             // Действие кнопки ВВЕРХ
+  ActionID down_action;           // Действие кнопки ВНИЗ
+  ActionID menu_action;           // Действие короткого нажатия МЕНЮ
+  ActionID long_menu_action;      // Действие долгого нажатия МЕНЮ
 };
 
 /**
@@ -123,10 +141,10 @@ struct MenuRootDef {
   const char* label;              // Название раздела (в PROGMEM)
   const MenuItemDef* items;       // Указатель на массив элементов подменю (в PROGMEM)
   uint8_t item_count;             // Количество элементов в подразделе
-  void (*on_up)(DisplayUI* ui);   // Обработчик кнопки ВВЕРХ на уровне корня
-  void (*on_down)(DisplayUI* ui); // Обработчик кнопки ВНИЗ на уровне корня
-  void (*on_menu)(DisplayUI* ui); // Обработчик короткого нажатия МЕНЮ
-  void (*on_long_menu)(DisplayUI* ui); // Обработчик долгого нажатия МЕНЮ
+  ActionID up_action;             // Действие кнопки ВВЕРХ на уровне корня
+  ActionID down_action;           // Действие кнопки ВНИЗ на уровне корня
+  ActionID menu_action;           // Действие короткого нажатия МЕНЮ
+  ActionID long_menu_action;      // Действие долгого нажатия МЕНЮ
   uint16_t refresh_interval_ms;   // Интервал обновления экрана для этого раздела
 };
 

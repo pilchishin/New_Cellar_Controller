@@ -1,18 +1,21 @@
 #include "MenuDispatcher.h"
 #include "DisplayUI.h"
+#include "MenuActions.h"
 
 void MenuDispatcher::Dispatch(DisplayUI* ui, ButtonEvent event) {
   if (event == ButtonEvent::kNone) return;
+
+  ActionID action = ActionID::kNone;
 
   if (!ui->nav_.InSubmenu()) {
     const MenuRootDef* root = ui->GetCurrentRootDef();
     if (!root) return;
 
     switch (event) {
-      case ButtonEvent::kUp:   if (root->on_up) root->on_up(ui); break;
-      case ButtonEvent::kDown: if (root->on_down) root->on_down(ui); break;
-      case ButtonEvent::kMenu: if (root->on_menu) root->on_menu(ui); break;
-      case ButtonEvent::kMenuLong: if (root->on_long_menu) root->on_long_menu(ui); break;
+      case ButtonEvent::kUp:       action = root->up_action; break;
+      case ButtonEvent::kDown:     action = root->down_action; break;
+      case ButtonEvent::kMenu:     action = root->menu_action; break;
+      case ButtonEvent::kMenuLong: action = root->long_menu_action; break;
       default: break;
     }
   } else {
@@ -20,11 +23,15 @@ void MenuDispatcher::Dispatch(DisplayUI* ui, ButtonEvent event) {
     if (!item) return;
 
     switch (event) {
-      case ButtonEvent::kUp:   if (item->on_up) item->on_up(ui); break;
-      case ButtonEvent::kDown: if (item->on_down) item->on_down(ui); break;
-      case ButtonEvent::kMenu: if (item->on_menu) item->on_menu(ui); break;
-      case ButtonEvent::kMenuLong: if (item->on_long_menu) item->on_long_menu(ui); break;
+      case ButtonEvent::kUp:       action = item->up_action; break;
+      case ButtonEvent::kDown:     action = item->down_action; break;
+      case ButtonEvent::kMenu:     action = item->menu_action; break;
+      case ButtonEvent::kMenuLong: action = item->long_menu_action; break;
       default: break;
     }
+  }
+
+  if (action != ActionID::kNone) {
+    MenuActions::Execute(ui, action);
   }
 }
