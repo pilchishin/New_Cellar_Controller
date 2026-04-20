@@ -76,7 +76,7 @@ const uint8_t kMedianWindow  = 3;    // Размер окна медианног
 // 7. ГРАНИЦЫ ДОСТОВЕРНОСТИ ДАННЫХ (Plausibility Checks)
 // =================================================================
 const float kRawTempMin = -40.0f;
-const float kRawTempMax = 80.0f;
+const float kRawTempMax = 85.0f;
 const float kRawHumMin  = 0.0f;
 const float kRawHumMax  = 100.0f;
 

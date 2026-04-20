@@ -105,10 +105,17 @@ void SensorManager::Update() {
     float raw_temp = bme_.readTemperature();
     float raw_hum = bme_.readHumidity();
 
-    // Проверка на NaN (ошибка чтения)
-    if (isnan(raw_temp) || isnan(raw_hum)) {
+    // Проверка на NaN и физически допустимые диапазоны
+    bool is_invalid = isnan(raw_temp) || isnan(raw_hum) ||
+                      raw_temp < kRawTempMin || raw_temp > kRawTempMax ||
+                      raw_hum < kRawHumMin || raw_hum > kRawHumMax;
+
+    if (is_invalid) {
       bme_stat_.valid = false;
       inside_data_.valid = false;
+#ifdef DEBUG
+      Serial.println(F("BME280: Raw data out of range or NaN!"));
+#endif
     } else {
       // Пропускаем сырые данные через фильтры (Медиана -> EMA)
       inside_data_.temp = filter_bme_temp_.Update(raw_temp) + calib_.bmeTempOffset;
@@ -140,10 +147,17 @@ void SensorManager::Update() {
     float raw_temp = htu_.readTemperature();
     float raw_hum = htu_.readHumidity();
 
-    if (isnan(raw_temp) || isnan(raw_hum) ||
-        raw_hum > 100.0f) {  // HTU иногда выдает >100% при ошибках
+    // Проверка на NaN и физически допустимые диапазоны
+    bool is_invalid = isnan(raw_temp) || isnan(raw_hum) ||
+                      raw_temp < kRawTempMin || raw_temp > kRawTempMax ||
+                      raw_hum < kRawHumMin || raw_hum > kRawHumMax;
+
+    if (is_invalid) {
       htu_stat_.valid = false;
       outside_data_.valid = false;
+#ifdef DEBUG
+      Serial.println(F("HTU21D: Raw data out of range or NaN!"));
+#endif
     } else {
       outside_data_.temp = filter_htu_temp_.Update(raw_temp) + calib_.htuTempOffset;
       outside_data_.rh = filter_htu_hum_.Update(raw_hum) + calib_.htuHumOffset;
