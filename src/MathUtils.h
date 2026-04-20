@@ -3,9 +3,22 @@
 
 #include <Arduino.h>
 
-// Класс для фильтрации сырых данных с датчиков
-// Комбинирует медианный фильтр (окно 3) и экспоненциальное сглаживание (EMA)
-class Filter {
+/**
+ * @class IFilter
+ * @brief Интерфейс для фильтров данных датчиков.
+ */
+class IFilter {
+ public:
+  virtual ~IFilter() {}
+  virtual float Update(float v) = 0;
+  virtual void Reset() = 0;
+};
+
+/**
+ * @class EmaMedianFilter
+ * @brief Комбинированный фильтр: медиана (окно 3) + экспоненциальное сглаживание (EMA).
+ */
+class EmaMedianFilter : public IFilter {
  private:
   float history_[3];     // Буфер для последних 3-х измерений (для медианы)
   float ema_value_;      // Текущее значение EMA
@@ -17,13 +30,13 @@ class Filter {
 
  public:
   // Конструктор. По ТЗ коэффициент альфа для EMA равен 0.2
-  Filter(float alpha = 0.2f);
+  EmaMedianFilter(float alpha = 0.2f);
 
   // Главный метод: принимает новое сырое значение, возвращает отфильтрованное
-  float Update(float new_value);
+  float Update(float new_value) override;
 
   // Сброс фильтра (для очистки истории после восстановления датчика)
-  void Reset();
+  void Reset() override;
 };
 
 // Пространство имен для климатических формул

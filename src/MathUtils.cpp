@@ -2,7 +2,7 @@
 #include <math.h> // Необходима для функций exp() и log()
 
 // Инициализация класса фильтра
-Filter::Filter(float alpha) {
+EmaMedianFilter::EmaMedianFilter(float alpha) {
   this->alpha_ = alpha;
   this->is_initialized_ = false;
   this->ema_value_ = 0.0f;
@@ -14,12 +14,12 @@ Filter::Filter(float alpha) {
 /**
  * @brief Быстрый алгоритм поиска медианы для трех чисел без полноценной сортировки массива.
  */
-float Filter::GetMedian(float a, float b, float c) {
+float EmaMedianFilter::GetMedian(float a, float b, float c) {
   return max(min(a, b), min(max(a, b), c));
 }
 
 // Обновление значения в фильтре
-float Filter::Update(float new_value) {
+float EmaMedianFilter::Update(float new_value) {
   // Если это самое первое измерение после включения устройства
   if (!is_initialized_) {
     // Заполняем весь буфер первым валидным значением
@@ -42,7 +42,7 @@ float Filter::Update(float new_value) {
   return ema_value_;
 }
 
-void Filter::Reset() {
+void EmaMedianFilter::Reset() {
   this->is_initialized_ = false;
   this->ema_value_ = 0.0f;
   for (int i = 0; i < 3; i++) {

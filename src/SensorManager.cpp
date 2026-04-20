@@ -29,6 +29,18 @@ void SensorManager::Init() {
   InitDs();
 }
 
+SensorData SensorManager::FillSensorData(float temp, float rh, IFilter& tFilter,
+                                        IFilter& hFilter, float tOffset,
+                                        float hOffset) {
+  SensorData data;
+  data.temp = tFilter.Update(temp) + tOffset;
+  data.rh = hFilter.Update(rh) + hOffset;
+  data.ah = climate_math::CalculateAH(data.temp, data.rh);
+  data.dewpoint = climate_math::CalculateDewPoint(data.temp, data.rh);
+  data.valid = true;
+  return data;
+}
+
 void SensorManager::InitBme() {
   if (bme_.begin(BME280_ADDR)) {
     bme_stat_.valid = true;
