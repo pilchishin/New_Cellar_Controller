@@ -16,6 +16,7 @@ struct SensorStatus {
   bool valid;
   uint8_t retries;
   unsigned long lastRetry;
+  uint8_t stability_count;
 };
 
 class SensorManager {

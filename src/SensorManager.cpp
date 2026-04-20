@@ -5,9 +5,9 @@ SensorManager::SensorManager()
     : one_wire_(ONE_WIRE_BUS),
       ds_sensor_(&one_wire_),
       control_temp_(0.0f),
-      bme_stat_({false, 0, 0}),
-      htu_stat_({false, 0, 0}),
-      ds_stat_({false, 0, 0}),
+      bme_stat_({false, 0, 0, 0}),
+      htu_stat_({false, 0, 0, 0}),
+      ds_stat_({false, 0, 0, 0}),
       i2c_error_count_(0) {
   // Начальные значения структур сбрасываем в нули/false
   inside_data_ = {0, 0, 0, 0, false};
@@ -118,6 +118,7 @@ void SensorManager::Update() {
     if (is_invalid) {
       bme_stat_.valid = false;
       inside_data_.valid = false;
+      bme_stat_.stability_count = 0;
 #ifdef DEBUG
       Serial.println(F("BME280: Raw data out of range or NaN!"));
 #endif
@@ -132,6 +133,9 @@ void SensorManager::Update() {
           climate_math::CalculateDewPoint(inside_data_.temp, inside_data_.rh);
       inside_data_.valid = true;
       i2c_success = true;
+      if (bme_stat_.stability_count < kSensorStabilityThreshold) {
+        bme_stat_.stability_count++;
+      }
     }
   }
 
@@ -160,6 +164,7 @@ void SensorManager::Update() {
     if (is_invalid) {
       htu_stat_.valid = false;
       outside_data_.valid = false;
+      htu_stat_.stability_count = 0;
 #ifdef DEBUG
       Serial.println(F("HTU21D: Raw data out of range or NaN!"));
 #endif
@@ -173,6 +178,9 @@ void SensorManager::Update() {
           climate_math::CalculateDewPoint(outside_data_.temp, outside_data_.rh);
       outside_data_.valid = true;
       i2c_success = true;
+      if (htu_stat_.stability_count < kSensorStabilityThreshold) {
+        htu_stat_.stability_count++;
+      }
     }
   }
 
@@ -195,8 +203,12 @@ void SensorManager::Update() {
 
     if (raw_ds_temp == DEVICE_DISCONNECTED_C) {
       ds_stat_.valid = false;
+      ds_stat_.stability_count = 0;
     } else {
       control_temp_ = filter_ds_temp_.Update(raw_ds_temp) + calib_.dsTempOffset;
+      if (ds_stat_.stability_count < kSensorStabilityThreshold) {
+        ds_stat_.stability_count++;
+      }
     }
 
     // Сразу запрашиваем новую конверсию для следующего цикла опроса (через 10 сек)
@@ -220,7 +232,11 @@ ErrorCode SensorManager::CheckErrors() {
   if (!htu_stat_.valid) return ErrorCode::kSensorHtuFail;
   if (!ds_stat_.valid) return ErrorCode::kSensorDsFail;
 
-  if (abs(inside_data_.temp - control_temp_) > kSensorDiffMax) {
+  // Проверка расхождения температур BME и DS только после периода стабилизации
+  bool is_stable = (bme_stat_.stability_count >= kSensorStabilityThreshold &&
+                    ds_stat_.stability_count >= kSensorStabilityThreshold);
+
+  if (is_stable && abs(inside_data_.temp - control_temp_) > kSensorDiffMax) {
 #ifdef DEBUG
     Serial.print(F("Temp Mismatch! BME: "));
     Serial.print(inside_data_.temp);

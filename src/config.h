@@ -55,6 +55,7 @@ const float kSensorDiffMax = 2.0f;    // Макс. разница между BME
 const uint32_t kSensorPollInterval = 10000UL; // Опрос датчиков раз в 10 секунд
 const uint32_t kSensorRetryInterval = 60000UL; // Интервал повторной попытки опроса датчика
 const uint8_t  kSensorMaxRetries    = 3;       // Макс. количество попыток оживления датчика
+const uint8_t  kSensorStabilityThreshold = 3;  // Кол-во циклов для стабилизации показаний
 const uint32_t kFanMinWorkTime    = 300000UL; // Антидребезг вентилятора (5 минут)
 const uint32_t kBacklightTimeout    = 30000UL;  // Автовыключение подсветки (30 секунд)
 
