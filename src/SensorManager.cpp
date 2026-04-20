@@ -216,8 +216,13 @@ ErrorCode SensorManager::CheckErrors() {
 }
 
 void SensorManager::Recover() {
-  // Выполняем программный сброс шины (A4=SDA, A5=SCL на Arduino Nano)
+  // Полноценное восстановление шины I2C
+  Wire.end();
+  delay(10);
   i2c_utils::RecoverBus(A4, A5);
+  Wire.begin();
+  Wire.setWireTimeout(3000, true);
+
   // Пробуем инициализировать датчики заново
   Init();
 }
