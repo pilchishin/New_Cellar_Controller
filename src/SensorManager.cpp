@@ -20,6 +20,10 @@ void SensorManager::Init() {
   Serial.println(F("Init Sensors..."));
 #endif
 
+  // Инициализация шины I2C и установка таймаута для предотвращения зависаний
+  Wire.begin();
+  Wire.setWireTimeout(3000, true);
+
   InitBme();
   InitHtu();
   InitDs();
