@@ -33,6 +33,8 @@ void SensorManager::InitBme() {
   if (bme_.begin(BME280_ADDR)) {
     bme_stat_.valid = true;
     bme_stat_.retries = 0;
+    filter_bme_temp_.Reset();
+    filter_bme_hum_.Reset();
     bme_.setSampling(Adafruit_BME280::MODE_NORMAL, Adafruit_BME280::SAMPLING_X1,
                      Adafruit_BME280::SAMPLING_X1, Adafruit_BME280::SAMPLING_X1,
                      Adafruit_BME280::FILTER_OFF);
@@ -51,6 +53,8 @@ void SensorManager::InitHtu() {
   if (htu_.begin()) {
     htu_stat_.valid = true;
     htu_stat_.retries = 0;
+    filter_htu_temp_.Reset();
+    filter_htu_hum_.Reset();
 #ifdef DEBUG
     Serial.println(F("HTU21D Init OK"));
 #endif
@@ -67,6 +71,7 @@ void SensorManager::InitDs() {
   if (ds_sensor_.getDeviceCount() > 0) {
     ds_stat_.valid = true;
     ds_stat_.retries = 0;
+    filter_ds_temp_.Reset();
     ds_sensor_.setResolution(12);
     ds_sensor_.setWaitForConversion(false);
     ds_sensor_.requestTemperatures();

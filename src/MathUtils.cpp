@@ -42,6 +42,14 @@ float Filter::Update(float new_value) {
   return ema_value_;
 }
 
+void Filter::Reset() {
+  this->is_initialized_ = false;
+  this->ema_value_ = 0.0f;
+  for (int i = 0; i < 3; i++) {
+    this->history_[i] = 0.0f;
+  }
+}
+
 // ==========================================================
 // КЛИМАТИЧЕСКАЯ МАТЕМАТИКА
 // ==========================================================
