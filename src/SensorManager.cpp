@@ -201,7 +201,7 @@ void SensorManager::Update() {
   // Логика обнаружения полного отказа I2C-шины
   if (i2c_success) {
     i2c_error_count_ = 0;
-  } else if (bme_stat_.valid || htu_stat_.valid) {
+  } else {
     i2c_error_count_++;
 #ifdef DEBUG
     Serial.print(F("I2C Error Count: "));
