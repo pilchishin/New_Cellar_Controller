@@ -5,6 +5,11 @@ SensorManager::SensorManager()
     : one_wire_(ONE_WIRE_BUS),
       ds_sensor_(&one_wire_),
       control_temp_(0.0f),
+      filter_bme_temp_(0.01f, 0.5f),
+      filter_bme_hum_(0.05f, 2.0f),
+      filter_htu_temp_(0.01f, 0.5f),
+      filter_htu_hum_(0.05f, 2.0f),
+      filter_ds_temp_(0.01f, 0.5f),
       bme_stat_({false, 0, 0, 0}),
       htu_stat_({false, 0, 0, 0}),
       ds_stat_({false, 0, 0, 0}),
@@ -27,18 +32,6 @@ void SensorManager::Init() {
   InitBme();
   InitHtu();
   InitDs();
-}
-
-SensorData SensorManager::FillSensorData(float temp, float rh, IFilter& tFilter,
-                                        IFilter& hFilter, float tOffset,
-                                        float hOffset) {
-  SensorData data;
-  data.temp = tFilter.Update(temp) + tOffset;
-  data.rh = hFilter.Update(rh) + hOffset;
-  data.ah = climate_math::CalculateAH(data.temp, data.rh);
-  data.dewpoint = climate_math::CalculateDewPoint(data.temp, data.rh);
-  data.valid = true;
-  return data;
 }
 
 void SensorManager::InitBme() {

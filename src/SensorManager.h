@@ -32,12 +32,12 @@ class SensorManager {
   SensorData outside_data_;  // Данные снаружи (HTU21D)
   float control_temp_;       // Контрольная температура подвала (DS18B20)
 
-  // Объекты фильтров (Медиана N=3 + EMA alpha=0.2)
-  EmaMedianFilter filter_bme_temp_;
-  EmaMedianFilter filter_bme_hum_;
-  EmaMedianFilter filter_htu_temp_;
-  EmaMedianFilter filter_htu_hum_;
-  EmaMedianFilter filter_ds_temp_;
+  // Объекты фильтров (1D Kalman Filter)
+  KalmanFilter filter_bme_temp_;
+  KalmanFilter filter_bme_hum_;
+  KalmanFilter filter_htu_temp_;
+  KalmanFilter filter_htu_hum_;
+  KalmanFilter filter_ds_temp_;
 
   // Состояния датчиков (исправен, попытки, время последнего ретрая)
   SensorStatus bme_stat_;
@@ -54,7 +54,6 @@ class SensorManager {
   void ProcessBme(bool& i2c_success);
   void ProcessHtu(bool& i2c_success);
   void ProcessDs();
-  SensorData FillSensorData(float temp, float rh, IFilter& tFilter, IFilter& hFilter, float tOffset, float hOffset);
   bool IsDataPlausible(float temp, float rh);
 
   // Счетчики ошибок для I2C устройств
