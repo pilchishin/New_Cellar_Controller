@@ -40,6 +40,9 @@ void SensorManager::InitBme() {
   if (bme_.begin(BME280_ADDR)) {
     bme_stat_.valid = true;
     bme_stat_.retries = 0;
+    // Деинициализируем фильтры, чтобы они сбросились при следующем чтении
+    filter_bme_temp_.Invalidate();
+    filter_bme_hum_.Invalidate();
     // Конфигурация режима работы и передискретизации
     bme_.setSampling(Adafruit_BME280::MODE_NORMAL, Adafruit_BME280::SAMPLING_X1,
                      Adafruit_BME280::SAMPLING_X1, Adafruit_BME280::SAMPLING_X1,
@@ -60,6 +63,9 @@ void SensorManager::InitHtu() {
   if (htu_.begin()) {
     htu_stat_.valid = true;
     htu_stat_.retries = 0;
+    // Сброс состояния фильтров для чистого старта после reconnect
+    filter_htu_temp_.Invalidate();
+    filter_htu_hum_.Invalidate();
 #ifdef DEBUG
     Serial.println(F("HTU21D Init OK"));
 #endif
@@ -77,6 +83,8 @@ void SensorManager::InitDs() {
   if (ds_sensor_.getDeviceCount() > 0) {
     ds_stat_.valid = true;
     ds_stat_.retries = 0;
+    // Инвалидируем фильтр, чтобы он подхватил первое реальное измерение
+    filter_ds_temp_.Invalidate();
     // Настройка разрешения (12 бит = 0.0625°C)
     ds_sensor_.setResolution(12);
     // Не блокируем выполнение на время конвертации (750 мс для 12 бит)
