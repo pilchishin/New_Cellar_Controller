@@ -134,12 +134,25 @@ void SensorManager::Update() {
 #endif
     } else {
       // Инициализация фильтров первым валидным значением или обновление оценки
-      if (!filter_bme_temp_.IsInitialized()) filter_bme_temp_.Reset(raw_temp);
-      if (!filter_bme_hum_.IsInitialized()) filter_bme_hum_.Reset(raw_hum);
+      float filtered_temp, filtered_hum;
 
-      // Применяем фильтрацию Калмана и вносим калибровочное смещение
-      inside_data_.temp = filter_bme_temp_.Update(raw_temp) + calib_.bmeTempOffset;
-      inside_data_.rh = filter_bme_hum_.Update(raw_hum) + calib_.bmeHumOffset;
+      if (!filter_bme_temp_.IsInitialized()) {
+        filter_bme_temp_.Reset(raw_temp);
+        filtered_temp = raw_temp;
+      } else {
+        filtered_temp = filter_bme_temp_.Update(raw_temp);
+      }
+
+      if (!filter_bme_hum_.IsInitialized()) {
+        filter_bme_hum_.Reset(raw_hum);
+        filtered_hum = raw_hum;
+      } else {
+        filtered_hum = filter_bme_hum_.Update(raw_hum);
+      }
+
+      // Применяем калибровочное смещение к отфильтрованным данным
+      inside_data_.temp = filtered_temp + calib_.bmeTempOffset;
+      inside_data_.rh = filtered_hum + calib_.bmeHumOffset;
 
       // Расчет производных параметров на основе отфильтрованных данных
       inside_data_.ah = climate_math::CalculateAH(inside_data_.temp, inside_data_.rh);
@@ -186,12 +199,25 @@ void SensorManager::Update() {
 #endif
     } else {
       // Инициализация фильтров или обновление оценки
-      if (!filter_htu_temp_.IsInitialized()) filter_htu_temp_.Reset(raw_temp);
-      if (!filter_htu_hum_.IsInitialized()) filter_htu_hum_.Reset(raw_hum);
+      float filtered_temp, filtered_hum;
 
-      // Применяем фильтрацию Калмана и калибровку
-      outside_data_.temp = filter_htu_temp_.Update(raw_temp) + calib_.htuTempOffset;
-      outside_data_.rh = filter_htu_hum_.Update(raw_hum) + calib_.htuHumOffset;
+      if (!filter_htu_temp_.IsInitialized()) {
+        filter_htu_temp_.Reset(raw_temp);
+        filtered_temp = raw_temp;
+      } else {
+        filtered_temp = filter_htu_temp_.Update(raw_temp);
+      }
+
+      if (!filter_htu_hum_.IsInitialized()) {
+        filter_htu_hum_.Reset(raw_hum);
+        filtered_hum = raw_hum;
+      } else {
+        filtered_hum = filter_htu_hum_.Update(raw_hum);
+      }
+
+      // Применяем калибровку
+      outside_data_.temp = filtered_temp + calib_.htuTempOffset;
+      outside_data_.rh = filtered_hum + calib_.htuHumOffset;
 
       // Расчет AH и DewPoint
       outside_data_.ah =
@@ -243,10 +269,16 @@ void SensorManager::Update() {
     // 3. Валидное измерение
     else {
       // Инициализация фильтра или обновление оценки
-      if (!filter_ds_temp_.IsInitialized()) filter_ds_temp_.Reset(raw_ds_temp);
+      float filtered_ds;
+      if (!filter_ds_temp_.IsInitialized()) {
+        filter_ds_temp_.Reset(raw_ds_temp);
+        filtered_ds = raw_ds_temp;
+      } else {
+        filtered_ds = filter_ds_temp_.Update(raw_ds_temp);
+      }
 
-      // Фильтрация и калибровка
-      control_temp_ = filter_ds_temp_.Update(raw_ds_temp) + calib_.dsTempOffset;
+      // Калибровка
+      control_temp_ = filtered_ds + calib_.dsTempOffset;
       if (ds_stat_.stability_count < kSensorStabilityThreshold) {
         ds_stat_.stability_count++;
       }
