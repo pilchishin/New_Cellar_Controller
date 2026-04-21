@@ -120,6 +120,9 @@ void SensorManager::Update() {
     float raw_temp = bme_.readTemperature();
     float raw_hum = bme_.readHumidity();
 
+    // Факт выполнения операций по шине I2C
+    i2c_success = true;
+
     // Проверка на корректность данных (NaN и границы физического диапазона)
     bool is_invalid = isnan(raw_temp) || isnan(raw_hum) ||
                       raw_temp < kRawTempMin || raw_temp > kRawTempMax ||
@@ -161,7 +164,6 @@ void SensorManager::Update() {
       inside_data_.dewpoint =
           climate_math::CalculateDewPoint(inside_data_.temp, inside_data_.rh);
       inside_data_.valid = true;
-      i2c_success = true; // Фиксируем успех обмена по шине I2C
 
       // Инкремент счетчика стабильности до достижения порога
       if (bme_stat_.stability_count < kSensorStabilityThreshold) {
@@ -186,6 +188,9 @@ void SensorManager::Update() {
   if (htu_stat_.valid) {
     float raw_temp = htu_.readTemperature();
     float raw_hum = htu_.readHumidity();
+
+    // Факт выполнения операций по шине I2C
+    i2c_success = true;
 
     // Проверка на корректность данных
     bool is_invalid = isnan(raw_temp) || isnan(raw_hum) ||
@@ -229,7 +234,6 @@ void SensorManager::Update() {
       outside_data_.dewpoint =
           climate_math::CalculateDewPoint(outside_data_.temp, outside_data_.rh);
       outside_data_.valid = true;
-      i2c_success = true;
 
       if (htu_stat_.stability_count < kSensorStabilityThreshold) {
         htu_stat_.stability_count++;
