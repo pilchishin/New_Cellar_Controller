@@ -51,6 +51,10 @@ void EmaMedianFilter::Reset(float initial_value) {
   }
 }
 
+void EmaMedianFilter::Invalidate() {
+  this->is_initialized_ = false;
+}
+
 // ==========================================================
 // KALMAN FILTER
 // ==========================================================
@@ -82,6 +86,10 @@ void KalmanFilter::Reset(float initial_value) {
   x_ = initial_value;
   p_ = 1.0f;
   is_initialized_ = true;
+}
+
+void KalmanFilter::Invalidate() {
+  is_initialized_ = false;
 }
 
 // ==========================================================

@@ -129,6 +129,8 @@ void SensorManager::Update() {
       bme_stat_.valid = false;
       inside_data_.valid = false;
       bme_stat_.stability_count = 0;
+      filter_bme_temp_.Invalidate();
+      filter_bme_hum_.Invalidate();
 #ifdef DEBUG
       Serial.println(F("BME280: Raw data out of range or NaN!"));
 #endif
@@ -194,6 +196,8 @@ void SensorManager::Update() {
       htu_stat_.valid = false;
       outside_data_.valid = false;
       htu_stat_.stability_count = 0;
+      filter_htu_temp_.Invalidate();
+      filter_htu_hum_.Invalidate();
 #ifdef DEBUG
       Serial.println(F("HTU21D: Raw data out of range or NaN!"));
 #endif
@@ -254,6 +258,7 @@ void SensorManager::Update() {
     if (raw_ds_temp == DEVICE_DISCONNECTED_C) {
       ds_stat_.valid = false;
       ds_stat_.stability_count = 0;
+      filter_ds_temp_.Invalidate();
 #ifdef DEBUG
       Serial.println(F("DS18B20: Disconnected!"));
 #endif
