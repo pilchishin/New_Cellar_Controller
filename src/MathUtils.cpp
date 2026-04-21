@@ -42,12 +42,42 @@ float EmaMedianFilter::Update(float new_value) {
   return ema_value_;
 }
 
-void EmaMedianFilter::Reset() {
+void EmaMedianFilter::Reset(float initial_value) {
   this->is_initialized_ = false;
-  this->ema_value_ = 0.0f;
+  this->ema_value_ = initial_value;
   for (int i = 0; i < 3; i++) {
-    this->history_[i] = 0.0f;
+    this->history_[i] = initial_value;
   }
+}
+
+// ==========================================================
+// KALMAN FILTER
+// ==========================================================
+
+KalmanFilter::KalmanFilter(float q, float r)
+    : q_(q), r_(r), x_(0), p_(1.0f), k_(0), is_initialized_(false) {}
+
+float KalmanFilter::Update(float measurement) {
+  if (!is_initialized_) {
+    Reset(measurement);
+    return x_;
+  }
+
+  // 1. Prediction update
+  // p_ = p_ + q_; // (Prediction error covariance)
+
+  // 2. Measurement update
+  k_ = (p_ + q_) / (p_ + q_ + r_);   // Kalman Gain
+  x_ = x_ + k_ * (measurement - x_); // Current estimate
+  p_ = (1.0f - k_) * (p_ + q_);      // Estimation error covariance
+
+  return x_;
+}
+
+void KalmanFilter::Reset(float initial_value) {
+  x_ = initial_value;
+  p_ = 1.0f;
+  is_initialized_ = true;
 }
 
 // ==========================================================
