@@ -308,6 +308,8 @@ void SensorManager::Recover() {
   Wire.begin();
   Wire.setWireTimeout(3000, true);
 
-  // Переинициализация всех датчиков после сброса шины
-  Init();
+  // Переинициализация всех датчиков после сброса шины напрямую
+  InitBme();
+  InitHtu();
+  InitDs();
 }

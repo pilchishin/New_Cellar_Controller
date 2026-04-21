@@ -162,9 +162,7 @@ void i2c_utils::RecoverBus(uint8_t sda_pin, uint8_t scl_pin) {
     digitalWrite(sda_pin, HIGH);
     delayMicroseconds(5);
 
-    // 5. Возвращаем аппаратный I2C
-    Wire.begin();
-
+    // 5. Шина готова к повторной инициализации через Wire.begin()
     #ifdef DEBUG
     Serial.println(F("I2C: Recovery complete."));
     #endif
