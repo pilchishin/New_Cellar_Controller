@@ -32,6 +32,7 @@ void setup() {
 #endif
 
   // 2. Инициализация аппаратных модулей
+  Wire.begin();           // Инициализация шины I2C как Master
   relay_manager.Init();   // Реле — в первую очередь (безопасное состояние)
   sensor_manager.Init();  // Датчики
   time_manager.Init();    // Часы реального времени
