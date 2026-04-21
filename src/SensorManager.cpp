@@ -107,7 +107,7 @@ void SensorManager::InitDs() {
  * @brief Главный цикл опроса датчиков и восстановления I2C шины.
  */
 void SensorManager::Update() {
-  bool i2c_success = false;  // Флаг успешного чтения хотя бы одного I2C устройства
+  bool i2c_alive = false;  // Флаг работоспособности шины I2C (хотя бы одно устройство ответило)
   unsigned long now = millis();
 
   // 1. ОПРОС И ФИЛЬТРАЦИЯ BME280 (ПОМЕЩЕНИЕ)
@@ -120,18 +120,21 @@ void SensorManager::Update() {
       Serial.println(bme_stat_.retries);
 #endif
       InitBme();
-      if (bme_stat_.valid) i2c_success = true;
+      // Если инициализация прошла успешно (устройство ответило по I2C)
+      if (bme_stat_.valid) i2c_alive = true;
     }
   }
 
   // 1. Опрос внутреннего датчика (BME280)
   if (bme_stat_.valid) {
+    // Попытка чтения (I2C Alive check)
     float raw_temp = bme_.readTemperature();
     float raw_hum = bme_.readHumidity();
 
-    // Успех аппаратного обмена фиксируем только при получении числовых значений (не NaN)
+    // Шина считается живой, если операция завершилась без ошибки связи (не NaN).
+    // При этом данные могут быть "невалидными" по диапазону, это не влияет на i2c_alive.
     if (!isnan(raw_temp) && !isnan(raw_hum)) {
-      i2c_success = true;
+      i2c_alive = true;
     }
 
     // Проверка на корректность данных (NaN и границы физического диапазона)
@@ -193,17 +196,18 @@ void SensorManager::Update() {
       Serial.println(htu_stat_.retries);
 #endif
       InitHtu();
-      if (htu_stat_.valid) i2c_success = true;
+      if (htu_stat_.valid) i2c_alive = true;
     }
   }
 
   if (htu_stat_.valid) {
+    // Попытка чтения (I2C Alive check)
     float raw_temp = htu_.readTemperature();
     float raw_hum = htu_.readHumidity();
 
-    // Успех аппаратного обмена
+    // Фиксация успешности транзакции (шина ответила)
     if (!isnan(raw_temp) && !isnan(raw_hum)) {
-      i2c_success = true;
+      i2c_alive = true;
     }
 
     // Проверка на корректность данных
@@ -313,7 +317,7 @@ void SensorManager::Update() {
   }
 
   // Логика обнаружения полного отказа I2C-шины
-  if (i2c_success) {
+  if (i2c_alive) {
     i2c_error_count_ = 0;
   } else {
     // Защита счетчика от переполнения при длительном отсутствии связи
