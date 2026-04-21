@@ -224,8 +224,24 @@ void SensorManager::Update() {
     // Читаем результат предыдущего запроса (асинхронная модель)
     float raw_ds_temp = ds_sensor_.getTempCByIndex(0);
 
-    // Проверка на корректность данных (исключаем 85.0C - значение при незавершенной конверсии)
-    if (raw_ds_temp != 85.0f && raw_ds_temp != DEVICE_DISCONNECTED_C) {
+    // 1. Проверка на физическое отключение датчика
+    if (raw_ds_temp == DEVICE_DISCONNECTED_C) {
+      ds_stat_.valid = false;
+      ds_stat_.stability_count = 0;
+#ifdef DEBUG
+      Serial.println(F("DS18B20: Disconnected!"));
+#endif
+    }
+    // 2. Проверка на значение 85.0C (ошибка инициализации или незавершенная конверсия)
+    else if (raw_ds_temp == 85.0f) {
+      // Не сбрасываем статус 'valid' сразу, но и не считаем это измерение полезным.
+      // Просто ждем следующего цикла опроса.
+#ifdef DEBUG
+      Serial.println(F("DS18B20: Power-on reset value (85.0C) detected. Skipping..."));
+#endif
+    }
+    // 3. Валидное измерение
+    else {
       // Инициализация фильтра или обновление оценки
       if (!filter_ds_temp_.IsInitialized()) filter_ds_temp_.Reset(raw_ds_temp);
 
@@ -234,13 +250,6 @@ void SensorManager::Update() {
       if (ds_stat_.stability_count < kSensorStabilityThreshold) {
         ds_stat_.stability_count++;
       }
-    } else {
-      ds_stat_.valid = false;
-      ds_stat_.stability_count = 0;
-#ifdef DEBUG
-      Serial.print(F("DS18B20 Error: "));
-      Serial.println(raw_ds_temp);
-#endif
     }
 
     // Сразу запрашиваем новое измерение для следующего цикла опроса (через 10 сек)
