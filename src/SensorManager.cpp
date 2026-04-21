@@ -14,6 +14,7 @@ SensorManager::SensorManager()
       bme_stat_({false, 0, 0, 0}),
       htu_stat_({false, 0, 0, 0}),
       ds_stat_({false, 0, 0, 0}),
+      ds_request_ts_(0),
       i2c_error_count_(0) {
   // Сброс структур данных в безопасное состояние
   inside_data_ = {0, 0, 0, 0, false};
@@ -91,6 +92,7 @@ void SensorManager::InitDs() {
     ds_sensor_.setWaitForConversion(false);
     // Запускаем первое преобразование
     ds_sensor_.requestTemperatures();
+    ds_request_ts_ = millis();
 #ifdef DEBUG
     Serial.println(F("DS18B20 Init OK"));
 #endif
@@ -219,23 +221,29 @@ void SensorManager::Update() {
     }
   }
 
-  if (ds_stat_.valid) {
+  if (ds_stat_.valid && (millis() - ds_request_ts_ >= 750)) {
     // Читаем результат предыдущего запроса (асинхронная модель)
     float raw_ds_temp = ds_sensor_.getTempCByIndex(0);
 
-    if (raw_ds_temp == DEVICE_DISCONNECTED_C) {
-      ds_stat_.valid = false;
-      ds_stat_.stability_count = 0;
-    } else {
+    // Проверка на корректность данных (исключаем 85.0C - значение при незавершенной конверсии)
+    if (raw_ds_temp != 85.0f && raw_ds_temp != DEVICE_DISCONNECTED_C) {
       // Фильтрация и калибровка
       control_temp_ = filter_ds_temp_.Update(raw_ds_temp) + calib_.dsTempOffset;
       if (ds_stat_.stability_count < kSensorStabilityThreshold) {
         ds_stat_.stability_count++;
       }
+    } else {
+      ds_stat_.valid = false;
+      ds_stat_.stability_count = 0;
+#ifdef DEBUG
+      Serial.print(F("DS18B20 Error: "));
+      Serial.println(raw_ds_temp);
+#endif
     }
 
     // Сразу запрашиваем новое измерение для следующего цикла опроса (через 10 сек)
     ds_sensor_.requestTemperatures();
+    ds_request_ts_ = millis();
   }
 
   // Логика обнаружения полного отказа I2C-шины

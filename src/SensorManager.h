@@ -52,6 +52,7 @@ class SensorManager {
   SensorStatus bme_stat_; ///< Состояние BME280
   SensorStatus htu_stat_; ///< Состояние HTU21D
   SensorStatus ds_stat_;  ///< Состояние DS18B20
+  unsigned long ds_request_ts_; ///< Время последнего запроса конверсии DS18B20
 
   // --- Внутренние методы инициализации ---
   void InitBme(); ///< Настройка параметров BME280
