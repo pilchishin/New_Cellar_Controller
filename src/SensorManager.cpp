@@ -120,6 +120,7 @@ void SensorManager::Update() {
       Serial.println(bme_stat_.retries);
 #endif
       InitBme();
+      if (bme_stat_.valid) i2c_success = true;
     }
   }
 
@@ -128,8 +129,10 @@ void SensorManager::Update() {
     float raw_temp = bme_.readTemperature();
     float raw_hum = bme_.readHumidity();
 
-    // Факт выполнения операций по шине I2C
-    i2c_success = true;
+    // Успех аппаратного обмена фиксируем только при получении числовых значений (не NaN)
+    if (!isnan(raw_temp) && !isnan(raw_hum)) {
+      i2c_success = true;
+    }
 
     // Проверка на корректность данных (NaN и границы физического диапазона)
     bool is_invalid = isnan(raw_temp) || isnan(raw_hum) ||
@@ -190,6 +193,7 @@ void SensorManager::Update() {
       Serial.println(htu_stat_.retries);
 #endif
       InitHtu();
+      if (htu_stat_.valid) i2c_success = true;
     }
   }
 
@@ -197,8 +201,10 @@ void SensorManager::Update() {
     float raw_temp = htu_.readTemperature();
     float raw_hum = htu_.readHumidity();
 
-    // Факт выполнения операций по шине I2C
-    i2c_success = true;
+    // Успех аппаратного обмена
+    if (!isnan(raw_temp) && !isnan(raw_hum)) {
+      i2c_success = true;
+    }
 
     // Проверка на корректность данных
     bool is_invalid = isnan(raw_temp) || isnan(raw_hum) ||
