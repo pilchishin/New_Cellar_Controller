@@ -41,9 +41,6 @@ void SensorManager::InitBme() {
   if (bme_.begin(BME280_ADDR)) {
     bme_stat_.valid = true;
     bme_stat_.retries = 0;
-    // Сброс фильтров Калмана при переподключении датчика
-    filter_bme_temp_.Reset();
-    filter_bme_hum_.Reset();
     // Конфигурация режима работы и передискретизации
     bme_.setSampling(Adafruit_BME280::MODE_NORMAL, Adafruit_BME280::SAMPLING_X1,
                      Adafruit_BME280::SAMPLING_X1, Adafruit_BME280::SAMPLING_X1,
@@ -64,9 +61,6 @@ void SensorManager::InitHtu() {
   if (htu_.begin()) {
     htu_stat_.valid = true;
     htu_stat_.retries = 0;
-    // Сброс фильтров Калмана при переподключении датчика
-    filter_htu_temp_.Reset();
-    filter_htu_hum_.Reset();
 #ifdef DEBUG
     Serial.println(F("HTU21D Init OK"));
 #endif
@@ -84,8 +78,6 @@ void SensorManager::InitDs() {
   if (ds_sensor_.getDeviceCount() > 0) {
     ds_stat_.valid = true;
     ds_stat_.retries = 0;
-    // Сброс фильтра Калмана
-    filter_ds_temp_.Reset();
     // Настройка разрешения (12 бит = 0.0625°C)
     ds_sensor_.setResolution(12);
     // Не блокируем выполнение на время конвертации (750 мс для 12 бит)
@@ -142,6 +134,10 @@ void SensorManager::Update() {
       Serial.println(F("BME280: Raw data out of range or NaN!"));
 #endif
     } else {
+      // Инициализация фильтров первым валидным значением или обновление оценки
+      if (!filter_bme_temp_.IsInitialized()) filter_bme_temp_.Reset(raw_temp);
+      if (!filter_bme_hum_.IsInitialized()) filter_bme_hum_.Reset(raw_hum);
+
       // Применяем фильтрацию Калмана и вносим калибровочное смещение
       inside_data_.temp = filter_bme_temp_.Update(raw_temp) + calib_.bmeTempOffset;
       inside_data_.rh = filter_bme_hum_.Update(raw_hum) + calib_.bmeHumOffset;
@@ -190,6 +186,10 @@ void SensorManager::Update() {
       Serial.println(F("HTU21D: Raw data out of range or NaN!"));
 #endif
     } else {
+      // Инициализация фильтров или обновление оценки
+      if (!filter_htu_temp_.IsInitialized()) filter_htu_temp_.Reset(raw_temp);
+      if (!filter_htu_hum_.IsInitialized()) filter_htu_hum_.Reset(raw_hum);
+
       // Применяем фильтрацию Калмана и калибровку
       outside_data_.temp = filter_htu_temp_.Update(raw_temp) + calib_.htuTempOffset;
       outside_data_.rh = filter_htu_hum_.Update(raw_hum) + calib_.htuHumOffset;
@@ -227,6 +227,9 @@ void SensorManager::Update() {
 
     // Проверка на корректность данных (исключаем 85.0C - значение при незавершенной конверсии)
     if (raw_ds_temp != 85.0f && raw_ds_temp != DEVICE_DISCONNECTED_C) {
+      // Инициализация фильтра или обновление оценки
+      if (!filter_ds_temp_.IsInitialized()) filter_ds_temp_.Reset(raw_ds_temp);
+
       // Фильтрация и калибровка
       control_temp_ = filter_ds_temp_.Update(raw_ds_temp) + calib_.dsTempOffset;
       if (ds_stat_.stability_count < kSensorStabilityThreshold) {

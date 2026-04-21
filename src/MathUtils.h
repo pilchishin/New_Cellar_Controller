@@ -12,6 +12,7 @@ class IFilter {
   virtual ~IFilter() {}
   virtual float Update(float v) = 0;
   virtual void Reset(float initial_value = 0.0f) = 0;
+  virtual bool IsInitialized() const = 0;
 };
 
 /**
@@ -37,6 +38,8 @@ class EmaMedianFilter : public IFilter {
 
   // Сброс фильтра (для очистки истории после восстановления датчика)
   void Reset(float initial_value = 0.0f) override;
+
+  bool IsInitialized() const override { return is_initialized_; }
 };
 
 /**
@@ -61,6 +64,8 @@ class KalmanFilter : public IFilter {
 
   float Update(float measurement) override;
   void Reset(float initial_value = 0.0f) override;
+
+  bool IsInitialized() const override { return is_initialized_; }
 };
 
 // Пространство имен для климатических формул
