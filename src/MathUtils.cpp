@@ -43,6 +43,7 @@ float EmaMedianFilter::Update(float new_value) {
 }
 
 void EmaMedianFilter::Reset(float initial_value) {
+  // Сброс флага инициализации для захвата первого реального измерения
   this->is_initialized_ = false;
   this->ema_value_ = initial_value;
   for (int i = 0; i < 3; i++) {
@@ -59,7 +60,9 @@ KalmanFilter::KalmanFilter(float q, float r)
 
 float KalmanFilter::Update(float measurement) {
   if (!is_initialized_) {
+    // При первом вызове фиксируем значение и помечаем фильтр как готовый
     Reset(measurement);
+    is_initialized_ = true;
     return x_;
   }
 
@@ -75,9 +78,10 @@ float KalmanFilter::Update(float measurement) {
 }
 
 void KalmanFilter::Reset(float initial_value) {
+  // Сброс флага инициализации позволяет фильтру "защелкнуться" на первом замере
   x_ = initial_value;
   p_ = 1.0f;
-  is_initialized_ = true;
+  is_initialized_ = false;
 }
 
 // ==========================================================

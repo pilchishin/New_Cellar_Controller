@@ -12,78 +12,98 @@
 #include "config.h" // Предполагается, что здесь задан пин ONE_WIRE_BUS
 #include "MathUtils.h"
 
+/**
+ * @struct SensorStatus
+ * @brief Хранит текущее состояние здоровья и статистику восстановления датчика.
+ */
 struct SensorStatus {
-  bool valid;
-  uint8_t retries;
-  unsigned long lastRetry;
-  uint8_t stability_count;
+  bool valid;              ///< Флаг исправности датчика (успешное чтение и валидация)
+  uint8_t retries;         ///< Текущее количество попыток повторной инициализации
+  unsigned long lastRetry; ///< Время последней попытки ретрая (мс)
+  uint8_t stability_count; ///< Счетчик последовательных валидных чтений для стабилизации
 };
 
+/**
+ * @class SensorManager
+ * @brief Центральный модуль управления всеми датчиками системы (BME280, HTU21D, DS18B20).
+ * Отвечает за опрос, фильтрацию Калмана, калибровку и диагностику аппаратных сбоев.
+ */
 class SensorManager {
  private:
-  // Объекты библиотек для работы с датчиками
-  Adafruit_BME280 bme_;
-  Adafruit_HTU21DF htu_;
-  OneWire one_wire_;
-  DallasTemperature ds_sensor_;
+  // --- Объекты библиотек для работы с оборудованием ---
+  Adafruit_BME280 bme_;        ///< Датчик параметров внутри погреба (I2C)
+  Adafruit_HTU21DF htu_;       ///< Датчик параметров на улице (I2C)
+  OneWire one_wire_;           ///< Шина 1-Wire для DS18B20
+  DallasTemperature ds_sensor_; ///< Контрольный датчик температуры (1-Wire)
 
-  // Структуры для хранения финальных (отфильтрованных) данных
-  SensorData inside_data_;   // Данные внутри (BME280)
-  SensorData outside_data_;  // Данные снаружи (HTU21D)
-  float control_temp_;       // Контрольная температура подвала (DS18B20)
+  // --- Контейнеры для хранения отфильтрованных и откалиброванных данных ---
+  SensorData inside_data_;   ///< Результаты BME280 (T, RH, AH, DewPoint)
+  SensorData outside_data_;  ///< Результаты HTU21D (T, RH, AH, DewPoint)
+  float control_temp_;       ///< Результат DS18B20 (T)
 
-  // Объекты фильтров (1D Kalman Filter)
-  KalmanFilter filter_bme_temp_;
-  KalmanFilter filter_bme_hum_;
-  KalmanFilter filter_htu_temp_;
-  KalmanFilter filter_htu_hum_;
-  KalmanFilter filter_ds_temp_;
+  // --- Объекты одномерных фильтров Калмана (1D Kalman Filter) ---
+  KalmanFilter filter_bme_temp_; ///< Фильтр температуры помещения
+  KalmanFilter filter_bme_hum_;  ///< Фильтр влажности помещения
+  KalmanFilter filter_htu_temp_; ///< Фильтр температуры улицы
+  KalmanFilter filter_htu_hum_;  ///< Фильтр влажности улицы
+  KalmanFilter filter_ds_temp_;  ///< Фильтр контрольной температуры
 
-  // Состояния датчиков (исправен, попытки, время последнего ретрая)
-  SensorStatus bme_stat_;
-  SensorStatus htu_stat_;
-  SensorStatus ds_stat_;
+  // --- Статусы жизненного цикла датчиков ---
+  SensorStatus bme_stat_; ///< Состояние BME280
+  SensorStatus htu_stat_; ///< Состояние HTU21D
+  SensorStatus ds_stat_;  ///< Состояние DS18B20
 
-  // Методы инициализации конкретных датчиков
-  void InitBme();
-  void InitHtu();
-  void InitDs();
+  // --- Внутренние методы инициализации ---
+  void InitBme(); ///< Настройка параметров BME280
+  void InitHtu(); ///< Настройка параметров HTU21D
+  void InitDs();  ///< Поиск и настройка DS18B20
 
-  // Методы декомпозиции Update()
-  void HandleRetries();
-  void ProcessBme(bool& i2c_success);
-  void ProcessHtu(bool& i2c_success);
-  void ProcessDs();
-  bool IsDataPlausible(float temp, float rh);
+  // --- Диагностика I2C шины ---
+  uint8_t i2c_error_count_;        ///< Счетчик последовательных ошибок обмена по I2C
+  const uint8_t kI2cMaxErrors = 3; ///< Порог ошибок для запуска процедуры восстановления
 
-  // Счетчики ошибок для I2C устройств
-  uint8_t i2c_error_count_;
-  const uint8_t kI2cMaxErrors = 3;
-
-  // Калибровочные коэффициенты
-  CalibrationData calib_;
+  CalibrationData calib_; ///< Хранилище калибровочных смещений
 
  public:
   SensorManager();
 
-  // Инициализация шин и самих датчиков
+  /**
+   * @brief Инициализация всех шин и датчиков.
+   * Вызывается при старте и после сброса I2C-шины.
+   */
   void Init();
 
-  // Главный метод опроса
+  /**
+   * @brief Основной метод опроса датчиков.
+   * Вызывается по расписанию из главного цикла (обычно раз в 10 сек).
+   */
   void Update();
 
-  // Возвращает код ошибки
+  /**
+   * @brief Диагностика состояния датчиков.
+   * @return ErrorCode Код первой обнаруженной критической ошибки.
+   */
   ErrorCode CheckErrors();
 
-  // Попытка восстановления после сбоя I2C
+  /**
+   * @brief Процедура аварийного восстановления I2C шины.
+   * Выполняет Wire.end(), bit-bang SCL и полную ре-инициализацию.
+   */
   void Recover();
 
-  // Геттеры для получения актуальных данных контроллером
+  // --- Геттеры для получения актуальных данных ---
   SensorData GetInside() const { return inside_data_; }
   SensorData GetOutside() const { return outside_data_; }
   float GetControlTemp() const { return control_temp_; }
+
+  /**
+   * @brief Проверка состояния "зависания" I2C-шины.
+   */
   bool IsI2cFailing() const { return i2c_error_count_ >= kI2cMaxErrors; }
 
+  /**
+   * @brief Применение новых калибровочных данных.
+   */
   void SetCalibration(const CalibrationData& data) { calib_ = data; }
 };
 
