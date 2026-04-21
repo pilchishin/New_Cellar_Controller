@@ -4,12 +4,12 @@ SensorManager::SensorManager()
     : one_wire_(ONE_WIRE_BUS),
       ds_sensor_(&one_wire_),
       control_temp_(0.0f),
-      // Настройка фильтров Калмана: Q (шум процесса), R (шум измерения)
-      filter_bme_temp_(0.01f, 0.5f),
-      filter_bme_hum_(0.05f, 2.0f),
-      filter_htu_temp_(0.01f, 0.5f),
-      filter_htu_hum_(0.05f, 2.0f),
-      filter_ds_temp_(0.01f, 0.5f),
+      // Настройка фильтров (Median window 3 + EMA alpha 0.2)
+      filter_bme_temp_(0.2f),
+      filter_bme_hum_(0.2f),
+      filter_htu_temp_(0.2f),
+      filter_htu_hum_(0.2f),
+      filter_ds_temp_(0.2f),
       // Инициализация статусов датчиков
       bme_stat_({false, 0, 0, 0}),
       htu_stat_({false, 0, 0, 0}),

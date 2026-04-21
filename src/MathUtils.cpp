@@ -56,43 +56,6 @@ void EmaMedianFilter::Invalidate() {
 }
 
 // ==========================================================
-// KALMAN FILTER
-// ==========================================================
-
-KalmanFilter::KalmanFilter(float q, float r)
-    : q_(q), r_(r), x_(0), p_(1.0f), k_(0), is_initialized_(false) {}
-
-float KalmanFilter::Update(float measurement) {
-  if (!is_initialized_) {
-    // При первом вызове фиксируем значение и помечаем фильтр как готовый
-    Reset(measurement);
-    is_initialized_ = true;
-    return x_;
-  }
-
-  // 1. Prediction update
-  // p_ = p_ + q_; // (Prediction error covariance)
-
-  // 2. Measurement update
-  k_ = (p_ + q_) / (p_ + q_ + r_);   // Kalman Gain
-  x_ = x_ + k_ * (measurement - x_); // Current estimate
-  p_ = (1.0f - k_) * (p_ + q_);      // Estimation error covariance
-
-  return x_;
-}
-
-void KalmanFilter::Reset(float initial_value) {
-  // Принудительная инициализация фильтра Калмана заданным значением
-  x_ = initial_value;
-  p_ = 1.0f;
-  is_initialized_ = true;
-}
-
-void KalmanFilter::Invalidate() {
-  is_initialized_ = false;
-}
-
-// ==========================================================
 // КЛИМАТИЧЕСКАЯ МАТЕМАТИКА
 // ==========================================================
 

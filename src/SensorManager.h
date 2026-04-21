@@ -26,7 +26,7 @@ struct SensorStatus {
 /**
  * @class SensorManager
  * @brief Центральный модуль управления всеми датчиками системы (BME280, HTU21D, DS18B20).
- * Отвечает за опрос, фильтрацию Калмана, калибровку и диагностику аппаратных сбоев.
+ * Отвечает за опрос, фильтрацию (Median + EMA), калибровку и диагностику аппаратных сбоев.
  */
 class SensorManager {
  private:
@@ -41,12 +41,12 @@ class SensorManager {
   SensorData outside_data_;  ///< Результаты HTU21D (T, RH, AH, DewPoint)
   float control_temp_;       ///< Результат DS18B20 (T)
 
-  // --- Объекты одномерных фильтров Калмана (1D Kalman Filter) ---
-  KalmanFilter filter_bme_temp_; ///< Фильтр температуры помещения
-  KalmanFilter filter_bme_hum_;  ///< Фильтр влажности помещения
-  KalmanFilter filter_htu_temp_; ///< Фильтр температуры улицы
-  KalmanFilter filter_htu_hum_;  ///< Фильтр влажности улицы
-  KalmanFilter filter_ds_temp_;  ///< Фильтр контрольной температуры
+  // --- Объекты фильтров (Median window 3 + EMA alpha 0.2) ---
+  EmaMedianFilter filter_bme_temp_; ///< Фильтр температуры помещения
+  EmaMedianFilter filter_bme_hum_;  ///< Фильтр влажности помещения
+  EmaMedianFilter filter_htu_temp_; ///< Фильтр температуры улицы
+  EmaMedianFilter filter_htu_hum_;  ///< Фильтр влажности улицы
+  EmaMedianFilter filter_ds_temp_;  ///< Фильтр контрольной температуры
 
   // --- Статусы жизненного цикла датчиков ---
   SensorStatus bme_stat_; ///< Состояние BME280

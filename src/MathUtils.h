@@ -46,33 +46,6 @@ class EmaMedianFilter : public IFilter {
   bool IsInitialized() const override { return is_initialized_; }
 };
 
-/**
- * @class KalmanFilter
- * @brief Легкий одномерный фильтр Калмана для сглаживания показаний.
- */
-class KalmanFilter : public IFilter {
- private:
-  float q_;             // Шум процесса (Process noise)
-  float r_;             // Шум измерения (Measurement noise)
-  float x_;             // Текущая оценка значения (State estimate)
-  float p_;             // Ошибка оценки (Estimation error)
-  float k_;             // Коэффициент усиления Калмана (Kalman gain)
-  bool is_initialized_; // Флаг первого измерения
-
- public:
-  /**
-   * @param q Шум процесса. Чем меньше, тем больше доверия модели (фильтр "медленнее").
-   * @param r Шум измерения. Чем больше, тем больше фильтрация шумов датчика.
-   */
-  KalmanFilter(float q = 0.01f, float r = 0.1f);
-
-  float Update(float measurement) override;
-  void Reset(float initial_value = 0.0f) override;
-  void Invalidate() override;
-
-  bool IsInitialized() const override { return is_initialized_; }
-};
-
 // Пространство имен для климатических формул
 namespace climate_math {
 // Расчет абсолютной влажности (г/м³)
