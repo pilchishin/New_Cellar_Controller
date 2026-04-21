@@ -330,7 +330,7 @@ ErrorCode SensorManager::CheckErrors() {
                     ds_stat_.stability_count >= kSensorStabilityThreshold);
 
   // Если оба датчика в стабильном состоянии, сравниваем их показания для обнаружения дрейфа или перегрева.
-  if (is_stable && abs(inside_data_.temp - control_temp_) > kSensorDiffMax) {
+  if (is_stable && fabsf(inside_data_.temp - control_temp_) > kSensorDiffMax) {
 #ifdef DEBUG
     Serial.print(F("Temp Mismatch! BME: "));
     Serial.print(inside_data_.temp);
