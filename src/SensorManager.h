@@ -60,8 +60,9 @@ class SensorManager {
   void InitDs();  ///< Поиск и настройка DS18B20
 
   // --- Диагностика I2C шины ---
-  uint8_t i2c_error_count_;        ///< Счетчик последовательных ошибок обмена по I2C
+  uint16_t i2c_error_count_;       ///< Счетчик последовательных ошибок обмена по I2C
   const uint8_t kI2cMaxErrors = 3; ///< Порог ошибок для запуска процедуры восстановления
+  static constexpr uint16_t kI2cErrorMax = 1000; ///< Лимит счетчика ошибок (защита от переполнения)
 
   CalibrationData calib_; ///< Хранилище калибровочных смещений
 

@@ -253,7 +253,10 @@ void SensorManager::Update() {
   if (i2c_success) {
     i2c_error_count_ = 0;
   } else {
-    i2c_error_count_++;
+    // Защита счетчика от переполнения при длительном отсутствии связи
+    if (i2c_error_count_ < kI2cErrorMax) {
+      i2c_error_count_++;
+    }
 #ifdef DEBUG
     Serial.print(F("I2C Error Count: "));
     Serial.println(i2c_error_count_);
