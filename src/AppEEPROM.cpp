@@ -24,7 +24,7 @@ uint16_t AppEEPROM::CalculateCrc(const PersistentData& data) {
  * @brief Поиск последнего валидного слота с данными.
  */
 int AppEEPROM::FindActiveSlot() {
-  for (int i = 0; i < kSlotsCount; i++) {
+  for (int i = kSlotsCount - 1; i >= 0; i--) {
     PersistentData temp;
     EEPROM.get(i * kSlotSize, temp);
     if (temp.crc == CalculateCrc(temp)) {

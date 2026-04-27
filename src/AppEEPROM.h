@@ -19,6 +19,8 @@ class AppEEPROM {
   static const uint16_t kSlotSize = sizeof(PersistentData);
   static const uint32_t kDeferredSaveDelay = 5000UL;
 
+  static_assert(kSlotsCount * sizeof(PersistentData) <= 1024, "EEPROM overflow!");
+
   uint16_t CalculateCrc(const PersistentData& data);
   int FindActiveSlot();
 
