@@ -243,6 +243,8 @@ void Controller::CheckCriticalErrors() {
     current_error_ = ErrorCode::kTempTooLow;
   } else if (in.dewpoint >= (in.temp - kCondensationErrDiff)) {
     current_error_ = ErrorCode::kCondensationRisk;
+  } else {
+    current_error_ = ErrorCode::kNone;
   }
 }
 
