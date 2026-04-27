@@ -14,6 +14,7 @@ enum class SystemState {
     kOzoneActive,
     kOzoneHold,
     kOzoneVent,
+    kOzoneAbort,
     kManualFan,
     kManualOzone,
     kErrorState
@@ -69,6 +70,7 @@ inline const char* StateToString(SystemState s) {
         case SystemState::kOzoneActive: return "O3 WORK";
         case SystemState::kOzoneHold:   return "O3 HOLD";
         case SystemState::kOzoneVent:   return "O3 VENT";
+        case SystemState::kOzoneAbort:  return "O3 ABORT";
         case SystemState::kManualFan:   return "MAN FAN";
         case SystemState::kManualOzone: return "MAN O3";
         case SystemState::kErrorState:  return "ERROR";

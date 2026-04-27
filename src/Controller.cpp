@@ -168,6 +168,12 @@ void Controller::ProcessStateMachine() {
       break;
     }
 
+    case SystemState::kOzoneAbort:
+      relays_->SetFan(false, true);
+      relays_->SetOzone(false);
+      ChangeState(SystemState::kAutoClimate);
+      break;
+
     case SystemState::kManualFan:
       if (now - state_timer_ >= (manual_timer_ * 60000UL)) {
         relays_->SetFan(false);
