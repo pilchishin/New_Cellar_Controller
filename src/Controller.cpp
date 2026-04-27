@@ -19,7 +19,6 @@ Controller::Controller(SensorManager* s, RelayManager* r, TimeManager* t)
 
   last_stats_update_ = millis();
   last_eeprom_save_ = millis();
-  ozone_inhibited_today_ = false;
   is_user_present_ = false;
   last_user_activity_time_ = 0;
   state_timer_ = 0;

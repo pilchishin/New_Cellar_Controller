@@ -15,7 +15,6 @@ struct PersistentData {
 
 class AppEEPROM {
  private:
-  static const uint16_t kEepromSize = 1024;   // Для ATmega328P
   static const uint8_t kSlotsCount = 10;      // Количество слотов для wear leveling
   static const uint16_t kSlotSize = sizeof(PersistentData);
   static const uint32_t kDeferredSaveDelay = 5000UL;

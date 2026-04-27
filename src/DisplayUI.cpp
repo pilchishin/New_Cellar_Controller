@@ -27,8 +27,6 @@ const ValuePageDef VALUE_PAGES[] PROGMEM = {
   { MenuItemID::kCalibDsTemp,  ValueID::kCalibDsTemp,  -5.0f,  5.0f, 0.1f, unit_c,   1 }
 };
 
-static const uint8_t VALUE_PAGES_COUNT = sizeof(VALUE_PAGES) / sizeof(VALUE_PAGES[0]);
-
 static const char lbl_target_t[] PROGMEM = "TEMP";
 static const char lbl_target_h[] PROGMEM = "HUM";
 static const MenuItemDef TARGET_ITEMS[] PROGMEM = {

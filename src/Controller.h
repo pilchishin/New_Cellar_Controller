@@ -42,7 +42,6 @@ class Controller {
   unsigned long state_timer_;        // Timer for ozone phases and manual modes
   uint16_t manual_timer_;            // Manual mode duration in minutes
   unsigned long retry_ozone_timer_;  // Таймер для повтора при запрете (30 мин)
-  bool ozone_inhibited_today_;       // Флаг, что сегодня попытка уже была
 
   // Абстракция присутствия пользователя
   bool is_user_present_;
