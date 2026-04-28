@@ -207,6 +207,11 @@ void Controller::HandleAutoClimate() {
   SensorData in = sensors_->GetInside();
   SensorData out = sensors_->GetOutside();
 
+  if (!in.valid || !out.valid) {
+    relays_->SetFan(false);
+    return;
+  }
+
   // 1. Физические условия для активации вентиляции
   bool is_too_hot = (in.temp > (target_temp_ + kHysteresisTemp));
   bool is_too_humid = (in.rh > (target_rh_ + kHysteresisRh));
