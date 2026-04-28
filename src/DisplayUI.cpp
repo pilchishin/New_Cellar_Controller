@@ -378,9 +378,11 @@ void DisplayUI::DrawStatusPage(const SensorData& data, const __FlashStringHelper
 
   screen_.SetPos(1, 0);
   screen_.print(label);
-  screen_.print(data.temp, 1);
+  if (data.valid) screen_.print(data.temp, 1);
+  else screen_.print(F("---"));
   screen_.print(F("C "));
-  screen_.print(data.rh, 0);
+  if (data.valid) screen_.print(data.rh, 0);
+  else screen_.print(F("---"));
   screen_.print(F("%"));
 }
 
