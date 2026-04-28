@@ -247,7 +247,7 @@ void DisplayUI::HandleButtons() {
  * @brief Автоматическое гашение подсветки при отсутствии активности.
  */
 void DisplayUI::UpdateBacklight() {
-  if (backlight_on_ && (millis() - last_activity_time_ > 30000UL)) {
+  if (backlight_on_ && (millis() - last_activity_time_ > kBacklightTimeout)) {
     // В ручном режиме озонирования подсветка не гаснет для безопасности
     if (model_.state != SystemState::kManualOzone) {
       lcd_.noBacklight();
