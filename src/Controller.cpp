@@ -68,7 +68,7 @@ void Controller::CheckSystemHealth() {
 #endif
     sensors_->Recover();  // Сброс шины + переинициализация датчиков
     rtc_->Init();         // Переинициализация RTC
-    ui_->Reinit();        // Переинициализация LCD
+    if (ui_) ui_->Reinit();  // Переинициализация LCD
   }
 
   // Постоянная проверка критических ошибок

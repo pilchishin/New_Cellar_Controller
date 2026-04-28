@@ -336,9 +336,11 @@ void DisplayUI::DrawHomeScreen() {
   // Строка 1: Внутри [Т] [H] [Индикатор работы]
   screen_.SetPos(0, 0);
   screen_.print(F("IN "));
-  screen_.print(model_.inside.temp, 1);
+  if (model_.inside.valid) screen_.print(model_.inside.temp, 1);
+  else screen_.print(F("---"));
   screen_.print(F("C "));
-  screen_.print(model_.inside.rh, 0);
+  if (model_.inside.valid) screen_.print(model_.inside.rh, 0);
+  else screen_.print(F("---"));
   screen_.print(F("%"));
 
   screen_.SetPos(0, 15);
@@ -349,9 +351,11 @@ void DisplayUI::DrawHomeScreen() {
   // Строка 2: Снаружи [Т] [H] [Режим системы]
   screen_.SetPos(1, 0);
   screen_.print(F("OUT "));
-  screen_.print(model_.outside.temp, 1);
+  if (model_.outside.valid) screen_.print(model_.outside.temp, 1);
+  else screen_.print(F("---"));
   screen_.print(F("C "));
-  screen_.print(model_.outside.rh, 0);
+  if (model_.outside.valid) screen_.print(model_.outside.rh, 0);
+  else screen_.print(F("---"));
   screen_.print(F("%"));
 
   screen_.SetPos(1, 15);
