@@ -255,6 +255,11 @@ void Controller::CheckCriticalErrors() {
 }
 
 void Controller::ChangeState(SystemState new_state) {
+  if (new_state == SystemState::kErrorState) {
+    relays_->SetFan(false, true);
+    relays_->SetOzone(false);
+  }
+
 #ifdef DEBUG
   Serial.print(F("FSM: "));
   Serial.print((int)current_state_);
