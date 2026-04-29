@@ -442,12 +442,22 @@ void DisplayUI::DrawStats() {
 
   screen_.SetPos(1, 0);
   if (item_idx == 0) { // Просмотр
-    screen_.print(F("U"));
-    screen_.print(model_.stats.uptimeMinutes / 60);
-    screen_.print(F(" F"));
-    screen_.print(model_.stats.fanMinutes / 60);
-    screen_.print(F(" O3"));
-    screen_.print(model_.stats.ozoneMinutes / 60);
+    uint32_t counters[] = {model_.stats.uptimeMinutes / 60,
+                           model_.stats.fanMinutes / 60,
+                           model_.stats.ozoneMinutes / 60};
+    const char labels[] = {'U', 'F', 'O'};
+
+    for (int i = 0; i < 3; i++) {
+      screen_.print(labels[i]);
+      if (counters[i] < 1000) {
+        screen_.print(counters[i]);
+        screen_.print(F("h"));
+      } else {
+        screen_.print(counters[i] / 24);
+        screen_.print(F("d"));
+      }
+      if (i < 2) screen_.print(F(" "));
+    }
   } else if (item_idx == 1) { // Сброс
     screen_.print(F("MENU CONFIRM"));
   }
