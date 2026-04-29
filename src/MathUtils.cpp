@@ -1,6 +1,12 @@
 #include "MathUtils.h"
 #include <math.h> // Необходима для функций exp() и log()
 
+#ifdef NATIVE_TEST
+#include <algorithm>
+#define max(a,b) std::max(a,b)
+#define min(a,b) std::min(a,b)
+#endif
+
 // Инициализация класса фильтра
 EmaMedianFilter::EmaMedianFilter(float alpha) {
   this->alpha_ = alpha;
