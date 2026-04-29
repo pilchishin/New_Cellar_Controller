@@ -220,7 +220,7 @@ void Controller::HandleAutoClimate() {
   bool ventilation_is_effective = (out.ah + kMarginAh) < in.ah;
 
   // 3. Безопасность: температура поверхностей должна быть выше точки росы
-  bool condensation_is_safe = (in.dewpoint + kMarginCondSafety) < in.temp;
+  bool condensation_is_safe = (out.dewpoint + kMarginCondSafety) < in.temp;
 
   // Итоговая логика принятия решения
   bool ventilation_needed = (is_too_hot || is_too_humid);
