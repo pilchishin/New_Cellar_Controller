@@ -9,80 +9,115 @@
 #include "TimeManager.h"
 #include "AppEEPROM.h"
 
-// Предварительное объявление, чтобы избежать циклической зависимости
+// Предварительное объявление для устранения циклической зависимости
 class DisplayUI; 
 
+/**
+ * @class Controller
+ * @brief Центральный модуль управления системой (Координатор).
+ * Реализует логику конечного автомата (FSM), управляет климатом,
+ * озонированием, хранением настроек и взаимодействием между периферийными модулями.
+ */
 class Controller {
  private:
-  SystemState current_state_;
-  ErrorCode current_error_;
+  SystemState current_state_; ///< Текущее состояние системы
+  ErrorCode current_error_;   ///< Код активной ошибки (ErrorCode::kNone если все ОК)
 
-  // Уставки климата
-  float target_temp_;
-  float target_rh_;
+  // Уставки климата (загружаются из EEPROM)
+  float target_temp_;         ///< Целевая температура (°C)
+  float target_rh_;           ///< Целевая влажность (%)
 
   // Калибровочные данные
-  CalibrationData calib_;
+  CalibrationData calib_;     ///< Смещения датчиков
 
-  // Статистика
-  SystemStatistics stats_;
-  unsigned long last_stats_update_;
-  unsigned long last_eeprom_save_;
+  // Статистика работы
+  SystemStatistics stats_;    ///< Время работы компонентов
+  unsigned long last_stats_update_; ///< Таймер для ежеминутного обновления статистики
+  unsigned long last_eeprom_save_;  ///< Таймер для периодического сохранения в EEPROM
 
-  // EEPROM
+  // Модуль энергонезависимой памяти
   AppEEPROM storage_;
 
-  // Ссылки на модули
+  // Указатели на другие модули системы
   SensorManager* sensors_;
   RelayManager* relays_;
   TimeManager* rtc_;
   DisplayUI* ui_;
 
-  // Переменные логики
-  unsigned long state_timer_;        // Timer for ozone phases and manual modes
-  uint16_t manual_timer_;            // Manual mode duration in minutes
-  unsigned long retry_ozone_timer_;  // Таймер для повтора при запрете (30 мин)
+  // Переменные внутреннего состояния логики
+  unsigned long state_timer_;        ///< Универсальный таймер для фаз озонирования и ручных режимов
+  uint16_t manual_timer_;            ///< Длительность ручного режима в минутах
+  unsigned long retry_ozone_timer_;  ///< Таймер для отложенного перезапуска озонатора при запрете (мороз/люди)
 
-  // Абстракция присутствия пользователя
-  bool is_user_present_;
-  unsigned long last_user_activity_time_;
-  const unsigned long kUserPresenceTimeout = 30000UL;
+  // Логика обнаружения присутствия пользователя (для безопасности озонирования)
+  bool is_user_present_;             ///< Флаг недавней активности пользователя
+  unsigned long last_user_activity_time_; ///< Метка времени последнего действия пользователя
+  const unsigned long kUserPresenceTimeout = 30000UL; ///< Таймаут сброса флага присутствия (30 сек)
 
-  // Внутренние методы обработки состояний
+  /**
+   * @brief Реализация алгоритма автоматического поддержания климата.
+   * Вычисляет 6 условий (необходимость, эффективность, точка росы, мороз, охлаждение, лимит T)
+   * и принимает решение о включении вентилятора.
+   */
   void HandleAutoClimate();
 
-  // Проверка критических условий
+  /**
+   * @brief Постоянный мониторинг критических параметров системы.
+   * Проверяет аппаратные сбои и выход климата за аварийные границы.
+   */
   void CheckCriticalErrors();
 
-  // Переход между состояниями
+  /**
+   * @brief Безопасный переход между состояниями FSM.
+   * Выполняет entry-actions (например, выключение реле при переходе в ошибку).
+   * @param new_state Целевое состояние.
+   */
   void ChangeState(SystemState new_state);
 
-  // Методы декомпозиции Tick()
-  void UpdateStatistics();     // Обновление счетчиков времени работы
-  void HandleStorage();        // Управление планированием записи в EEPROM
-  void CheckSystemHealth();    // Мониторинг датчиков и шины I2C
-  void UpdateUserPresence();   // Управление флагом присутствия пользователя
-  void ProcessStateMachine();  // Логика переключения состояний (FSM)
+  // Вспомогательные методы декомпозиции Tick()
+  void UpdateStatistics();     ///< Обновление счетчиков моточасов
+  void HandleStorage();        ///< Управление жизненным циклом EEPROM
+  void CheckSystemHealth();    ///< Контроль шины I2C и аппаратного здоровья
+  void UpdateUserPresence();   ///< Обновление флага присутствия человека
+  void ProcessStateMachine();  ///< Главный диспетчер состояний (FSM switch)
 
  public:
+  /**
+   * @brief Конструктор контроллера.
+   * @param s Менеджер датчиков.
+   * @param r Менеджер реле.
+   * @param t Менеджер времени (RTC).
+   */
   Controller(SensorManager* s, RelayManager* r, TimeManager* t);
 
-  void SetUI(DisplayUI* u) { ui_ = u; }  // Установка UI после его инициализации
+  /**
+   * @brief Регистрация модуля интерфейса.
+   * Вызывается отдельно после инициализации UI.
+   */
+  void SetUI(DisplayUI* u) { ui_ = u; }
 
+  /**
+   * @brief Начальная инициализация логики (переход в AutoClimate).
+   */
   void Init();
-  void Tick();  // Основной цикл логики
 
-  // Управление из UI
-  void ResetError();
-  void StartManualFan(uint16_t minutes);
-  void StartManualOzone(uint16_t minutes);
-  void NotifyUserActivity();  // Сообщение от UI об активности (нажатие кнопок)
+  /**
+   * @brief Главный итерационный метод. Должен вызываться в каждом цикле loop().
+   */
+  void Tick();
 
-  // Геттеры для UI
+  // Методы управления, вызываемые из UI/Меню
+  void ResetError();                    ///< Сброс аварийного состояния
+  void StartManualFan(uint16_t minutes);  ///< Запуск вентилятора на время
+  void StartManualOzone(uint16_t minutes); ///< Запуск озонатора на время
+  void NotifyUserActivity();            ///< Регистрация нажатия кнопок пользователем
+
+  // Геттеры состояния для отображения в UI
   SystemState GetState() const { return current_state_; }
   ErrorCode GetError() const { return current_error_; }
   RelayManager* GetRelayManager() const { return relays_; }
 
+  // Работа с настройками (с автоматическим сохранением в EEPROM)
   float GetTargetTemp() const { return target_temp_; }
   float GetTargetRh() const { return target_rh_; }
   void SetTargetTemp(float t);
