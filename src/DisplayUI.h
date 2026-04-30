@@ -14,11 +14,16 @@
 class DisplayUI;
 
 /**
- * @brief Класс для формирования содержимого экрана 16x2.
- * Реализует интерфейс Print для удобного вывода текста в строковый буфер.
+ * @class ScreenBuffer
+ * @brief Вспомогательный класс для формирования содержимого экрана 16x2.
+ * Реализует интерфейс Print для удобного вывода текста, чисел и форматированных строк
+ * во внутренний двухстрочный буфер перед отправкой на физический дисплей.
  */
 class ScreenBuffer : public Print {
  public:
+  /**
+   * @brief Конструктор. Инициализирует пустой буфер.
+   */
   ScreenBuffer() { Clear(); }
 
   /**
@@ -34,8 +39,8 @@ class ScreenBuffer : public Print {
   }
 
   /**
-   * @brief Установка позиции курсора в буфере.
-   * @param row Строка (0-1).
+   * @brief Установка виртуальной позиции курсора в буфере.
+   * @param row Строка (0 или 1).
    * @param col Колонка (0-15).
    */
   void SetPos(int row, int col) {
@@ -45,6 +50,7 @@ class ScreenBuffer : public Print {
 
   /**
    * @brief Запись одного символа в текущую позицию буфера.
+   * Требуется для реализации интерфейса Print.
    */
   size_t write(uint8_t c) override {
     if (col_ < 16) {
@@ -55,8 +61,9 @@ class ScreenBuffer : public Print {
   }
 
   /**
-   * @brief Получение указателя на строку буфера.
-   * @param row Номер строки.
+   * @brief Получение указателя на сформированную строку буфера.
+   * @param row Номер строки (0 или 1).
+   * @return Указатель на C-строку длиной 16 символов.
    */
   const char* GetLine(int row) const {
     if (row < 0 || row >= 2) return "";
@@ -64,53 +71,56 @@ class ScreenBuffer : public Print {
   }
 
  private:
-  char buffer[2][17]; // 16 символов + терминатор для двух строк
-  int row_, col_;     // Текущая позиция курсора в буфере
+  char buffer[2][17]; ///< 16 символов + нуль-терминатор для двух строк
+  int row_, col_;     ///< Текущие координаты "печати" в буфере
 };
 
 /**
- * @brief Идентификаторы действий, которые могут быть привязаны к кнопкам в меню.
+ * @enum ActionID
+ * @brief Идентификаторы высокоуровневых действий, привязанных к кнопкам меню.
  */
 enum class ActionID : uint8_t {
-  kNone,
-  kNavNext,
-  kNavPrev,
-  kNavNextRoot,
-  kNavPrevRoot,
-  kValueInc,
-  kValueDec,
-  kEnterSubmenu,
-  kExitSubmenu,
-  kManualStart,
-  kStatsReset,
-  kErrorReset
+  kNone,           ///< Действие не назначено
+  kNavNext,        ///< Переход к следующему элементу подменю
+  kNavPrev,        ///< Переход к предыдущему элементу подменю
+  kNavNextRoot,    ///< Переход к следующему корневому разделу
+  kNavPrevRoot,    ///< Переход к предыдущему корневому разделу
+  kValueInc,       ///< Увеличение редактируемого значения
+  kValueDec,       ///< Уменьшение редактируемого значения
+  kEnterSubmenu,   ///< Вход в выбранный подраздел
+  kExitSubmenu,    ///< Возврат на уровень вверх
+  kManualStart,    ///< Запуск устройства в ручном режиме
+  kStatsReset,     ///< Сброс накопленной статистики
+  kErrorReset      ///< Попытка сброса активной ошибки
 };
 
 /**
- * @brief Идентификаторы элементов меню для быстрой идентификации в коде.
- */
-/**
- * @brief Типы элементов меню для определения способа отрисовки и взаимодействия.
+ * @enum MenuItemType
+ * @brief Типы элементов меню, определяющие логику их отрисовки и поведения.
  */
 enum class MenuItemType : uint8_t {
-  kView,    // Только просмотр (например, показатели датчиков или лог ошибок)
-  kValue,   // Редактируемое числовое значение
-  kAction,  // Выполнение действия (например, запуск ручного режима)
-  kStats    // Специальный тип для статистики
+  kView,    ///< Только чтение (статус датчиков, список ошибок)
+  kValue,   ///< Редактируемое число (уставки, калибровки)
+  kAction,  ///< Кнопка действия (запуск ручных режимов)
+  kStats    ///< Специальная страница отображения наработки (моточасы)
 };
 
+/**
+ * @enum MenuItemID
+ * @brief Уникальные идентификаторы страниц и элементов меню для логики управления.
+ */
 enum class MenuItemID : uint8_t {
   kNone,
-  kStatusIn,
-  kStatusOut,
-  kTargetTemp,
-  kTargetHum,
-  kManualFan,
-  kManualOzone,
-  kStatsView,
-  kStatsReset,
-  kErrorView,
-  kCalibBmeTemp,
+  kStatusIn,     ///< Статус внутреннего датчика
+  kStatusOut,    ///< Статус внешнего датчика
+  kTargetTemp,   ///< Настройка целевой температуры
+  kTargetHum,    ///< Настройка целевой влажности
+  kManualFan,    ///< Ручной пуск вентилятора
+  kManualOzone,  ///< Ручной пуск озонатора
+  kStatsView,    ///< Просмотр статистики
+  kStatsReset,   ///< Сброс статистики
+  kErrorView,    ///< Просмотр текущей ошибки
+  kCalibBmeTemp, ///< Калибровочные смещения...
   kCalibBmeHum,
   kCalibHtuTemp,
   kCalibHtuHum,
@@ -118,120 +128,160 @@ enum class MenuItemID : uint8_t {
 };
 
 /**
+ * @struct ValuePageDef
  * @brief Определение параметров страницы редактирования числового значения.
+ * Хранится в PROGMEM для экономии оперативной памяти.
  */
 struct ValuePageDef {
-  MenuItemID id;            // ID элемента меню
-  ValueID val_id;           // ID значения в UIModel
-  float min_val;            // Минимальное значение
-  float max_val;            // Максимальное значение
-  float step;               // Шаг изменения
-  const char* unit;         // Единица измерения (в PROGMEM)
-  uint8_t precision;        // Количество знаков после запятой
+  MenuItemID id;            ///< ID элемента меню
+  ValueID val_id;           ///< Соответствующее значение в UIModel
+  float min_val;            ///< Нижняя граница регулировки
+  float max_val;            ///< Верхняя граница регулировки
+  float step;               ///< Шаг изменения при одном нажатии
+  const char* unit;         ///< Строка единицы измерения (в PROGMEM)
+  uint8_t precision;        ///< Количество знаков после запятой
 };
 
 /**
- * @brief Определение элемента подменю.
+ * @struct MenuItemDef
+ * @brief Определение элемента подменю (строка внутри раздела).
+ * Описывает визуальную метку и привязанные действия для кнопок.
  */
 struct MenuItemDef {
-  MenuItemID id;                  // Уникальный идентификатор элемента
-  const char* label;              // Метка элемента (в PROGMEM)
-  MenuItemType type;              // Тип элемента для отрисовки
-  uint8_t ctx_index;              // Индекс контекста (для VALUE_PAGES или сенсоров)
-  ActionID up_action;             // Действие кнопки ВВЕРХ
-  ActionID down_action;           // Действие кнопки ВНИЗ
-  ActionID menu_action;           // Действие короткого нажатия МЕНЮ
-  ActionID long_menu_action;      // Действие долгого нажатия МЕНЮ
+  MenuItemID id;                  ///< Уникальный идентификатор
+  const char* label;              ///< Текстовая метка (в PROGMEM)
+  MenuItemType type;              ///< Способ отображения
+  uint8_t ctx_index;              ///< Индекс в массиве данных (для калибровок/датчиков)
+  ActionID up_action;             ///< Что делать при нажатии ВВЕРХ
+  ActionID down_action;           ///< Что делать при нажатии ВНИЗ
+  ActionID menu_action;           ///< Что делать при коротком нажатии МЕНЮ
+  ActionID long_menu_action;      ///< Что делать при долгом нажатии МЕНЮ
 };
 
 /**
- * @brief Определение корневого раздела меню.
+ * @struct MenuRootDef
+ * @brief Определение корневого раздела меню (верхний уровень навигации).
  */
 struct MenuRootDef {
-  const char* label;              // Название раздела (в PROGMEM)
-  const MenuItemDef* items;       // Указатель на массив элементов подменю (в PROGMEM)
-  uint8_t item_count;             // Количество элементов в подразделе
-  ActionID up_action;             // Действие кнопки ВВЕРХ на уровне корня
-  ActionID down_action;           // Действие кнопки ВНИЗ на уровне корня
-  ActionID menu_action;           // Действие короткого нажатия МЕНЮ
-  ActionID long_menu_action;      // Действие долгого нажатия МЕНЮ
-  uint16_t refresh_interval_ms;   // Интервал обновления экрана для этого раздела
+  const char* label;              ///< Название раздела (в PROGMEM)
+  const MenuItemDef* items;       ///< Указатель на массив дочерних элементов (в PROGMEM)
+  uint8_t item_count;             ///< Количество элементов в этом разделе
+  ActionID up_action;             ///< Действие кнопки ВВЕРХ на уровне корня
+  ActionID down_action;           ///< Действие кнопки ВНИЗ на уровне корня
+  ActionID menu_action;           ///< Действие короткого нажатия МЕНЮ
+  ActionID long_menu_action;      ///< Действие долгого нажатия МЕНЮ
+  uint16_t refresh_interval_ms;   ///< Частота обновления экрана в этом режиме
 };
 
 /**
- * @brief Класс управления пользовательским интерфейсом на базе LCD 16x2.
- * Реализует древовидное меню, обработку кнопок и вывод данных датчиков.
+ * @class DisplayUI
+ * @brief Модуль управления пользовательским интерфейсом (LCD + Кнопки).
+ * Реализует архитектуру на базе табличного меню, хранящегося во Flash-памяти.
+ * Обеспечивает неблокирующую отрисовку, оптимизацию вывода по I2C и
+ * обработку высокоуровневых событий навигации.
  */
 class DisplayUI {
  private:
-  LiquidCrystal_I2C lcd_;       // Объект управления LCD по I2C
-  Controller* controller_;      // Ссылка на основной контроллер системы
-  SensorManager* sensors_;      // Ссылка на менеджер датчиков
-  TimeManager* rtc_;            // Ссылка на менеджер времени
-  MenuNavigator nav_;           // Состояние навигации по меню
-  ButtonEngine buttons_;        // Обработчик кнопок
-  MenuDispatcher dispatcher_;   // Маршрутизатор событий меню
-  UIModel model_;               // Локальная копия данных для отображения
+  LiquidCrystal_I2C lcd_;       ///< Низкоуровневый драйвер LCD
+  Controller* controller_;      ///< Ссылка на ядро системы
+  SensorManager* sensors_;      ///< Доступ к данным датчиков
+  TimeManager* rtc_;            ///< Доступ к реальному времени
+  MenuNavigator nav_;           ///< Хранитель состояния навигации (Root/Item)
+  ButtonEngine buttons_;        ///< Обработчик физических кнопок
+  MenuDispatcher dispatcher_;   ///< Перевод событий кнопок в действия меню
+  UIModel model_;               ///< Локальное хранилище данных для отображения
 
-  // Временные уведомления на экране
-  unsigned long message_timer_;    // Таймер отображения сообщения
-  const char* temp_message_;       // Текст временного сообщения
+  // --- Временные уведомления ---
+  unsigned long message_timer_;    ///< Время начала показа уведомления
+  const char* temp_message_;       ///< Текст текущего сообщения (если есть)
 
-  // Управление подсветкой
-  unsigned long last_activity_time_; // Время последнего действия пользователя
-  bool backlight_on_;                // Флаг состояния подсветки
+  // --- Энергосбережение ---
+  unsigned long last_activity_time_; ///< Время последнего нажатия кнопки
+  bool backlight_on_;                ///< Текущее состояние подсветки
 
-  // Оптимизация вывода (выводятся только изменившиеся строки)
-  ScreenBuffer screen_;              // Буфер текущего кадра
-  char last_lines_[2][17];           // Копия предыдущего кадра для сравнения
-  bool needs_redraw_;                // Флаг принудительной перерисовки
-  void Flush();                      // Перенос данных из буфера на физический экран
+  // --- Оптимизация отрисовки ---
+  ScreenBuffer screen_;              ///< Виртуальный холст для отрисовки кадра
+  char last_lines_[2][17];           ///< Кэш предыдущего кадра для поиска изменений
+  bool needs_redraw_;                ///< Флаг принудительного обновления кадра
 
-  void HandleButtons();    // Опрос физических кнопок
-  void DrawPage();         // Определение того, какую страницу рисовать
-  void DrawRootPage();     // Отрисовка страницы выбора раздела
-  void UpdateBacklight();  // Управление тайм-аутом подсветки
+  /**
+   * @brief Перенос данных из виртуального буфера на физический дисплей.
+   * Отправляет по I2C только те строки, содержимое которых реально изменилось.
+   */
+  void Flush();
 
-  // Вспомогательные методы отрисовки заголовков
+  void HandleButtons();    ///< Опрос кнопок и пробуждение подсветки
+  void DrawPage();         ///< Определение типа текущей страницы для отрисовки
+  void DrawRootPage();     ///< Отрисовка страницы выбора раздела меню
+  void UpdateBacklight();  ///< Проверка таймаута автоматического гашения экрана
+
+  // --- Вспомогательные методы формирования заголовков ---
   void DrawHeader(const char* label, uint8_t index, uint8_t count);
   void DrawHeader(const __FlashStringHelper* label, uint8_t index, uint8_t count);
 
-  // Методы отрисовки конкретных страниц
-  void DrawHomeScreen();    // Главный экран со статусом
-  void RenderItem(const MenuItemDef* item); // Централизованный рендерер элементов
-  void DrawStatus(int index); // Показатели (0 - IN, 1 - OUT)
-  void DrawStatusPage(const SensorData& data, const __FlashStringHelper* label); // Общий метод отрисовки статуса
-  void DrawManualModes();   // Ручное управление устройствами
-  void DrawValuePage();     // Универсальная страница редактирования значения
-  void DrawStats();         // Просмотр статистики наработки
-  void DrawErrorLog();      // Просмотр лога ошибок
+  // --- Методы отрисовки конкретных шаблонов страниц ---
+  void DrawHomeScreen();    ///< Главный экран (показатели IN/OUT и режим)
+  void RenderItem(const MenuItemDef* item); ///< Рендерер содержимого подменю
+  void DrawStatus(int index); ///< Переключатель страниц статуса (IN=0, OUT=1)
+  void DrawStatusPage(const SensorData& data, const __FlashStringHelper* label); ///< Шаблон данных датчика
+  void DrawManualModes();   ///< Экран управления FAN/OZONE
+  void DrawValuePage();     ///< Универсальный экран редактирования числовых параметров
+  void DrawStats();         ///< Экран отображения моточасов системы
+  void DrawErrorLog();      ///< Экран просмотра текущей аварии
 
+  /**
+   * @brief Возвращает количество корневых разделов меню.
+   */
   uint8_t GetMenuTableSize() const;
 
   friend class MenuActions;
   friend class MenuDispatcher;
 
  public:
-  // Получение определений текущего положения в меню
+  /**
+   * @brief Чтение текущего корня меню из PROGMEM в буфер RAM.
+   */
   const MenuRootDef* GetCurrentRootDef() const;
+
+  /**
+   * @brief Чтение текущего элемента подменю из PROGMEM в буфер RAM.
+   */
   const MenuItemDef* GetCurrentItemDef() const;
 
-  // Буферы для чтения структур из Flash-памяти
+  // Статические буферы для исключения динамического выделения памяти при работе с Flash
   static MenuRootDef current_root_buf_;
   static MenuItemDef current_item_buf_;
 
  public:
+  /**
+   * @brief Конструктор модуля интерфейса.
+   */
   DisplayUI(Controller* c, SensorManager* s, TimeManager* t);
-  void Init();
-  void Reinit();  // Повторная инициализация LCD (например, после сбоя I2C)
-  void Update();  // Основной цикл обновления UI (вызывается в loop)
 
   /**
-   * @brief Проверка состояния подсветки.
+   * @brief Начальная инициализация железа.
+   */
+  void Init();
+
+  /**
+   * @brief Повторная инициализация LCD после критического сбоя шины I2C.
+   */
+  void Reinit();
+
+  /**
+   * @brief Главный итерационный метод UI. Должен вызываться в loop().
+   */
+  void Update();
+
+  /**
+   * @brief Проверка текущего состояния подсветки.
    */
   bool IsBacklightOn() const { return backlight_on_; }
 };
 
+/**
+ * @brief Таблица конфигураций страниц редактирования значений (в PROGMEM).
+ */
 extern const ValuePageDef VALUE_PAGES[] PROGMEM;
 
 #endif

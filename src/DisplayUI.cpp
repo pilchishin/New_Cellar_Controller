@@ -3,20 +3,31 @@
 #include "config.h"
 
 
-// --- Определения таблиц меню в PROGMEM ---
+// --- ОПРЕДЕЛЕНИЯ ТАБЛИЦ МЕНЮ (Хранятся во Flash-памяти / PROGMEM) ---
 
+// Текстовые метки для элементов статуса
 static const char lbl_status_in[] PROGMEM = "STATUS_IN";
 static const char lbl_status_out[] PROGMEM = "STATUS_OUT";
+
+/**
+ * @brief Элементы раздела "STATUS".
+ * Позволяют просматривать детальные данные внутреннего и внешнего датчиков.
+ */
 static const MenuItemDef STATUS_ITEMS[] PROGMEM = {
   { MenuItemID::kStatusIn,  lbl_status_in,  MenuItemType::kView, 0, ActionID::kNavPrev, ActionID::kNavNext, ActionID::kNavNext, ActionID::kExitSubmenu },
   { MenuItemID::kStatusOut, lbl_status_out, MenuItemType::kView, 1, ActionID::kNavPrev, ActionID::kNavNext, ActionID::kNavNext, ActionID::kExitSubmenu }
 };
 
-// --- Определения страниц редактирования значений ---
+// --- КОНФИГУРАЦИЯ СТРАНИЦ РЕДАКТИРОВАНИЯ ---
 
+// Единицы измерения
 static const char unit_c[] PROGMEM = "C";
 static const char unit_pct[] PROGMEM = "%";
 
+/**
+ * @brief Параметры настройки числовых величин.
+ * Формат: { ID элемента, ID переменной в модели, Мин, Макс, Шаг, Ед.изм., Точность }
+ */
 const ValuePageDef VALUE_PAGES[] PROGMEM = {
   { MenuItemID::kTargetTemp,   ValueID::kTargetTemp,   kTempCriticalMin, 15.0f, 0.1f, unit_c,   1 },
   { MenuItemID::kTargetHum,    ValueID::kTargetHum,    0.0f, 100.0f, 1.0f, unit_pct, 0 },
@@ -27,6 +38,7 @@ const ValuePageDef VALUE_PAGES[] PROGMEM = {
   { MenuItemID::kCalibDsTemp,  ValueID::kCalibDsTemp,  -5.0f,  5.0f, 0.1f, unit_c,   1 }
 };
 
+// Элементы раздела "TARGETS" (Уставки)
 static const char lbl_target_t[] PROGMEM = "TEMP";
 static const char lbl_target_h[] PROGMEM = "HUM";
 static const MenuItemDef TARGET_ITEMS[] PROGMEM = {
@@ -34,6 +46,7 @@ static const MenuItemDef TARGET_ITEMS[] PROGMEM = {
   { MenuItemID::kTargetHum,  lbl_target_h, MenuItemType::kValue, 1, ActionID::kValueInc, ActionID::kValueDec, ActionID::kNavNext, ActionID::kExitSubmenu }
 };
 
+// Элементы раздела "MANUAL" (Ручной режим)
 static const char lbl_man_fan[] PROGMEM = "MANUAL_FAN";
 static const char lbl_man_o3[] PROGMEM = "MANUAL_OZONE";
 static const MenuItemDef MANUAL_ITEMS[] PROGMEM = {
@@ -41,6 +54,7 @@ static const MenuItemDef MANUAL_ITEMS[] PROGMEM = {
   { MenuItemID::kManualOzone, lbl_man_o3,    MenuItemType::kAction, 0, ActionID::kNavPrev, ActionID::kNavNext, ActionID::kManualStart, ActionID::kExitSubmenu }
 };
 
+// Элементы раздела "STATS" (Статистика)
 static const char lbl_stats_v[] PROGMEM = "STATS_VIEW";
 static const char lbl_stats_r[] PROGMEM = "STATS_RESET";
 static const MenuItemDef STATS_ITEMS[] PROGMEM = {
@@ -48,11 +62,13 @@ static const MenuItemDef STATS_ITEMS[] PROGMEM = {
   { MenuItemID::kStatsReset, lbl_stats_r, MenuItemType::kStats, 0, ActionID::kNavPrev,    ActionID::kNavNext, ActionID::kNavNext,     ActionID::kStatsReset }
 };
 
+// Элементы раздела "ERRORS" (Ошибки)
 static const char lbl_err_v[] PROGMEM = "ERROR_VIEW";
 static const MenuItemDef ERROR_ITEMS[] PROGMEM = {
   { MenuItemID::kErrorView, lbl_err_v, MenuItemType::kView, 0, ActionID::kErrorReset, ActionID::kNone,    ActionID::kNavNext,     ActionID::kExitSubmenu }
 };
 
+// Элементы раздела "SERVICE" (Калибровка)
 static const char lbl_bme_t[] PROGMEM = "BME T";
 static const char lbl_bme_h[] PROGMEM = "BME H";
 static const char lbl_htu_t[] PROGMEM = "HTU T";
@@ -79,6 +95,8 @@ static const char root_service[] PROGMEM = "SERVICE";
 /**
  * @brief Главная таблица разделов меню.
  * Хранится во Flash-памяти для экономии RAM.
+ * Каждый раздел определяет свой набор элементов, действия кнопок на корневом уровне
+ * и интервал фонового обновления данных на экране.
  */
 static const MenuRootDef MENU_TABLE[] PROGMEM = {
   { root_home,    nullptr,       0, ActionID::kNavPrevRoot, ActionID::kNavNextRoot, ActionID::kNavNextRoot, ActionID::kNone,          500 },
@@ -90,14 +108,15 @@ static const MenuRootDef MENU_TABLE[] PROGMEM = {
   { root_service, SERVICE_ITEMS, 5, ActionID::kNavPrevRoot, ActionID::kNavNextRoot, ActionID::kNavNextRoot, ActionID::kEnterSubmenu, 1000 }
 };
 
+// Вычисление размера таблицы разделов на этапе компиляции
 static const uint8_t MENU_TABLE_SIZE = sizeof(MENU_TABLE) / sizeof(MENU_TABLE[0]);
 
 uint8_t DisplayUI::GetMenuTableSize() const { return MENU_TABLE_SIZE; }
 
 
 /**
- * @brief Конструктор UI.
- * Инициализирует базовые параметры и очищает кэш строк.
+ * @brief Конструктор модуля интерфейса.
+ * Инициализирует драйвер LCD (адрес 0x27), менеджеры навигации и ввода.
  */
 DisplayUI::DisplayUI(Controller* c, SensorManager* s, TimeManager* t)
     : lcd_(0x27, 16, 2),
@@ -111,11 +130,12 @@ DisplayUI::DisplayUI(Controller* c, SensorManager* s, TimeManager* t)
       last_activity_time_(0),
       backlight_on_(true),
       needs_redraw_(true) {
+  // Очистка кэша строк для корректной первой отрисовки
   memset(last_lines_, 0, sizeof(last_lines_));
 }
 
 /**
- * @brief Первичная инициализация LCD и пинов кнопок.
+ * @brief Начальная инициализация периферии.
  */
 void DisplayUI::Init() {
   lcd_.init();
@@ -125,7 +145,8 @@ void DisplayUI::Init() {
 }
 
 /**
- * @brief Восстановление работы LCD после возможных сбоев I2C-шины.
+ * @brief Аварийное восстановление дисплея.
+ * Используется контроллером при обнаружении «подвисания» шины I2C.
  */
 void DisplayUI::Reinit() {
   lcd_.init();
@@ -135,12 +156,12 @@ void DisplayUI::Reinit() {
     lcd_.noBacklight();
 }
 
-// Статические буферы для временного хранения структур, прочитанных из Flash
+// Резервирование памяти под статические буферы для работы с Flash
 MenuRootDef DisplayUI::current_root_buf_;
 MenuItemDef DisplayUI::current_item_buf_;
 
 /**
- * @brief Чтение определения текущего корневого раздела из PROGMEM в RAM-буфер.
+ * @brief Безопасное чтение текущего корневого раздела из PROGMEM.
  */
 const MenuRootDef* DisplayUI::GetCurrentRootDef() const {
   memcpy_P(&current_root_buf_, &MENU_TABLE[nav_.GetRootIndex()], sizeof(MenuRootDef));
@@ -148,18 +169,19 @@ const MenuRootDef* DisplayUI::GetCurrentRootDef() const {
 }
 
 /**
- * @brief Чтение определения текущего элемента подменю из PROGMEM в RAM-буфер.
- * Использует pgm_read_ptr для получения адреса массива элементов.
+ * @brief Безопасное чтение текущего элемента подменю из PROGMEM.
+ * Сначала извлекается указатель на массив элементов, затем копируется сама структура.
  */
 const MenuItemDef* DisplayUI::GetCurrentItemDef() const {
-  // Согласно лучшим практикам AVR, сначала читаем указатель из PROGMEM
   uint8_t root_idx = nav_.GetRootIndex();
   uint8_t item_idx = nav_.GetItemIndex();
+
+  // Чтение указателя на подменю из структуры корня, лежащей во Flash
   const MenuItemDef* items_ptr = (const MenuItemDef*)pgm_read_ptr(&MENU_TABLE[root_idx].items);
   uint8_t count = pgm_read_byte(&MENU_TABLE[root_idx].item_count);
 
   if (items_ptr && item_idx < count) {
-    // Затем копируем всю структуру элемента в RAM
+    // Копирование структуры элемента из Flash в RAM-буфер
     memcpy_P(&current_item_buf_, &items_ptr[item_idx], sizeof(MenuItemDef));
     return &current_item_buf_;
   }
@@ -167,26 +189,28 @@ const MenuItemDef* DisplayUI::GetCurrentItemDef() const {
 }
 
 /**
- * @brief Основной цикл обновления интерфейса.
- * Обрабатывает кнопки, подсветку и перерисовку по таймеру или флагу.
+ * @brief Основной итератор интерфейса.
+ * Синхронизирует данные, обрабатывает ввод и управляет циклом перерисовки.
  */
 void DisplayUI::Update() {
+  // Обновление локальной модели данных из датчиков и контроллера
   model_.Sync(controller_, sensors_);
+
   HandleButtons();    // Опрос кнопок
-  UpdateBacklight();  // Управление тайм-аутом света
+  UpdateBacklight();  // Проверка тайм-аута гашения
 
   static unsigned long last_draw = 0;
   const MenuRootDef* root = GetCurrentRootDef();
   unsigned long interval = root ? root->refresh_interval_ms : 1000;
 
-  // Перерисовка по таймеру или по событию (нажатие кнопки)
+  // Отрисовка кадра: либо принудительно (кнопки), либо по таймеру обновления данных
   if (needs_redraw_ || (millis() - last_draw >= interval)) {
     last_draw = millis();
     needs_redraw_ = false;
 
-    screen_.Clear();
+    screen_.Clear(); // Очистка виртуального холста
 
-    // Приоритет вывода - временное системное сообщение
+    // Приоритет: отображение временного уведомления (например, "SAVED")
     if (temp_message_ != nullptr && millis() - message_timer_ < 2000) {
       screen_.SetPos(0, 0);
       screen_.print(temp_message_);
@@ -196,59 +220,64 @@ void DisplayUI::Update() {
       if (temp_message_ != nullptr) {
         temp_message_ = nullptr;
       }
-      DrawPage(); // Наполнение буфера содержимым страницы
+      DrawPage(); // Наполнение холста содержимым текущей страницы меню
     }
 
-    Flush(); // Физический вывод изменений на LCD
+    Flush(); // Оптимизированный вывод изменений на физический LCD
   }
 }
 
 /**
- * @brief Оптимизированный вывод на LCD.
- * Печатает строку только если её содержимое изменилось по сравнению с предыдущим кадром.
+ * @brief Интеллектуальный вывод на LCD по шине I2C.
+ * Сравнивает каждую строку с предыдущим состоянием и обновляет на экране только
+ * изменившиеся символы (строки). Это существенно снижает нагрузку на медленную шину I2C.
  */
 void DisplayUI::Flush() {
   for (int i = 0; i < 2; i++) {
     const char* line = screen_.GetLine(i);
-    // Оптимизированное сравнение фиксированных 16 символов
+    // Построчное сравнение буфера и кэша экрана
     if (memcmp(line, last_lines_[i], 16) != 0) {
       lcd_.setCursor(0, i);
       lcd_.print(line);
-      // Копируем все 16 символов + терминатор
+      // Обновление кэша (включая терминатор для безопасности)
       memcpy(last_lines_[i], line, 17);
     }
   }
 }
 
 /**
- * @brief Обработка событий кнопок, полученных от ButtonEngine.
+ * @brief Реакция на физическое нажатие кнопок.
+ * Автоматически включает подсветку и делегирует событие диспетчеру меню.
  */
 void DisplayUI::HandleButtons() {
-  // Сброс таймера бездействия и пробуждение подсветки
   if (buttons_.AnyPressed()) {
     needs_redraw_ = true;
-    controller_->NotifyUserActivity();
+    controller_->NotifyUserActivity(); // Сообщаем системе, что человек рядом
     last_activity_time_ = millis();
+
+    // Если экран был погашен, первое нажатие только включает свет
     if (!backlight_on_) {
       lcd_.backlight();
       backlight_on_ = true;
-      return; // Первое нажатие только пробуждает экран
+      return;
     }
   }
 
+  // Получение логического события от ButtonEngine (click, long click, repeat)
   ButtonEvent event = buttons_.Poll();
   if (event != ButtonEvent::kNone) {
     needs_redraw_ = true;
-    dispatcher_.Dispatch(this, event);
+    dispatcher_.Dispatch(this, event); // Передача события в логику навигации/действий
   }
 }
 
 /**
- * @brief Автоматическое гашение подсветки при отсутствии активности.
+ * @brief Управление энергосбережением.
+ * Гасит подсветку через kBacklightTimeout мс, если нет активности.
  */
 void DisplayUI::UpdateBacklight() {
   if (backlight_on_ && (millis() - last_activity_time_ > kBacklightTimeout)) {
-    // В ручном режиме озонирования подсветка не гаснет для безопасности
+    // ВАЖНО: При ручном озонировании подсветка НЕ гаснет (требование безопасности ТЗ)
     if (model_.state != SystemState::kManualOzone) {
       lcd_.noBacklight();
       backlight_on_ = false;
@@ -257,14 +286,16 @@ void DisplayUI::UpdateBacklight() {
 }
 
 /**
- * @brief Диспетчер отрисовки страниц.
+ * @brief Главный диспетчер шаблонов страниц.
+ * Выбирает нужный метод отрисовки в зависимости от глубины навигации.
  */
 void DisplayUI::DrawPage() {
-  if (nav_.GetRootIndex() == 0) { // Главный экран
-    DrawHomeScreen();
-  } else if (!nav_.InSubmenu()) { // Экран выбора раздела
-    DrawRootPage();
-  } else { // Экран конкретного элемента подменю
+  if (nav_.GetRootIndex() == 0) {
+    DrawHomeScreen(); // Главная (Index 0)
+  } else if (!nav_.InSubmenu()) {
+    DrawRootPage();   // Выбор раздела (Root 1-N)
+  } else {
+    // Мы внутри раздела — рисуем текущий элемент
     const MenuItemDef* item = GetCurrentItemDef();
     if (item) {
       RenderItem(item);
@@ -272,6 +303,9 @@ void DisplayUI::DrawPage() {
   }
 }
 
+/**
+ * @brief Централизованный вызов рендереров по типам элементов.
+ */
 void DisplayUI::RenderItem(const MenuItemDef* item) {
   switch (item->type) {
     case MenuItemType::kView:
@@ -293,11 +327,11 @@ void DisplayUI::RenderItem(const MenuItemDef* item) {
 }
 
 /**
- * @brief Отрисовка страницы выбора раздела меню (корень).
+ * @brief Отрисовка страницы выбора корневого раздела.
  */
 void DisplayUI::DrawRootPage() {
   const MenuRootDef* root = GetCurrentRootDef();
-  // HOME не считается за пронумерованный раздел в статус-баре
+  // HOME не считается порядковым номером в полосе прокрутки
   uint8_t root_idx = nav_.GetRootIndex();
   uint8_t index = (root_idx > 0) ? root_idx - 1 : 0;
   DrawHeader((const __FlashStringHelper*)root->label, index, MENU_TABLE_SIZE - 1);
@@ -307,12 +341,13 @@ void DisplayUI::DrawRootPage() {
 }
 
 /**
- * @brief Отрисовка стандартного заголовка раздела.
- * Формат: [Метка] [текущий]/[всего]
+ * @brief Формирование стандартного заголовка с индикатором позиции.
+ * @param label Текст заголовка.
+ * @param index Текущий индекс (0-based).
+ * @param count Общее количество элементов.
  */
 void DisplayUI::DrawHeader(const char* label, uint8_t index, uint8_t count) {
   screen_.SetPos(0, 0);
-  // Приведение к FlashStringHelper, т.к. строки меток лежат в PROGMEM
   screen_.print((const __FlashStringHelper*)label);
   screen_.print(F(" "));
   screen_.print(index + 1);
@@ -330,10 +365,11 @@ void DisplayUI::DrawHeader(const __FlashStringHelper* label, uint8_t index, uint
 }
 
 /**
- * @brief Главный экран: текущие показатели и статус работы.
+ * @brief Шаблон ГЛАВНОГО ЭКРАНА.
+ * Отображает сводку по подвалу и улице, а также индикаторы активных реле и режима.
  */
 void DisplayUI::DrawHomeScreen() {
-  // Строка 1: Внутри [Т] [H] [Индикатор работы]
+  // Строка 1: Показатели внутри подвала [T] [H] [Индикатор работы]
   screen_.SetPos(0, 0);
   screen_.print(F("IN "));
   if (model_.inside.valid) screen_.print(model_.inside.temp, 1);
@@ -343,12 +379,13 @@ void DisplayUI::DrawHomeScreen() {
   else screen_.print(F("---"));
   screen_.print(F("%"));
 
+  // Индикаторы активного оборудования (O - Озон, F - Вентилятор)
   screen_.SetPos(0, 15);
   if (model_.ozone_on) screen_.print(F("O"));
   else if (model_.fan_on) screen_.print(F("F"));
   else screen_.print(F(" "));
 
-  // Строка 2: Снаружи [Т] [H] [Режим системы]
+  // Строка 2: Показатели на улице [T] [H] [Режим системы]
   screen_.SetPos(1, 0);
   screen_.print(F("OUT "));
   if (model_.outside.valid) screen_.print(model_.outside.temp, 1);
@@ -358,19 +395,23 @@ void DisplayUI::DrawHomeScreen() {
   else screen_.print(F("---"));
   screen_.print(F("%"));
 
+  // Режим системы (E - Error, A - Auto, M - Manual)
   screen_.SetPos(1, 15);
-  if (model_.state == SystemState::kErrorState) screen_.print(F("E")); // Ошибка
-  else if (model_.is_auto_mode) screen_.print(F("A")); // Авто
-  else screen_.print(F("M")); // Ручной
+  if (model_.state == SystemState::kErrorState) screen_.print(F("E"));
+  else if (model_.is_auto_mode) screen_.print(F("A"));
+  else screen_.print(F("M"));
 }
 
+/**
+ * @brief Отрисовка страницы детального статуса датчика.
+ */
 void DisplayUI::DrawStatus(int index) {
   if (index == 0) DrawStatusPage(model_.inside, F("IN "));
   else DrawStatusPage(model_.outside, F("OUT "));
 }
 
 /**
- * @brief Общий метод отрисовки страницы статуса датчика.
+ * @brief Внутренний шаблон вывода параметров микроклимата.
  */
 void DisplayUI::DrawStatusPage(const SensorData& data, const __FlashStringHelper* label) {
   const MenuRootDef* root = GetCurrentRootDef();
@@ -386,9 +427,8 @@ void DisplayUI::DrawStatusPage(const SensorData& data, const __FlashStringHelper
   screen_.print(F("%"));
 }
 
-
 /**
- * @brief Отрисовка страницы выбора устройства для ручного пуска.
+ * @brief Шаблон страницы запуска ручных режимов.
  */
 void DisplayUI::DrawManualModes() {
   const MenuRootDef* root = GetCurrentRootDef();
@@ -405,11 +445,15 @@ void DisplayUI::DrawManualModes() {
   screen_.print(F("OZONE"));
 }
 
-
+/**
+ * @brief Универсальный шаблон страницы редактирования числового значения.
+ * Читает конфигурацию (шаг, границы) из Flash и текущее значение из модели.
+ */
 void DisplayUI::DrawValuePage() {
   const MenuItemDef* item = GetCurrentItemDef();
   if (!item) return;
 
+  // Загрузка параметров страницы редактирования из Flash
   ValuePageDef vcfg;
   memcpy_P(&vcfg, &VALUE_PAGES[item->ctx_index], sizeof(ValuePageDef));
 
@@ -423,7 +467,7 @@ void DisplayUI::DrawValuePage() {
   screen_.print((const __FlashStringHelper*)item->label);
   screen_.print(F(":"));
 
-  // Для калибровки добавляем + если значение положительное
+  // Спец. форматирование для калибровок (вывод знака +)
   if (item->id >= MenuItemID::kCalibBmeTemp && val > 0.001f) {
     screen_.print(F("+"));
   }
@@ -433,7 +477,8 @@ void DisplayUI::DrawValuePage() {
 }
 
 /**
- * @brief Отрисовка статистики наработки или страницы подтверждения сброса.
+ * @brief Шаблон страницы статистики наработки.
+ * Реализует сокращенный вывод (U - uptime, F - Fan, O3 - Ozone).
  */
 void DisplayUI::DrawStats() {
   const MenuRootDef* root = GetCurrentRootDef();
@@ -441,20 +486,20 @@ void DisplayUI::DrawStats() {
   DrawHeader(F("STATS"), item_idx, root->item_count);
 
   screen_.SetPos(1, 0);
-  if (item_idx == 0) { // Просмотр
+  if (item_idx == 0) { // Просмотр наработки (в часах)
     screen_.print(F("U"));
     screen_.print(model_.stats.uptimeMinutes / 60);
     screen_.print(F(" F"));
     screen_.print(model_.stats.fanMinutes / 60);
     screen_.print(F(" O3"));
     screen_.print(model_.stats.ozoneMinutes / 60);
-  } else if (item_idx == 1) { // Сброс
+  } else if (item_idx == 1) { // Страница подтверждения сброса
     screen_.print(F("MENU CONFIRM"));
   }
 }
 
 /**
- * @brief Отрисовка лога текущих ошибок.
+ * @brief Шаблон страницы просмотра системных ошибок.
  */
 void DisplayUI::DrawErrorLog() {
   const MenuRootDef* root = GetCurrentRootDef();
@@ -464,7 +509,9 @@ void DisplayUI::DrawErrorLog() {
   if (model_.error == ErrorCode::kNone) {
     screen_.print(F("SYSTEM OK"));
   } else {
+    // Вывод текстового описания ошибки
     screen_.print(ErrorToString(model_.error));
+    // Подсказка для сброса (UP = Reset)
     screen_.SetPos(1, 12);
     screen_.print(F("UP:R"));
   }
