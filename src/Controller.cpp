@@ -222,10 +222,13 @@ void Controller::HandleAutoClimate() {
   // 3. Безопасность: температура поверхностей должна быть выше точки росы
   bool condensation_is_safe = (out.dewpoint + kMarginCondSafety) < in.temp;
 
+  // 4. Защита от промерзания
+  bool freeze_safe = (out.temp > kOutTempFrostLimit);
+
   // Итоговая логика принятия решения
   bool ventilation_needed = (is_too_hot || is_too_humid);
 
-  if (ventilation_needed && ventilation_is_effective && condensation_is_safe) {
+  if (ventilation_needed && ventilation_is_effective && condensation_is_safe && freeze_safe) {
     relays_->SetFan(true);
   } else {
     relays_->SetFan(false);  // Выключение (с учетом защиты в RelayManager)
