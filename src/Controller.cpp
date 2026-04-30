@@ -231,10 +231,13 @@ void Controller::HandleAutoClimate() {
   // 5. Проверка возможности охлаждения
   bool cooling_is_possible = !is_too_hot || (out.temp < in.temp);
 
+  // 6. Минимальная температура внутри для вентиляции
+  bool temp_allows_vent = (in.temp > kVentTempMin);
+
   // Итоговая логика принятия решения
   bool ventilation_needed = (is_too_hot || is_too_humid);
 
-  if (ventilation_needed && ventilation_is_effective && condensation_is_safe && freeze_safe && cooling_is_possible) {
+  if (ventilation_needed && ventilation_is_effective && condensation_is_safe && freeze_safe && cooling_is_possible && temp_allows_vent) {
     relays_->SetFan(true);
   } else {
     relays_->SetFan(false);  // Выключение (с учетом защиты в RelayManager)
