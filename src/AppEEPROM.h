@@ -4,40 +4,86 @@
 #include <Arduino.h>
 #include "Types.h"
 
-// Структура всех сохраняемых данных
+/**
+ * @struct PersistentData
+ * @brief Структура всех данных, сохраняемых в энергонезависимой памяти (EEPROM).
+ * Содержит настройки целевого климата, калибровочные коэффициенты, статистику работы системы
+ * и контрольную сумму CRC для проверки целостности.
+ */
 struct PersistentData {
-    float targetTemp;
-    float targetRh;
-    CalibrationData calibration;
-    SystemStatistics stats;
-    uint16_t crc;
+    float targetTemp;            ///< Целевая температура внутри подвала (°C)
+    float targetRh;              ///< Целевая относительная влажность (%)
+    CalibrationData calibration; ///< Данные калибровки датчиков (смещения)
+    SystemStatistics stats;      ///< Накопленная статистика работы (время наработки)
+    uint16_t crc;                ///< Контрольная сумма CRC16 (MODBUS-совместимая)
 };
 
+/**
+ * @class AppEEPROM
+ * @brief Класс для управления постоянной памятью контроллера.
+ * Реализует механизм выравнивания износа (Wear Leveling) путем циклической записи в 10 слотов,
+ * а также механизм отложенной записи (Deferred Save) для предотвращения слишком частого
+ * обращения к физической ячейке памяти при изменении параметров.
+ */
 class AppEEPROM {
  private:
-  static const uint16_t kEepromSize = 1024;   // Для ATmega328P
-  static const uint8_t kSlotsCount = 10;      // Количество слотов для wear leveling
-  static const uint16_t kSlotSize = sizeof(PersistentData);
-  static const uint32_t kDeferredSaveDelay = 5000UL;
+  static const uint16_t kEepromSize = 1024;   ///< Доступный объем EEPROM для ATmega328P (1 КБ)
+  static const uint8_t kSlotsCount = 10;      ///< Количество слотов для циклической записи (wear leveling)
+  static const uint16_t kSlotSize = sizeof(PersistentData); ///< Размер одного слота в байтах
+  static const uint32_t kDeferredSaveDelay = 5000UL;        ///< Задержка отложенного сохранения (5 секунд)
 
+  // Проверка на этапе компиляции, что слоты помещаются в доступный объем памяти
   static_assert(kSlotsCount * kSlotSize <= kEepromSize, "EEPROM: slots overflow kEepromSize");
 
+  /**
+   * @brief Вычисляет контрольную сумму CRC16 для структуры данных.
+   * @param data Ссылка на структуру для расчета.
+   * @return 16-битное значение контрольной суммы.
+   */
   uint16_t CalculateCrc(const PersistentData& data);
+
+  /**
+   * @brief Ищет индекс активного (последнего валидного) слота в EEPROM.
+   * @return Индекс слота (0-9) или -1, если валидных данных не найдено.
+   */
   int FindActiveSlot();
 
-  // Состояние отложенной записи
-  PersistentData pending_data_;
-  bool needs_save_;
-  unsigned long last_change_time_;
+  PersistentData pending_data_; ///< Буфер данных, ожидающих записи
+  bool needs_save_;             ///< Флаг наличия изменений, требующих сохранения
+  unsigned long last_change_time_; ///< Время последнего изменения данных (в мс)
 
  public:
+  /**
+   * @brief Конструктор по умолчанию.
+   */
   AppEEPROM();
+
+  /**
+   * @brief Загружает данные из последнего активного слота EEPROM.
+   * Если валидные данные отсутствуют, инициализирует структуру значениями по умолчанию.
+   * @param data Ссылка на структуру, куда будут помещены данные.
+   */
   void Load(PersistentData& data);
+
+  /**
+   * @brief Немедленно сохраняет данные в следующий доступный слот EEPROM.
+   * Реализует логику wear leveling и аннулирует CRC в старом слоте.
+   * @param data Структура данных для сохранения.
+   */
   void Save(const PersistentData& data);
 
-  // Новые методы для инкапсуляции логики планирования
+  /**
+   * @brief Планирует сохранение данных.
+   * @param data Данные для записи.
+   * @param immediate Если true, запись произойдет при следующем вызове Update() без ожидания 5с.
+   */
   void ScheduleSave(const PersistentData& data, bool immediate = false);
-  void Update();  // Вызывается из главного цикла
+
+  /**
+   * @brief Обслуживает таймер отложенной записи.
+   * Должен вызываться в главном цикле (loop) контроллера.
+   */
+  void Update();
 };
 
 #endif
