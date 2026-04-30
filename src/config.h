@@ -37,7 +37,7 @@ const float kDefaultTargetTemp = 4.0f;     // Целевая температу�
 const float kDefaultTargetRh   = 85.0f;    // Целевая относительная влажность по умолчанию (%)
 
 const float kHysteresisTemp = 0.5f; // Допустимое отклонение температуры от заданной (+/- 0.5°C)
-const float kHisteresisTempOff = 1.5f; // Нижний гистерезис: выключить вентилятор при T < target - 1.5
+const float kHisteresisTempOff = 0.5f; // Нижний гистерезис: выключить вентилятор при T < target - 0.5
 const float kHysteresisRh   = 3.0f; // Допустимое отклонение влажности от заданной (+/- 3%)
 
 const float kMarginCondSafety = 2.0f; // Безопасный отступ от точки росы для предотвращения конденсата
