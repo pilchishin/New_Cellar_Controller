@@ -5,60 +5,104 @@
 
 /**
  * @class IFilter
- * @brief Интерфейс для фильтров данных датчиков.
+ * @brief Общий интерфейс для алгоритмов фильтрации данных датчиков.
+ * Позволяет унифицировать обработку зашумленных значений температуры и влажности.
  */
 class IFilter {
  public:
   virtual ~IFilter() {}
+
+  /**
+   * @brief Добавление нового измерения в фильтр.
+   * @param v Сырое значение с датчика.
+   * @return Отфильтрованное значение.
+   */
   virtual float Update(float v) = 0;
+
+  /**
+   * @brief Принудительная установка состояния фильтра.
+   * @param initial_value Значение, которым будет заполнена история.
+   */
   virtual void Reset(float initial_value = 0.0f) = 0;
+
+  /**
+   * @brief Сброс состояния инициализации.
+   * Следующий вызов Update() выполнит Reset() автоматически.
+   */
   virtual void Invalidate() = 0;
+
+  /**
+   * @brief Проверка, накоплено ли достаточно данных для работы.
+   */
   virtual bool IsInitialized() const = 0;
 };
 
 /**
  * @class EmaMedianFilter
- * @brief Комбинированный фильтр: медиана (окно 3) + экспоненциальное сглаживание (EMA).
+ * @brief Гибридный нелинейный фильтр.
+ * Сочетает медианный фильтр (окно 3) для отсечения резких выбросов
+ * и экспоненциальное скользящее среднее (EMA) для плавного сглаживания шума.
  */
 class EmaMedianFilter : public IFilter {
  private:
-  float history_[3];     // Буфер для последних 3-х измерений (для медианы)
-  float ema_value_;      // Текущее значение EMA
-  float alpha_;          // Коэффициент сглаживания EMA (обычно 0.2)
-  bool is_initialized_;  // Флаг первоначального заполнения буфера
+  float history_[3];     ///< Буфер для последних 3-х измерений (окно медианы)
+  float ema_value_;      ///< Накопленное сглаженное значение
+  float alpha_;          ///< Коэффициент веса нового значения (0.0 - 1.0)
+  bool is_initialized_;  ///< Флаг готовности фильтра
 
-  // Приватный метод для быстрого поиска медианы из 3-х чисел
+  /**
+   * @brief Оптимизированный поиск медианы из трех чисел.
+   */
   float GetMedian(float a, float b, float c);
 
  public:
-  // Конструктор. По ТЗ коэффициент альфа для EMA равен 0.2
+  /**
+   * @brief Конструктор фильтра.
+   * @param alpha Коэффициент сглаживания (по умолчанию 0.2).
+   */
   EmaMedianFilter(float alpha = 0.2f);
 
-  // Главный метод: принимает новое сырое значение, возвращает отфильтрованное
   float Update(float new_value) override;
-
-  // Сброс фильтра (для очистки истории после восстановления датчика)
   void Reset(float initial_value = 0.0f) override;
-
-  // Деинициализация фильтра
   void Invalidate() override;
-
   bool IsInitialized() const override { return is_initialized_; }
 };
 
-// Пространство имен для климатических формул
+/**
+ * @namespace climate_math
+ * @brief Математические функции для расчета производных параметров микроклимата.
+ */
 namespace climate_math {
-// Расчет абсолютной влажности (г/м³)
-float CalculateAH(float temp, float rh);
+  /**
+   * @brief Расчет абсолютной влажности (г/м³).
+   * Использует формулу Магнуса-Тетенса для определения плотности водяного пара.
+   * @param temp Температура (°C).
+   * @param rh Относительная влажность (%).
+   */
+  float CalculateAH(float temp, float rh);
 
-// Расчет точки росы (°C)
-float CalculateDewPoint(float temp, float rh);
-}  // namespace climate_math
+  /**
+   * @brief Расчет температуры точки росы (°C).
+   * Позволяет определить риск выпадения конденсата на поверхностях.
+   * @param temp Температура (°C).
+   * @param rh Относительная влажность (%).
+   */
+  float CalculateDewPoint(float temp, float rh);
+}
 
-// Утилиты для работы с шиной I2C
+/**
+ * @namespace i2c_utils
+ * @brief Низкоуровневые утилиты для обслуживания шины I2C.
+ */
 namespace i2c_utils {
-// Программный сброс зависшей шины I2C (9 тактов SCL)
-void RecoverBus(uint8_t sda_pin, uint8_t scl_pin);
-}  // namespace i2c_utils
+  /**
+   * @brief Программная процедура восстановления шины I2C.
+   * Генерирует 9 тактов SCL в режиме bit-bang, чтобы вывести ведомые устройства
+   * из состояния ожидания и освободить заблокированную линию SDA.
+   * @param sda_pin Номер пина SDA.
+   * @param scl_pin Номер пина SCL.
+   */
+  void RecoverBus(uint8_t sda_pin, uint8_t scl_pin);
+}
 
 #endif
