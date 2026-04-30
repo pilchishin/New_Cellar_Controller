@@ -213,19 +213,28 @@ void Controller::HandleAutoClimate() {
   }
 
   // 1. Физические условия для активации вентиляции
-  bool is_too_hot = (in.temp > (target_temp_ + kHysteresisTemp));
-  bool is_too_humid = (in.rh > (target_rh_ + kHysteresisRh));
+  bool is_fan_on = relays_->GetFanState();
+  bool is_too_hot = is_fan_on ? (in.temp > (target_temp_ - kHisteresisTempOff))
+                              : (in.temp > (target_temp_ + kHysteresisTemp));
+  bool is_too_humid = is_fan_on ? (in.rh > (target_rh_ - kHysteresisRh))
+                                : (in.rh > (target_rh_ + kHysteresisRh));
 
   // 2. Эффективность: воздух снаружи должен содержать меньше влаги
   bool ventilation_is_effective = (out.ah + kMarginAh) < in.ah;
 
   // 3. Безопасность: температура поверхностей должна быть выше точки росы
-  bool condensation_is_safe = (in.dewpoint + kMarginCondSafety) < in.temp;
+  bool condensation_is_safe = (out.dewpoint + kMarginCondSafety) < in.temp;
+
+  // 4. Защита от промерзания
+  bool freeze_safe = (out.temp > kOutTempFrostLimit);
+
+  // 5. Проверка возможности охлаждения
+  bool cooling_is_possible = !is_too_hot || (out.temp < in.temp);
 
   // Итоговая логика принятия решения
   bool ventilation_needed = (is_too_hot || is_too_humid);
 
-  if (ventilation_needed && ventilation_is_effective && condensation_is_safe) {
+  if (ventilation_needed && ventilation_is_effective && condensation_is_safe && freeze_safe && cooling_is_possible) {
     relays_->SetFan(true);
   } else {
     relays_->SetFan(false);  // Выключение (с учетом защиты в RelayManager)

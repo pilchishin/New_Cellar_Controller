@@ -37,6 +37,7 @@ const float kDefaultTargetTemp = 4.0f;     // Целевая температу�
 const float kDefaultTargetRh   = 85.0f;    // Целевая относительная влажность по умолчанию (%)
 
 const float kHysteresisTemp = 0.5f; // Допустимое отклонение температуры от заданной (+/- 0.5°C)
+const float kHisteresisTempOff = 1.5f; // Нижний гистерезис: выключить вентилятор при T < target - 1.5
 const float kHysteresisRh   = 3.0f; // Допустимое отклонение влажности от заданной (+/- 3%)
 
 const float kMarginCondSafety = 2.0f; // Безопасный отступ от точки росы для предотвращения конденсата
@@ -46,6 +47,7 @@ const float kMarginAh          = 1.0f; // Минимальная разница 
 // 4. КРИТИЧЕСКИЕ ПОКАЗАТЕЛИ И ОШИБКИ
 // =================================================================
 const float kTempCriticalMin = 2.0f;  // Минимально допустимая T в подвале (ниже - ошибка)
+const float kOutTempFrostLimit = 0.0f; // Минимальная T уличного воздуха для вентиляции (°C)
 const float kCondensationErrDiff = 0.5f; // Ошибка при риске конденсации (dewpoint >= T_in - 0.5)
 const float kSensorDiffMax = 2.0f;    // Макс. разница между BME280 и DS18B20
 
