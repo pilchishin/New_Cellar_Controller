@@ -213,8 +213,11 @@ void Controller::HandleAutoClimate() {
   }
 
   // 1. Физические условия для активации вентиляции
-  bool is_too_hot = (in.temp > (target_temp_ + kHysteresisTemp));
-  bool is_too_humid = (in.rh > (target_rh_ + kHysteresisRh));
+  bool is_fan_on = relays_->GetFanState();
+  bool is_too_hot = is_fan_on ? (in.temp > (target_temp_ - kHisteresisTempOff))
+                              : (in.temp > (target_temp_ + kHysteresisTemp));
+  bool is_too_humid = is_fan_on ? (in.rh > (target_rh_ - kHysteresisRh))
+                                : (in.rh > (target_rh_ + kHysteresisRh));
 
   // 2. Эффективность: воздух снаружи должен содержать меньше влаги
   bool ventilation_is_effective = (out.ah + kMarginAh) < in.ah;
