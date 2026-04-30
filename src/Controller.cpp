@@ -225,10 +225,13 @@ void Controller::HandleAutoClimate() {
   // 4. Защита от промерзания
   bool freeze_safe = (out.temp > kOutTempFrostLimit);
 
+  // 5. Проверка возможности охлаждения
+  bool cooling_is_possible = !is_too_hot || (out.temp < in.temp);
+
   // Итоговая логика принятия решения
   bool ventilation_needed = (is_too_hot || is_too_humid);
 
-  if (ventilation_needed && ventilation_is_effective && condensation_is_safe && freeze_safe) {
+  if (ventilation_needed && ventilation_is_effective && condensation_is_safe && freeze_safe && cooling_is_possible) {
     relays_->SetFan(true);
   } else {
     relays_->SetFan(false);  // Выключение (с учетом защиты в RelayManager)
