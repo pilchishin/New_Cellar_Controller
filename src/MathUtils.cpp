@@ -1,7 +1,10 @@
 #include "MathUtils.h"
 #include <math.h> // Необходима для функций exp() и log()
 
-// Инициализация класса фильтра
+/**
+ * @brief Инициализация комбинированного фильтра.
+ * @param alpha Коэффициент сглаживания EMA.
+ */
 EmaMedianFilter::EmaMedianFilter(float alpha) {
   this->alpha_ = alpha;
   this->is_initialized_ = false;
@@ -12,38 +15,45 @@ EmaMedianFilter::EmaMedianFilter(float alpha) {
 }
 
 /**
- * @brief Быстрый алгоритм поиска медианы для трех чисел без полноценной сортировки массива.
+ * @brief Быстрый алгоритм поиска медианы для трех чисел.
+ * Не требует сортировки массива, реализован через логические сравнения.
  */
 float EmaMedianFilter::GetMedian(float a, float b, float c) {
   return max(min(a, b), min(max(a, b), c));
 }
 
-// Обновление значения в фильтре
+/**
+ * @brief Обработка нового измерения.
+ * Сначала применяется медианный фильтр для удаления выбросов,
+ * затем результат сглаживается методом EMA.
+ */
 float EmaMedianFilter::Update(float new_value) {
-  // Если это самое первое измерение после включения устройства
+  // Инициализация при первом запуске (заполнение всей истории первым значением)
   if (!is_initialized_) {
-    // Заполняем весь буфер первым валидным значением
     history_[0] = history_[1] = history_[2] = new_value;
     ema_value_ = new_value;
     is_initialized_ = true;
     return new_value;
   }
 
-  // 1. МЕДИАННЫЙ ФИЛЬТР
+  // 1. Обновление истории для медианного фильтра (сдвиг окна)
   history_[0] = history_[1];
   history_[1] = history_[2];
   history_[2] = new_value;
 
+  // Поиск медианы в окне из 3-х элементов
   float median = GetMedian(history_[0], history_[1], history_[2]);
 
-  // 2. ФИЛЬТР EMA
+  // 2. Экспоненциальное сглаживание полученной медианы
   ema_value_ = (alpha_ * median) + ((1.0f - alpha_) * ema_value_);
 
   return ema_value_;
 }
 
+/**
+ * @brief Принудительный сброс фильтра на заданное значение.
+ */
 void EmaMedianFilter::Reset(float initial_value) {
-  // Принудительная инициализация фильтра заданным значением
   this->is_initialized_ = true;
   this->ema_value_ = initial_value;
   for (int i = 0; i < 3; i++) {
@@ -51,6 +61,9 @@ void EmaMedianFilter::Reset(float initial_value) {
   }
 }
 
+/**
+ * @brief Инвалидация (аннулирование) состояния фильтра.
+ */
 void EmaMedianFilter::Invalidate() {
   this->is_initialized_ = false;
 }
@@ -60,16 +73,17 @@ void EmaMedianFilter::Invalidate() {
 // ==========================================================
 
 /**
- * @brief Расчет абсолютной влажности (г/м³) по формуле Магнуса-Тетенса.
+ * @brief Расчет абсолютной влажности (г/м³).
+ * Использует аппроксимацию формулы Магнуса-Тетенса.
  */
 float climate_math::CalculateAH(float temp, float rh) {
-  // svp - Saturation Vapor Pressure (давление насыщенного пара, гПа)
+  // Расчет давления насыщенного пара (svp - Saturation Vapor Pressure, гПа)
   float svp = 6.112f * exp((17.62f * temp) / (243.12f + temp));
 
-  // vp - Actual Vapor Pressure (фактическое давление пара, гПа)
+  // Расчет фактического давления пара (vp - Actual Vapor Pressure, гПа)
   float vp = (rh / 100.0f) * svp;
 
-  // ah - Absolute Humidity
+  // Расчет абсолютной влажности (ah - Absolute Humidity, г/м³)
   float ah = 216.7f * vp / (temp + 273.15f);
 
   return ah;
@@ -77,64 +91,68 @@ float climate_math::CalculateAH(float temp, float rh) {
 
 /**
  * @brief Расчет точки росы (°C).
+ * Температура, при которой водяной пар в воздухе становится насыщенным.
  */
 float climate_math::CalculateDewPoint(float temp, float rh) {
-  // Защита от логарифма нуля
+  // Защита от математической ошибки (логарифм нуля)
   if (rh <= 0.0f) rh = 0.1f;
 
-  // Промежуточная переменная H (gamma) на основе обратной формулы Магнуса
+  // Промежуточный расчет коэффициента гамма (H)
   float H = log(rh / 100.0f) + ((17.62f * temp) / (243.12f + temp));
 
-  // Расчет финальной температуры точки росы (°C)
+  // Финальный расчет температуры точки росы (°C)
   float dew_point = (243.12f * H) / (17.62f - H);
 
   return dew_point;
 }
 
 // ==========================================================
-// I2C UTILS
+// УТИЛИТЫ ШИНЫ I2C
 // ==========================================================
 #include <Wire.h>
 
+/**
+ * @brief Процедура программного освобождения шины I2C.
+ * Если ведомое устройство зависло в процессе передачи (держит SDA в LOW),
+ * мастер генерирует до 9 импульсов синхронизации для завершения транзакции.
+ */
 void i2c_utils::RecoverBus(uint8_t sda_pin, uint8_t scl_pin) {
     #ifdef DEBUG
-    Serial.println(F("I2C: Recovery procedure started..."));
+    Serial.println(F("I2C: Запуск процедуры восстановления шины..."));
     #endif
 
-    // 1. Освобождаем шину (отключаем аппаратный I2C)
+    // 1. Отключение аппаратного модуля I2C контроллера
     Wire.end();
 
-    // 2. Настраиваем пины на вывод
+    // 2. Перевод пинов в режим программного управления (Bit-bang)
     pinMode(sda_pin, INPUT_PULLUP);
     pinMode(scl_pin, OUTPUT);
     digitalWrite(scl_pin, HIGH);
 
-    // 3. Отправляем 9 импульсов SCL
-    // Это заставит любое устройство, зависшее в ожидании ACK, освободить SDA
+    // 3. Генерация 9 импульсов SCL
     for (int i = 0; i < 9; i++) {
         digitalWrite(scl_pin, LOW);
         delayMicroseconds(5);
         digitalWrite(scl_pin, HIGH);
         delayMicroseconds(5);
 
-        // Если SDA освободился (стал HIGH), можно закончить раньше
+        // Проверка: если линия SDA освобождена (стала HIGH), выходим раньше
         if (digitalRead(sda_pin) == HIGH && i > 0) {
             #ifdef DEBUG
-            Serial.print(F("I2C: Bus released at cycle ")); Serial.println(i);
+            Serial.print(F("I2C: Шина освобождена на цикле ")); Serial.println(i);
             #endif
             break;
         }
     }
 
-    // 4. Формируем сигнал STOP: SDA low->high пока SCL high
+    // 4. Формирование сигнала STOP (SDA: LOW -> HIGH при SCL: HIGH)
     pinMode(sda_pin, OUTPUT);
     digitalWrite(sda_pin, LOW);
     delayMicroseconds(5);
     digitalWrite(sda_pin, HIGH);
     delayMicroseconds(5);
 
-    // 5. Шина готова к повторной инициализации через Wire.begin()
     #ifdef DEBUG
-    Serial.println(F("I2C: Recovery complete."));
+    Serial.println(F("I2C: Восстановление завершено."));
     #endif
 }
