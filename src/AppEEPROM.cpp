@@ -4,9 +4,15 @@
 
 AppEEPROM::AppEEPROM() : needs_save_(false), last_change_time_(0) {}
 
+/**
+ * @brief Реализация CRC16 (алгоритм MODBUS).
+ * Используется для проверки целостности данных при чтении из EEPROM.
+ * Исключает из расчета последние 2 байта структуры (где хранится сам CRC).
+ */
 uint16_t AppEEPROM::CalculateCrc(const PersistentData& data) {
   uint16_t crc = 0xFFFF;
   const uint8_t* bytes = (const uint8_t*)&data;
+
   // Считаем CRC для всей структуры, кроме самого поля crc (последние 2 байта)
   for (uint16_t i = 0; i < sizeof(PersistentData) - 2; i++) {
     crc ^= bytes[i];
@@ -22,11 +28,14 @@ uint16_t AppEEPROM::CalculateCrc(const PersistentData& data) {
 
 /**
  * @brief Поиск последнего валидного слота с данными.
+ * Итерация идет с конца списка слотов к началу, чтобы найти самую свежую запись.
+ * @return Индекс слота (0..kSlotsCount-1) или -1, если данные повреждены или отсутствуют.
  */
 int AppEEPROM::FindActiveSlot() {
   for (int i = kSlotsCount - 1; i >= 0; i--) {
     PersistentData temp;
     EEPROM.get(i * kSlotSize, temp);
+    // Проверка целостности через CRC
     if (temp.crc == CalculateCrc(temp)) {
       return i;
     }
@@ -34,6 +43,11 @@ int AppEEPROM::FindActiveSlot() {
   return -1;  // Ни один слот не прошел проверку CRC
 }
 
+/**
+ * @brief Загрузка параметров системы.
+ * Ищет активный слот и считывает данные. Если данных нет (первый запуск),
+ * загружает заводские установки из config.h.
+ */
 void AppEEPROM::Load(PersistentData& data) {
   int slot = FindActiveSlot();
   if (slot != -1) {
@@ -43,7 +57,7 @@ void AppEEPROM::Load(PersistentData& data) {
     Serial.println(slot);
 #endif
   } else {
-    // Если данных нет, инициализируем нулями (или дефолтами)
+    // Если данных нет, инициализируем нулями и загружаем значения по умолчанию
     memset(&data, 0, sizeof(PersistentData));
     data.targetTemp = kDefaultTargetTemp;
     data.targetRh = kDefaultTargetRh;
@@ -54,11 +68,13 @@ void AppEEPROM::Load(PersistentData& data) {
 }
 
 /**
- * @brief Сохранение данных с использованием алгоритма выравнивания износа.
+ * @brief Сохранение данных с использованием алгоритма выравнивания износа (Wear Leveling).
+ * Вместо перезаписи одной и той же ячейки, запись производится в следующий по порядку слот.
+ * Старый слот помечается как невалидный путем обнуления CRC.
  */
 void AppEEPROM::Save(const PersistentData& data) {
   PersistentData copy = data;
-  copy.crc = CalculateCrc(copy);  // Вычисление CRC для обеспечения целостности
+  copy.crc = CalculateCrc(copy);  // Вычисление CRC для обеспечения целостности при следующем чтении
 
   int current_slot = FindActiveSlot();
   int next_slot = (current_slot + 1) % kSlotsCount;
@@ -66,7 +82,7 @@ void AppEEPROM::Save(const PersistentData& data) {
   // Записываем новые данные в следующий по порядку слот
   EEPROM.put(next_slot * kSlotSize, copy);
 
-  // Стираем CRC в старом слоте
+  // Аннулируем контрольную сумму в старом слоте, чтобы активным считался только новый
   if (current_slot != -1 && current_slot != next_slot) {
     uint16_t invalid_crc = 0;
     EEPROM.put(current_slot * kSlotSize + offsetof(PersistentData, crc),
@@ -79,16 +95,27 @@ void AppEEPROM::Save(const PersistentData& data) {
 #endif
 }
 
+/**
+ * @brief Постановка записи в очередь (Deferred Write).
+ * Предотвращает частые циклы записи в память при быстрой смене настроек пользователем.
+ * @param data Данные для записи.
+ * @param immediate Флаг немедленной записи (игнорирует 5-секундную задержку).
+ */
 void AppEEPROM::ScheduleSave(const PersistentData& data, bool immediate) {
   pending_data_ = data;
   needs_save_ = true;
   if (immediate) {
+    // Устанавливаем время так, чтобы условие в Update() выполнилось немедленно
     last_change_time_ = millis() - kDeferredSaveDelay;
   } else {
     last_change_time_ = millis();
   }
 }
 
+/**
+ * @brief Метод фонового обслуживания записи.
+ * Проверяет, прошло ли достаточно времени с момента последнего изменения.
+ */
 void AppEEPROM::Update() {
   if (needs_save_ && (millis() - last_change_time_ >= kDeferredSaveDelay)) {
     Save(pending_data_);
