@@ -2,10 +2,10 @@
 #include "DisplayUI.h"
 #include "MenuNavigator.h"
 
-// Переменные из DisplayUI.cpp, которые нужны здесь для идентификации калибровок
-// В идеале их тоже стоит перенести в MenuActions или сделать общими.
-// Для простоты пока объявим как внешние или перенесем.
-
+/**
+ * @brief Центральный исполнитель команд меню.
+ * Выполняет диспетчеризацию ActionID на конкретные вызовы API контроллера или навигатора.
+ */
 void MenuActions::Execute(DisplayUI* ui, ActionID action) {
   if (action == ActionID::kNone) return;
 
@@ -13,15 +13,19 @@ void MenuActions::Execute(DisplayUI* ui, ActionID action) {
 
   switch (action) {
     case ActionID::kNavNext:
+      // Переход к следующему пункту в текущем подразделе
       if (root) ui->nav_.NextItem(root->item_count);
       break;
     case ActionID::kNavPrev:
+      // Переход к предыдущему пункту в текущем подразделе
       if (root) ui->nav_.PrevItem(root->item_count);
       break;
     case ActionID::kNavNextRoot:
+      // Листание главных разделов вперед
       ui->nav_.NextRoot(ui->GetMenuTableSize());
       break;
     case ActionID::kNavPrevRoot:
+      // Листание главных разделов назад
       ui->nav_.PrevRoot(ui->GetMenuTableSize());
       break;
     case ActionID::kValueInc:
@@ -43,6 +47,7 @@ void MenuActions::Execute(DisplayUI* ui, ActionID action) {
       HandleLongMenuStats(ui);
       break;
     case ActionID::kErrorReset:
+      // Команда контроллеру на попытку выхода из состояния ошибки
       ui->controller_->ResetError();
       break;
     default:
@@ -50,12 +55,19 @@ void MenuActions::Execute(DisplayUI* ui, ActionID action) {
   }
 }
 
+/**
+ * @brief Локальная утилита для чтения конфигурации страницы значения из Flash.
+ */
 static void LoadValuePageDef(uint8_t index, ValuePageDef* ram_buf) {
   if (ram_buf) {
     memcpy_P(ram_buf, &VALUE_PAGES[index], sizeof(ValuePageDef));
   }
 }
 
+/**
+ * @brief Применение измененного значения к ядру системы.
+ * Распределяет значения по соответствующим методам контроллера (уставки или калибровка).
+ */
 void MenuActions::ApplyValueChange(DisplayUI* ui, MenuItemID id, float val) {
   ValueID vid = ValueID::kNone;
 
@@ -66,6 +78,7 @@ void MenuActions::ApplyValueChange(DisplayUI* ui, MenuItemID id, float val) {
     ui->controller_->SetTargetRh(val);
     vid = ValueID::kTargetHum;
   } else if (id >= MenuItemID::kCalibBmeTemp && id <= MenuItemID::kCalibDsTemp) {
+    // Групповая обработка калибровочных констант
     CalibrationData c = ui->model_.calib;
     if (id == MenuItemID::kCalibBmeTemp) { c.bmeTempOffset = val; vid = ValueID::kCalibBmeTemp; }
     else if (id == MenuItemID::kCalibBmeHum) { c.bmeHumOffset = val; vid = ValueID::kCalibBmeHum; }
@@ -75,11 +88,15 @@ void MenuActions::ApplyValueChange(DisplayUI* ui, MenuItemID id, float val) {
     ui->controller_->SetCalibration(c);
   }
 
+  // Обновляем локальную модель UI для мгновенного отображения без ожидания цикла синхронизации
   if (vid != ValueID::kNone) {
     ui->model_.SetValue(vid, val);
   }
 }
 
+/**
+ * @brief Изменение значения с учетом шага и границ.
+ */
 void MenuActions::AdjustValue(DisplayUI* ui, float delta) {
   const MenuItemDef* item = ui->GetCurrentItemDef();
   if (!item) return;
@@ -87,10 +104,10 @@ void MenuActions::AdjustValue(DisplayUI* ui, float delta) {
   ValuePageDef vcfg;
   LoadValuePageDef(item->ctx_index, &vcfg);
 
-  // Для калибровки используем точность 1 знак, для других (например HUM) берем из конфига
   float val = ui->model_.GetValue(vcfg.val_id);
   val += delta;
 
+  // Ограничение значения заданными в PROGMEM рамками
   if (val < vcfg.min_val) val = vcfg.min_val;
   if (val > vcfg.max_val) val = vcfg.max_val;
 
@@ -113,17 +130,25 @@ void MenuActions::HandleDownValue(DisplayUI* ui) {
   AdjustValue(ui, -vcfg.step);
 }
 
+/**
+ * @brief Обработка запуска ручных режимов.
+ * Устанавливает таймеры в контроллере и выводит подтверждающее сообщение.
+ */
 void MenuActions::HandleMenuManual(DisplayUI* ui) {
-  if (ui->nav_.GetItemIndex() == 0) { // Вентилятор
+  if (ui->nav_.GetItemIndex() == 0) { // Элемент MANUAL_FAN
     ui->controller_->StartManualFan(30);
     ui->temp_message_ = "FAN STARTED";
-  } else { // Озон
+  } else { // Элемент MANUAL_OZONE
     ui->controller_->StartManualOzone(15);
     ui->temp_message_ = "OZONE STARTED";
   }
   ui->message_timer_ = millis();
 }
 
+/**
+ * @brief Сброс накопленной статистики наработки.
+ * Требует нахождения на странице сброса внутри раздела STATS.
+ */
 void MenuActions::HandleLongMenuStats(DisplayUI* ui) {
   if (ui->nav_.GetItemIndex() == 1) { // Страница STATS_RESET
     ui->controller_->ResetStats();
