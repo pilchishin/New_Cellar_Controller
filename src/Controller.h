@@ -52,7 +52,7 @@ class Controller {
   // Логика обнаружения присутствия пользователя (для безопасности озонирования)
   bool is_user_present_;             ///< Флаг недавней активности пользователя
   unsigned long last_user_activity_time_; ///< Метка времени последнего действия пользователя
-  const unsigned long kUserPresenceTimeout = 30000UL; ///< Таймаут сброса флага присутствия (30 сек)
+  const unsigned long kUserPresenceTimeout = 1800000UL; ///< Таймаут сброса флага присутствия (30 мин)
 
   /**
    * @brief Реализация алгоритма автоматического поддержания климата.
