@@ -159,6 +159,10 @@ void Controller::ProcessStateMachine() {
     }
 
     case SystemState::kOzoneActive:
+      if (is_user_present_) {
+        ChangeState(SystemState::kOzoneAbort);
+        break;
+      }
       // Фаза активной работы генератора (15 мин)
       if (now - state_timer_ >= kOzoneWorkTime) {
         relays_->SetOzone(false);
@@ -168,6 +172,10 @@ void Controller::ProcessStateMachine() {
       break;
 
     case SystemState::kOzoneHold:
+      if (is_user_present_) {
+        ChangeState(SystemState::kOzoneAbort);
+        break;
+      }
       // Фаза экспозиции (озон должен подействовать) (2 часа)
       if (now - state_timer_ >= kOzoneHoldTime) {
         state_timer_ = now;
@@ -197,8 +205,8 @@ void Controller::ProcessStateMachine() {
 
     case SystemState::kOzoneAbort:
       // Экстренная остановка озонирования (например, пришел человек)
-      relays_->SetFan(false, true);
       relays_->SetOzone(false);
+      relays_->SetFan(false, true);
       ChangeState(SystemState::kAutoClimate);
       break;
 
