@@ -30,7 +30,7 @@ static const char unit_pct[] PROGMEM = "%";
  */
 const ValuePageDef VALUE_PAGES[] PROGMEM = {
   { MenuItemID::kTargetTemp,   ValueID::kTargetTemp,   kTempCriticalMin, 15.0f, 0.1f, unit_c,   1 },
-  { MenuItemID::kTargetHum,    ValueID::kTargetHum,    0.0f, 100.0f, 1.0f, unit_pct, 0 },
+  { MenuItemID::kTargetHum,    ValueID::kTargetHum,    50.0f, 95.0f, 1.0f, unit_pct, 0 },
   { MenuItemID::kCalibBmeTemp, ValueID::kCalibBmeTemp, -5.0f,  5.0f, 0.1f, unit_c,   1 },
   { MenuItemID::kCalibBmeHum,  ValueID::kCalibBmeHum,  -5.0f,  5.0f, 0.1f, unit_pct, 1 },
   { MenuItemID::kCalibHtuTemp, ValueID::kCalibHtuTemp, -5.0f,  5.0f, 0.1f, unit_c,   1 },

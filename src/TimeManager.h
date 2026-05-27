@@ -23,6 +23,8 @@ class TimeManager {
   // Состояние модуля
   bool rtc_valid_;
   uint8_t read_error_count_;
+  unsigned long rtc_retry_timer_ = 0;
+  static constexpr unsigned long kRtcRetryInterval = 30000UL;
 
  public:
   TimeManager();

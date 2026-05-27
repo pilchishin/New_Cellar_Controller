@@ -60,9 +60,34 @@ void TimeManager::Init() {
 }
 
 void TimeManager::Update() {
-  // Если модуль уже помечен как неисправный аппаратно, не пытаемся читать
-  // (для восстановления потребуется перезагрузка контроллера)
-  if (!rtc_valid_ && read_error_count_ >= 3) return;
+  // Если модуль помечен как неисправный, пытаемся восстановиться каждые 30 секунд
+  if (!rtc_valid_) {
+    if (millis() - rtc_retry_timer_ < kRtcRetryInterval) {
+      return;
+    }
+
+#ifdef DEBUG
+    Serial.println(F("RTC Recovery Attempt..."));
+#endif
+
+    // Пытаемся переинициализировать RTC
+    if (rtc_.begin()) {
+      DateTime temp = rtc_.now();
+      // Год >= 2020 считается валидным для восстановления
+      if (temp.year() >= 2020) {
+        rtc_valid_ = true;
+        read_error_count_ = 0;
+#ifdef DEBUG
+        Serial.println(F("RTC Recovered successfully."));
+#endif
+      }
+    }
+
+    if (!rtc_valid_) {
+      rtc_retry_timer_ = millis();
+      return;
+    }
+  }
 
   // Пытаемся прочитать время. Библиотека RTClib использует Wire.requestFrom.
   // Если устройство на шине зависло, может вернуться кривая дата.
@@ -80,6 +105,7 @@ void TimeManager::Update() {
 
     if (read_error_count_ >= 3) {
       rtc_valid_ = false;  // Три ошибки подряд — критический отказ
+      rtc_retry_timer_ = millis();
     }
   } else {
     // Успешное чтение
