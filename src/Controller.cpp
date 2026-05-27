@@ -222,7 +222,9 @@ void Controller::ProcessStateMachine() {
       // Ручной запуск озонирования по таймеру
       if (now - state_timer_ >= (manual_timer_ * 60000UL)) {
         relays_->SetOzone(false);
-        ChangeState(SystemState::kAutoClimate);
+        relays_->SetFan(true);
+        state_timer_ = now;
+        ChangeState(SystemState::kOzoneVent);
       }
       break;
 
@@ -361,6 +363,11 @@ void Controller::StartManualFan(uint16_t minutes) {
  */
 void Controller::StartManualOzone(uint16_t minutes) {
   if (current_state_ == SystemState::kErrorState) return;
+
+  // Проверка условий безопасности (люди или мороз)
+  SensorData out = sensors_->GetOutside();
+  if (is_user_present_ || out.temp <= 0.0f) return;
+
   manual_timer_ = minutes;
   state_timer_ = millis();
   relays_->SetOzone(true);
