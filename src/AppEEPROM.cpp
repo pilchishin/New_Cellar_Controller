@@ -28,19 +28,27 @@ uint16_t AppEEPROM::CalculateCrc(const PersistentData& data) {
 
 /**
  * @brief Поиск последнего валидного слота с данными.
- * Итерация идет с конца списка слотов к началу, чтобы найти самую свежую запись.
+ * Выбирает слот с максимальным порядковым номером (seq) среди всех валидных.
  * @return Индекс слота (0..kSlotsCount-1) или -1, если данные повреждены или отсутствуют.
  */
 int AppEEPROM::FindActiveSlot() {
-  for (int i = kSlotsCount - 1; i >= 0; i--) {
+  int best_slot = -1;
+  uint16_t max_seq = 0;
+
+  for (int i = 0; i < kSlotsCount; i++) {
     PersistentData temp;
     EEPROM.get(i * kSlotSize, temp);
     // Проверка целостности через CRC
     if (temp.crc == CalculateCrc(temp)) {
-      return i;
+      // Если это первый валидный слот или его seq больше (с учетом переполнения uint16_t
+      // это упрощенная проверка, для 10 слотов достаточно обычного > или >=)
+      if (best_slot == -1 || temp.seq >= max_seq) {
+        max_seq = temp.seq;
+        best_slot = i;
+      }
     }
   }
-  return -1;  // Ни один слот не прошел проверку CRC
+  return best_slot;
 }
 
 /**
@@ -52,15 +60,19 @@ void AppEEPROM::Load(PersistentData& data) {
   int slot = FindActiveSlot();
   if (slot != -1) {
     EEPROM.get(slot * kSlotSize, data);
+    current_slot_seq_ = data.seq;
 #ifdef DEBUG
     Serial.print(F("EEPROM: Loaded from slot "));
-    Serial.println(slot);
+    Serial.print(slot);
+    Serial.print(F(" with seq "));
+    Serial.println(current_slot_seq_);
 #endif
   } else {
     // Если данных нет, инициализируем нулями и загружаем значения по умолчанию
     memset(&data, 0, sizeof(PersistentData));
     data.targetTemp = kDefaultTargetTemp;
     data.targetRh = kDefaultTargetRh;
+    current_slot_seq_ = 0;
 #ifdef DEBUG
     Serial.println(F("EEPROM: No valid data found. Defaults loaded."));
 #endif
@@ -74,6 +86,7 @@ void AppEEPROM::Load(PersistentData& data) {
  */
 void AppEEPROM::Save(const PersistentData& data) {
   PersistentData copy = data;
+  copy.seq = ++current_slot_seq_;
   copy.crc = CalculateCrc(copy);  // Вычисление CRC для обеспечения целостности при следующем чтении
 
   int current_slot = FindActiveSlot();

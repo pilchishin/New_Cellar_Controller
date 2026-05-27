@@ -15,6 +15,7 @@ struct PersistentData {
     float targetRh;              ///< Целевая относительная влажность (%)
     CalibrationData calibration; ///< Данные калибровки датчиков (смещения)
     SystemStatistics stats;      ///< Накопленная статистика работы (время наработки)
+    uint16_t seq;                ///< Порядковый номер записи (sequence counter)
     uint16_t crc;                ///< Контрольная сумма CRC16 (MODBUS-совместимая)
 };
 
@@ -48,6 +49,7 @@ class AppEEPROM {
    */
   int FindActiveSlot();
 
+  uint16_t current_slot_seq_ = 0; ///< Текущий порядковый номер записи
   PersistentData pending_data_; ///< Буфер данных, ожидающих записи
   bool needs_save_;             ///< Флаг наличия изменений, требующих сохранения
   unsigned long last_change_time_; ///< Время последнего изменения данных (в мс)
