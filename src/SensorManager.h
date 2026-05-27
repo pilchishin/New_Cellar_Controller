@@ -72,6 +72,8 @@ class SensorManager {
 
   // --- Диагностика I2C шины ---
   uint16_t i2c_error_count_;       ///< Счетчик последовательных неудачных транзакций по I2C.
+  uint8_t bme_error_count_ = 0;    ///< Счетчик ошибок чтения BME280.
+  uint8_t htu_error_count_ = 0;    ///< Счетчик ошибок чтения HTU21D.
   const uint8_t kI2cMaxErrors = 3; ///< Порог ошибок, после которого инициируется восстановление шины.
   static constexpr uint16_t kI2cErrorMax = 1000; ///< Максимальное значение счетчика ошибок (защита от переполнения).
 

@@ -145,6 +145,12 @@ void SensorManager::Update() {
     // Если данные получены (не NaN), шина I2C физически работает.
     if (!isnan(raw_temp) && !isnan(raw_hum)) {
       i2c_any_success = true;
+      bme_error_count_ = 0;
+    } else {
+      bme_error_count_++;
+      if (bme_error_count_ >= kI2cMaxErrors) {
+        if (i2c_error_count_ < kI2cErrorMax) i2c_error_count_++;
+      }
     }
 
     // Проверка физической достоверности данных (диапазоны из config.h).
@@ -214,6 +220,12 @@ void SensorManager::Update() {
 
     if (!isnan(raw_temp) && !isnan(raw_hum)) {
       i2c_any_success = true;
+      htu_error_count_ = 0;
+    } else {
+      htu_error_count_++;
+      if (htu_error_count_ >= kI2cMaxErrors) {
+        if (i2c_error_count_ < kI2cErrorMax) i2c_error_count_++;
+      }
     }
 
     bool is_plausible = !isnan(raw_temp) && !isnan(raw_hum) &&
@@ -361,6 +373,8 @@ void SensorManager::Recover() {
 
   // Сброс счетчика и попытка переинициализации датчиков.
   i2c_error_count_ = 0;
+  bme_error_count_ = 0;
+  htu_error_count_ = 0;
   InitBme();
   InitHtu();
   InitDs();
