@@ -139,7 +139,7 @@ void Controller::ProcessStateMachine() {
     case SystemState::kOzoneStart: {
       // Проверка условий безопасности перед пуском газа
       SensorData out = sensors_->GetOutside();
-      bool is_frost_outside = (out.temp < 0.0f);
+      bool is_frost_outside = (out.temp <= kOutTempFrostLimit);
       bool is_ozone_inhibited = (is_frost_outside || is_user_present_);
 
       if (is_ozone_inhibited) {
@@ -186,7 +186,7 @@ void Controller::ProcessStateMachine() {
     case SystemState::kOzoneVent: {
       // Фаза проветривания после озонирования (15 мин)
       SensorData out = sensors_->GetOutside();
-      bool is_frost_outside = (out.temp <= 0.0f);
+      bool is_frost_outside = (out.temp <= kOutTempFrostLimit);
 
       // Проветривание разрешено только если на улице не мороз
       if (!is_frost_outside) {
@@ -257,7 +257,7 @@ void Controller::HandleAutoClimate() {
   // 1. Физические условия (Гистерезис)
   bool is_fan_on = relays_->GetFanState();
   // Пороги переключаются в зависимости от текущего состояния вентилятора
-  bool is_too_hot = is_fan_on ? (in.temp > (target_temp_ - kHisteresisTempOff))
+  bool is_too_hot = is_fan_on ? (in.temp > (target_temp_ - kHysteresisTemp))
                               : (in.temp > (target_temp_ + kHysteresisTemp));
   bool is_too_humid = is_fan_on ? (in.rh > (target_rh_ - kHysteresisRh))
                                 : (in.rh > (target_rh_ + kHysteresisRh));
@@ -366,7 +366,7 @@ void Controller::StartManualOzone(uint16_t minutes) {
 
   // Проверка условий безопасности (люди или мороз)
   SensorData out = sensors_->GetOutside();
-  if (is_user_present_ || out.temp <= 0.0f) return;
+  if (is_user_present_ || out.temp <= kOutTempFrostLimit) return;
 
   manual_timer_ = minutes;
   state_timer_ = millis();
