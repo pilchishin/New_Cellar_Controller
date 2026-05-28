@@ -40,9 +40,9 @@ int AppEEPROM::FindActiveSlot() {
     EEPROM.get(i * kSlotSize, temp);
     // Проверка целостности через CRC
     if (temp.crc == CalculateCrc(temp)) {
-      // Если это первый валидный слот или его seq больше (с учетом переполнения uint16_t
-      // это упрощенная проверка, для 10 слотов достаточно обычного > или >=)
-      if (best_slot == -1 || temp.seq >= max_seq) {
+      // Сравнение с использованием арифметики серийных номеров для корректной
+      // обработки переполнения uint16_t (wraparound).
+      if (best_slot == -1 || (int16_t)(temp.seq - max_seq) > 0) {
         max_seq = temp.seq;
         best_slot = i;
       }
