@@ -58,6 +58,7 @@ int AppEEPROM::FindActiveSlot() {
  */
 void AppEEPROM::Load(PersistentData& data) {
   int slot = FindActiveSlot();
+  current_slot_ = slot;
   if (slot != -1) {
     EEPROM.get(slot * kSlotSize, data);
     current_slot_seq_ = data.seq;
@@ -89,18 +90,20 @@ void AppEEPROM::Save(const PersistentData& data) {
   copy.seq = ++current_slot_seq_;
   copy.crc = CalculateCrc(copy);  // Вычисление CRC для обеспечения целостности при следующем чтении
 
-  int current_slot = FindActiveSlot();
-  int next_slot = (current_slot + 1) % kSlotsCount;
+  int old_slot = current_slot_;
+  int next_slot = (old_slot + 1) % kSlotsCount;
 
   // Записываем новые данные в следующий по порядку слот
   EEPROM.put(next_slot * kSlotSize, copy);
 
   // Аннулируем контрольную сумму в старом слоте, чтобы активным считался только новый
-  if (current_slot != -1 && current_slot != next_slot) {
+  if (old_slot != -1 && old_slot != next_slot) {
     uint16_t invalid_crc = 0;
-    EEPROM.put(current_slot * kSlotSize + offsetof(PersistentData, crc),
+    EEPROM.put(old_slot * kSlotSize + offsetof(PersistentData, crc),
                invalid_crc);
   }
+
+  current_slot_ = next_slot;
 
 #ifdef DEBUG
   Serial.print(F("EEPROM: Saved to slot "));
