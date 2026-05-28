@@ -112,7 +112,7 @@ void AppEEPROM::Save(const PersistentData& data) {
  * @brief Постановка записи в очередь (Deferred Write).
  * Предотвращает частые циклы записи в память при быстрой смене настроек пользователем.
  * @param data Данные для записи.
- * @param immediate Флаг немедленной записи (игнорирует 5-секундную задержку).
+ * @param immediate Флаг немедленной записи (игнорирует 30-секундную задержку).
  */
 void AppEEPROM::ScheduleSave(const PersistentData& data, bool immediate) {
   pending_data_ = data;

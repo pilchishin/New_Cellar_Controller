@@ -58,7 +58,7 @@ const uint32_t kSensorPollInterval = 10000UL; // Опрос датчиков р�
 const uint32_t kSensorRetryInterval = 60000UL; // Интервал повторной попытки опроса датчика
 const uint8_t  kSensorMaxRetries    = 3;       // Макс. количество попыток оживления датчика
 const uint8_t  kSensorStabilityThreshold = 3;  // Кол-во циклов для стабилизации показаний
-const uint32_t kBacklightTimeout    = 30000UL;  // Автовыключение подсветки (30 секунд)
+const uint32_t kBacklightTimeout    = 60000UL;  // Автовыключение подсветки (60 секунд)
 
 // Интервалы цикла озонирования
 const uint32_t kOzoneWorkTime = 900000UL;   // Работа озонатора (15 минут)

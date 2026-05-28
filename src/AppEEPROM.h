@@ -31,7 +31,7 @@ class AppEEPROM {
   static const uint16_t kEepromSize = 1024;   ///< Доступный объем EEPROM для ATmega328P (1 КБ)
   static const uint8_t kSlotsCount = 10;      ///< Количество слотов для циклической записи (wear leveling)
   static const uint16_t kSlotSize = sizeof(PersistentData); ///< Размер одного слота в байтах
-  static const uint32_t kDeferredSaveDelay = 5000UL;        ///< Задержка отложенного сохранения (5 секунд)
+  static const uint32_t kDeferredSaveDelay = 30000UL;        ///< Задержка отложенного сохранения (30 секунд)
 
   // Проверка на этапе компиляции, что слоты помещаются в доступный объем памяти
   static_assert(kSlotsCount * kSlotSize <= kEepromSize, "EEPROM: slots overflow kEepromSize");
