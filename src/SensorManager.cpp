@@ -116,6 +116,32 @@ void SensorManager::InitDs() {
 }
 
 /**
+ * @brief Принудительная деактивация датчика BME280 при критических ошибках.
+ */
+void SensorManager::InvalidateBme() {
+  bme_stat_.valid = false;
+  bme_stat_.retries = 0;
+  bme_stat_.stability_count = 0;
+  bme_error_count_ = 0;
+  inside_data_.valid = false;
+  filter_bme_temp_.Invalidate();
+  filter_bme_hum_.Invalidate();
+}
+
+/**
+ * @brief Принудительная деактивация датчика HTU21D при критических ошибках.
+ */
+void SensorManager::InvalidateHtu() {
+  htu_stat_.valid = false;
+  htu_stat_.retries = 0;
+  htu_stat_.stability_count = 0;
+  htu_error_count_ = 0;
+  outside_data_.valid = false;
+  filter_htu_temp_.Invalidate();
+  filter_htu_hum_.Invalidate();
+}
+
+/**
  * @brief Цикл обновления данных всех датчиков.
  */
 void SensorManager::Update() {
@@ -142,38 +168,15 @@ void SensorManager::Update() {
     float raw_temp = bme_.readTemperature();
     float raw_hum = bme_.readHumidity();
 
-    // Если данные получены (не NaN), шина I2C физически работает.
-    if (!isnan(raw_temp) && !isnan(raw_hum)) {
+    bool is_nan = isnan(raw_temp) || isnan(raw_hum);
+    bool is_in_range = raw_temp >= kRawTempMin && raw_temp <= kRawTempMax &&
+                       raw_hum >= kRawHumMin && raw_hum <= kRawHumMax;
+    bool is_plausible = !is_nan && is_in_range;
+
+    if (is_plausible) {
       i2c_any_success = true;
       bme_error_count_ = 0;
-    } else {
-      bme_error_count_++;
-      if (bme_error_count_ >= kI2cMaxErrors) {
-        bme_stat_.valid = false;
-        bme_stat_.retries = 0;
-        bme_stat_.stability_count = 0;
-        bme_error_count_ = 0;
-        inside_data_.valid = false;
-        filter_bme_temp_.Invalidate();
-        filter_bme_hum_.Invalidate();
-      }
-    }
 
-    // Проверка физической достоверности данных (диапазоны из config.h).
-    bool is_plausible = !isnan(raw_temp) && !isnan(raw_hum) &&
-                        raw_temp >= kRawTempMin && raw_temp <= kRawTempMax &&
-                        raw_hum >= kRawHumMin && raw_hum <= kRawHumMax;
-
-    if (!is_plausible) {
-      bme_stat_.valid = false;
-      inside_data_.valid = false;
-      bme_stat_.stability_count = 0;
-      filter_bme_temp_.Invalidate();
-      filter_bme_hum_.Invalidate();
-#ifdef DEBUG
-      Serial.println(F("BME280: Data out of range!"));
-#endif
-    } else {
       // Инициализация или обновление фильтров.
       float filtered_temp, filtered_hum;
       if (!filter_bme_temp_.IsInitialized()) {
@@ -202,6 +205,17 @@ void SensorManager::Update() {
       if (bme_stat_.stability_count < kSensorStabilityThreshold) {
         bme_stat_.stability_count++;
       }
+    } else {
+      // Данные недостоверны (NaN или вне диапазона): используем счетчик ошибок для толерантности.
+      bme_error_count_++;
+      if (bme_error_count_ >= kI2cMaxErrors) {
+        InvalidateBme();
+      } else {
+        inside_data_.valid = false;
+      }
+#ifdef DEBUG
+      Serial.println(is_nan ? F("BME280: NaN read!") : F("BME280: Data out of range!"));
+#endif
     }
   }
 
@@ -224,36 +238,15 @@ void SensorManager::Update() {
     float raw_temp = htu_.readTemperature();
     float raw_hum = htu_.readHumidity();
 
-    if (!isnan(raw_temp) && !isnan(raw_hum)) {
+    bool is_nan = isnan(raw_temp) || isnan(raw_hum);
+    bool is_in_range = raw_temp >= kRawTempMin && raw_temp <= kRawTempMax &&
+                       raw_hum >= kRawHumMin && raw_hum <= kRawHumMax;
+    bool is_plausible = !is_nan && is_in_range;
+
+    if (is_plausible) {
       i2c_any_success = true;
       htu_error_count_ = 0;
-    } else {
-      htu_error_count_++;
-      if (htu_error_count_ >= kI2cMaxErrors) {
-        htu_stat_.valid = false;
-        htu_stat_.retries = 0;
-        htu_stat_.stability_count = 0;
-        htu_error_count_ = 0;
-        outside_data_.valid = false;
-        filter_htu_temp_.Invalidate();
-        filter_htu_hum_.Invalidate();
-      }
-    }
 
-    bool is_plausible = !isnan(raw_temp) && !isnan(raw_hum) &&
-                        raw_temp >= kRawTempMin && raw_temp <= kRawTempMax &&
-                        raw_hum >= kRawHumMin && raw_hum <= kRawHumMax;
-
-    if (!is_plausible) {
-      htu_stat_.valid = false;
-      outside_data_.valid = false;
-      htu_stat_.stability_count = 0;
-      filter_htu_temp_.Invalidate();
-      filter_htu_hum_.Invalidate();
-#ifdef DEBUG
-      Serial.println(F("HTU21D: Data out of range!"));
-#endif
-    } else {
       float filtered_temp, filtered_hum;
       if (!filter_htu_temp_.IsInitialized()) {
         filter_htu_temp_.Reset(raw_temp);
@@ -278,6 +271,16 @@ void SensorManager::Update() {
       if (htu_stat_.stability_count < kSensorStabilityThreshold) {
         htu_stat_.stability_count++;
       }
+    } else {
+      htu_error_count_++;
+      if (htu_error_count_ >= kI2cMaxErrors) {
+        InvalidateHtu();
+      } else {
+        outside_data_.valid = false;
+      }
+#ifdef DEBUG
+      Serial.println(is_nan ? F("HTU21D: NaN read!") : F("HTU21D: Data out of range!"));
+#endif
     }
   }
 
