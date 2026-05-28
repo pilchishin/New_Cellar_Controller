@@ -149,7 +149,13 @@ void SensorManager::Update() {
     } else {
       bme_error_count_++;
       if (bme_error_count_ >= kI2cMaxErrors) {
-        if (i2c_error_count_ < kI2cErrorMax) i2c_error_count_++;
+        bme_stat_.valid = false;
+        bme_stat_.retries = 0;
+        bme_stat_.stability_count = 0;
+        bme_error_count_ = 0;
+        inside_data_.valid = false;
+        filter_bme_temp_.Invalidate();
+        filter_bme_hum_.Invalidate();
       }
     }
 
@@ -224,7 +230,13 @@ void SensorManager::Update() {
     } else {
       htu_error_count_++;
       if (htu_error_count_ >= kI2cMaxErrors) {
-        if (i2c_error_count_ < kI2cErrorMax) i2c_error_count_++;
+        htu_stat_.valid = false;
+        htu_stat_.retries = 0;
+        htu_stat_.stability_count = 0;
+        htu_error_count_ = 0;
+        outside_data_.valid = false;
+        filter_htu_temp_.Invalidate();
+        filter_htu_hum_.Invalidate();
       }
     }
 
