@@ -69,7 +69,7 @@ void Controller::HandleStorage() {
   unsigned long now = millis();
   if (now - last_eeprom_save_ >= 1800000UL) {
     last_eeprom_save_ = now;
-    PersistentData data = {target_temp_, target_rh_, calib_, stats_, 0};
+    PersistentData data = {target_temp_, target_rh_, calib_, stats_, 0, 0};
     storage_.ScheduleSave(data, true);  // Принудительное немедленное сохранение
   }
 
@@ -388,7 +388,7 @@ void Controller::NotifyUserActivity() {
  */
 void Controller::SetTargetTemp(float t) {
   target_temp_ = t;
-  PersistentData data = {target_temp_, target_rh_, calib_, stats_, 0};
+  PersistentData data = {target_temp_, target_rh_, calib_, stats_, 0, 0};
   storage_.ScheduleSave(data);
 }
 
@@ -397,7 +397,7 @@ void Controller::SetTargetTemp(float t) {
  */
 void Controller::SetTargetRh(float h) {
   target_rh_ = h;
-  PersistentData data = {target_temp_, target_rh_, calib_, stats_, 0};
+  PersistentData data = {target_temp_, target_rh_, calib_, stats_, 0, 0};
   storage_.ScheduleSave(data);
 }
 
@@ -407,7 +407,7 @@ void Controller::SetTargetRh(float h) {
 void Controller::SetCalibration(const CalibrationData& data) {
   calib_ = data;
   sensors_->SetCalibration(calib_);
-  PersistentData d = {target_temp_, target_rh_, calib_, stats_, 0};
+  PersistentData d = {target_temp_, target_rh_, calib_, stats_, 0, 0};
   storage_.ScheduleSave(d);
 }
 
@@ -416,6 +416,6 @@ void Controller::SetCalibration(const CalibrationData& data) {
  */
 void Controller::ResetStats() {
   stats_ = {0, 0, 0};
-  PersistentData data = {target_temp_, target_rh_, calib_, stats_, 0};
+  PersistentData data = {target_temp_, target_rh_, calib_, stats_, 0, 0};
   storage_.ScheduleSave(data);
 }

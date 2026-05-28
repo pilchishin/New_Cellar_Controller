@@ -2,6 +2,7 @@
 #define APP_EEPROM_H
 
 #include <Arduino.h>
+#include <stddef.h>
 #include "Types.h"
 
 /**
@@ -19,6 +20,10 @@ struct PersistentData {
     uint16_t crc;                ///< Контрольная сумма CRC16 (MODBUS-совместимая)
 };
 
+static_assert(offsetof(PersistentData, crc) ==
+sizeof(PersistentData) - sizeof(uint16_t),
+"crc must be the last field in PersistentData");
+
 /**
  * @class AppEEPROM
  * @brief Класс для управления постоянной памятью контроллера.
@@ -34,7 +39,8 @@ class AppEEPROM {
   static const uint32_t kDeferredSaveDelay = 5000UL;        ///< Задержка отложенного сохранения (5 секунд)
 
   // Проверка на этапе компиляции, что слоты помещаются в доступный объем памяти
-  static_assert(kSlotsCount * kSlotSize <= kEepromSize, "EEPROM: slots overflow kEepromSize");
+  static_assert(kSlotsCount * kSlotSize <= kEepromSize,
+                "EEPROM: slots overflow kEepromSize");
 
   /**
    * @brief Вычисляет контрольную сумму CRC16 для структуры данных.
