@@ -7,6 +7,10 @@
  */
 EmaMedianFilter::EmaMedianFilter(float alpha) {
   this->alpha_ = alpha;
+  // Alpha is clamped to (0, 1) exclusive to prevent filter degeneracy.
+  if (this->alpha_ <= 0.0f) this->alpha_ = 0.01f;
+  if (this->alpha_ >= 1.0f) this->alpha_ = 0.99f;
+
   this->is_initialized_ = false;
   this->ema_value_ = 0.0f;
   for (int i = 0; i < 3; i++) {
@@ -115,16 +119,16 @@ float climate_math::CalculateDewPoint(float temp, float rh) {
  * @brief Процедура программного освобождения шины I2C.
  * Если ведомое устройство зависло в процессе передачи (держит SDA в LOW),
  * мастер генерирует до 9 импульсов синхронизации для завершения транзакции.
+ *
+ * @note Предусловие: Вызывающий должен вызвать Wire.end() перед этой функцией.
+ * Эта функция только выполняет последовательность импульсов bit-bang и STOP.
  */
 void i2c_utils::RecoverBus(uint8_t sda_pin, uint8_t scl_pin) {
     #ifdef DEBUG
     Serial.println(F("I2C: Запуск процедуры восстановления шины..."));
     #endif
 
-    // 1. Отключение аппаратного модуля I2C контроллера
-    Wire.end();
-
-    // 2. Перевод пинов в режим программного управления (Bit-bang)
+    // 1. Перевод пинов в режим программного управления (Bit-bang)
     pinMode(sda_pin, INPUT_PULLUP);
     pinMode(scl_pin, OUTPUT);
     digitalWrite(scl_pin, HIGH);
