@@ -76,7 +76,7 @@ void loop() {
   }
 
   // 2. Обновление времени (раз в 1 секунду достаточно для расписания)
-  if (current_millis - last_time_update >= 1000) {
+  if (current_millis - last_time_update >= kRtcPollInterval) {
     last_time_update = current_millis;
     time_manager.Update();
   }

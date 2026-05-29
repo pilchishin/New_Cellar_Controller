@@ -2,6 +2,7 @@
 #define BUTTON_ENGINE_H
 
 #include <Arduino.h>
+#include "config.h"
 
 /**
  * @enum ButtonEvent
@@ -58,10 +59,6 @@ class ButtonEngine {
   unsigned long last_action_;  ///< Время последнего сгенерированного события UP/DOWN (для автоповтора)
   unsigned long menu_timer_;   ///< Время начала нажатия кнопки MENU
   bool menu_pressed_;          ///< Флаг текущего зажатого состояния кнопки MENU
-
-  const unsigned long kDebounceMs = 50;   ///< Время антидребезга (мс)
-  const unsigned long kRepeatMs = 150;    ///< Период автоповтора для UP/DOWN (мс)
-  const unsigned long kLongPressMs = 600; ///< Порог длительного нажатия (мс)
 };
 
 #endif

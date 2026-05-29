@@ -33,57 +33,69 @@
 // =================================================================
 // 3. УСТАВКИ КЛИМАТ-КОНТРОЛЯ (Согласно ТЗ)
 // =================================================================
-const float kDefaultTargetTemp = 4.0f;     // Целевая температура в подвале по умолчанию (°C)
-const float kDefaultTargetRh   = 85.0f;    // Целевая относительная влажность по умолчанию (%)
+constexpr float kDefaultTargetTemp = 4.0f;     // Целевая температура в подвале по умолчанию (°C)
+constexpr float kDefaultTargetRh   = 85.0f;    // Целевая относительная влажность по умолчанию (%)
 
-const float kHysteresisTemp = 0.5f; // Hysteresis for temperature: applied symmetrically for turn-on and turn-off
-const float kHysteresisRh   = 3.0f; // Допустимое отклонение влажности от заданной (+/- 3%)
+constexpr float kHysteresisTemp = 0.5f; // Hysteresis for temperature: applied symmetrically for turn-on and turn-off
+constexpr float kHysteresisRh   = 3.0f; // Допустимое отклонение влажности от заданной (+/- 3%)
 
-const float kMarginCondSafety = 2.0f; // Безопасный отступ от точки росы для предотвращения конденсата
-const float kMarginAh          = 1.0f; // Минимальная разница абсолютной влажности для эффективного проветривания
+constexpr float kMarginCondSafety = 2.0f; // Безопасный отступ от точки росы для предотвращения конденсата
+constexpr float kMarginAh          = 1.0f; // Минимальная разница абсолютной влажности для эффективного проветривания
 
 // =================================================================
 // 4. КРИТИЧЕСКИЕ ПОКАЗАТЕЛИ И ОШИБКИ
 // =================================================================
-const float kTempCriticalMin = 2.0f;  // Минимально допустимая T в подвале (ниже - ошибка)
-const float kVentTempMin = 3.0f; // Минимальная T внутри для работы вентилятора
-const float kOutTempFrostLimit = 0.0f; // Минимальная T уличного воздуха для вентиляции (°C)
-const float kCondensationErrDiff = 0.5f; // Ошибка при риске конденсации (dewpoint >= T_in - 0.5)
-const float kSensorDiffMax = 2.0f;    // Макс. разница между BME280 и DS18B20
+constexpr float kTempCriticalMin = 2.0f;  // Минимально допустимая T в подвале (ниже - ошибка)
+constexpr float kVentTempMin = 3.0f; // Минимальная T внутри для работы вентилятора
+constexpr float kOutTempFrostLimit = 0.0f; // Минимальная T уличного воздуха для вентиляции (°C)
+constexpr float kCondensationErrDiff = 0.5f; // Ошибка при риске конденсации (dewpoint >= T_in - 0.5)
+constexpr float kSensorDiffMax = 2.0f;    // Макс. разница между BME280 и DS18B20
 
 // =================================================================
 // 5. ТАЙМИНГИ И ИНТЕРВАЛЫ
 // =================================================================
-const uint32_t kSensorPollInterval = 10000UL; // Опрос датчиков раз в 10 секунд
-const uint32_t kSensorRetryInterval = 60000UL; // Интервал повторной попытки опроса датчика
-const uint8_t  kSensorMaxRetries    = 3;       // Макс. количество попыток оживления датчика
-const uint8_t  kSensorStabilityThreshold = 3;  // Кол-во циклов для стабилизации показаний
-const uint32_t kBacklightTimeout    = 60000UL;  // Автовыключение подсветки (60 секунд)
-const uint32_t kUserPresenceTimeout = 1800000UL; // Таймаут присутствия пользователя (30 минут)
+constexpr uint32_t kSensorPollInterval = 10000UL; // Опрос датчиков раз в 10 секунд
+constexpr uint32_t kSensorRetryInterval = 60000UL; // Интервал повторной попытки опроса датчика
+constexpr uint8_t  kSensorMaxRetries    = 3;       // Макс. количество попыток оживления датчика
+constexpr uint8_t  kSensorStabilityThreshold = 3;  // Кол-во циклов для стабилизации показаний
+constexpr uint32_t kBacklightTimeout    = 60000UL;  // Автовыключение подсветки (60 секунд)
+constexpr uint32_t kUserPresenceTimeout = 1800000UL; // Таймаут присутствия пользователя (30 минут)
 
 static_assert(kUserPresenceTimeout >= 300000UL,
 "User presence timeout must be at least 5 minutes");
 
 // Интервалы цикла озонирования
-const uint32_t kOzoneWorkTime = 900000UL;   // Работа озонатора (15 минут)
-const uint32_t kOzoneHoldTime = 7200000UL;  // Пауза/ожидание (2 часа)
-const uint32_t kOzoneVentTime = 900000UL;   // Проветривание после (15 минут)
+constexpr uint32_t kOzoneWorkTime = 900000UL;   // Работа озонатора (15 минут)
+constexpr uint32_t kOzoneHoldTime = 7200000UL;  // Пауза/ожидание (2 часа)
+constexpr uint32_t kOzoneVentTime = 900000UL;   // Проветривание после (15 минут)
 
 // Повторные попытки при запрете озонирования (мороз на улице)
-const uint32_t kOzoneRetryShort = 1800000UL; // Перезапуск через 30 минут
+constexpr uint32_t kOzoneRetryShort = 1800000UL; // Перезапуск через 30 минут
 
 // =================================================================
 // 6. ПАРАМЕТРЫ ФИЛЬТРАЦИИ
 // =================================================================
-const float kFilterEmaAlpha = 0.2f; // Коэффициент сглаживания EMA
-const uint8_t kMedianWindow  = 3;    // Размер окна медианного фильтра
+constexpr float kFilterEmaAlpha = 0.2f; // Коэффициент сглаживания EMA
+constexpr uint8_t kMedianWindow  = 3;    // Размер окна медианного фильтра
 
 // =================================================================
 // 7. ГРАНИЦЫ ДОСТОВЕРНОСТИ ДАННЫХ (Plausibility Checks)
 // =================================================================
-const float kRawTempMin = -40.0f;
-const float kRawTempMax = 85.0f;
-const float kRawHumMin  = 0.0f;
-const float kRawHumMax  = 100.0f;
+constexpr float kRawTempMin = -40.0f;
+constexpr float kRawTempMax = 85.0f;
+constexpr float kRawHumMin  = 0.0f;
+constexpr float kRawHumMax  = 100.0f;
+
+// --- Timing intervals (ms) ---
+constexpr uint32_t kRtcPollInterval      = 1000UL;
+constexpr uint32_t kDeferredSaveDelay    = 30000UL;
+
+// --- Button timing (ms) ---
+constexpr uint16_t kDebounceMs   = 50;
+constexpr uint16_t kRepeatMs     = 150;
+constexpr uint16_t kLongPressMs  = 600;
+
+// --- Relay protection ---
+constexpr uint32_t kFanDebounceDelay = 300000UL;
 
 #endif // CONFIG_H

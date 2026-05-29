@@ -28,12 +28,6 @@ class RelayManager {
    */
   unsigned long last_fan_change_time_;
 
-  /**
-   * @brief Минимальный интервал между переключениями вентилятора (5 минут).
-   * Защищает обмотки двигателя от перегрева при частом старт-стопе.
-   */
-  const unsigned long kFanDebounceDelay = 300000UL;
-
  public:
   /**
    * @brief Конструктор. Инициализирует начальные состояния флагов.
