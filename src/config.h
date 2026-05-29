@@ -71,6 +71,7 @@ constexpr uint32_t kOzoneVentTime = 900000UL;   // Проветривание п
 
 // Повторные попытки при запрете озонирования (мороз на улице)
 constexpr uint32_t kOzoneRetryShort = 1800000UL; // Перезапуск через 30 минут
+constexpr uint8_t kOzoneMaxRetriesPerDay = 6;
 
 // =================================================================
 // 6. ПАРАМЕТРЫ ФИЛЬТРАЦИИ

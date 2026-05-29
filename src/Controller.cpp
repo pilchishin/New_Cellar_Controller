@@ -126,6 +126,7 @@ void Controller::ProcessStateMachine() {
 
       // Проверка расписания озонирования (через RTC)
       if (rtc_->IsOzoneTimeScheduled()) {
+        ozone_retry_count_ = 0;
         ChangeState(SystemState::kOzoneStart);
       }
       // Повторная попытка после временной блокировки (через 30 мин)
@@ -143,11 +144,21 @@ void Controller::ProcessStateMachine() {
       bool is_ozone_inhibited = (is_frost_outside || is_user_present_);
 
       if (is_ozone_inhibited) {
+        ozone_retry_count_++;
+        if (ozone_retry_count_ >= kOzoneMaxRetriesPerDay) {
+          retry_ozone_timer_ = 0;
+          ozone_retry_count_ = 0;
 #ifdef DEBUG
-        Serial.println(F("Ozone Inhibited: Wait 30m"));
+          Serial.println(F("Ozone: max retries reached, skipping today."));
 #endif
-        retry_ozone_timer_ = now;
-        ChangeState(SystemState::kAutoClimate);
+          ChangeState(SystemState::kAutoClimate);
+        } else {
+#ifdef DEBUG
+          Serial.println(F("Ozone Inhibited: Wait 30m"));
+#endif
+          retry_ozone_timer_ = now;
+          ChangeState(SystemState::kAutoClimate);
+        }
       } else {
         // Условия в норме - запуск генерации озона
         relays_->SetFan(false, true); // Вентилятор ВЫКЛ (принудительно)
