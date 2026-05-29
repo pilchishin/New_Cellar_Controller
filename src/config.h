@@ -98,4 +98,7 @@ constexpr uint16_t kLongPressMs  = 600;
 // --- Relay protection ---
 constexpr uint32_t kFanDebounceDelay = 300000UL;
 
+// --- TimeManager ---
+constexpr uint16_t kMinValidYear = 2023;
+
 #endif // CONFIG_H

@@ -1,4 +1,5 @@
 #include "TimeManager.h"
+#include "config.h"
 
 TimeManager::TimeManager() {
   // По ТЗ: запуск раз в неделю в 02:00.
@@ -95,8 +96,8 @@ void TimeManager::Update() {
 
   // Простая эвристика проверки успешного чтения I2C (обычно при сбое возвращается 2000 год)
   // Либо можно проверять статус шины Wire, но RTClib скрывает это.
-  // Если год < 2023, считаем чтение ошибочным.
-  if (temp_time.year() < 2023) {
+  // Если год < kMinValidYear, считаем чтение ошибочным.
+  if (temp_time.year() < kMinValidYear) {
     read_error_count_++;
 #ifdef DEBUG
     Serial.print(F("RTC Read Error. Count: "));
@@ -125,15 +126,20 @@ ErrorCode TimeManager::CheckErrors() {
 /**
  * @brief Проверка наступления времени планового озонирования.
  * Озонирование запускается только если часы исправны.
- * Для предотвращения повторных пусков в ту же минуту используется флаг последнего дня пуска.
+ * Для предотвращения повторных пусков в тот же день используется флаг последнего дня пуска.
  */
 bool TimeManager::IsOzoneTimeScheduled() {
   if (!rtc_valid_) return false;
 
-  // Сравнение текущего времени с установленным расписанием
+  // Допуск ±2 минуты: запуск, если текущее время в пределах 0..+2 минут от расписания.
+  // Это предотвращает пропуск цикла при кратковременном сбое чтения RTC или перезагрузке.
+  int16_t current_minutes = (int16_t)current_time_.hour() * 60 + current_time_.minute();
+  int16_t sched_minutes   = (int16_t)schedule_hour_ * 60 + schedule_minute_;
+  int16_t diff = current_minutes - sched_minutes;
+
+  // Сравнение текущего времени с установленным расписанием с учетом допуска
   if (current_time_.dayOfTheWeek() == schedule_day_of_week_ &&
-      current_time_.hour() == schedule_hour_ &&
-      current_time_.minute() == schedule_minute_) {
+      diff >= 0 && diff <= 2) {
     // Защита от дребезга триггера:
     // Если сегодня цикл уже запускался, игнорируем совпадение.
     if (last_ozone_trigger_day_ != current_time_.dayOfTheWeek()) {
