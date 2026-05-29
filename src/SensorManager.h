@@ -64,6 +64,8 @@ class SensorManager {
   SensorStatus htu_stat_;       ///< Состояние датчика HTU21D.
   SensorStatus ds_stat_;        ///< Состояние датчика DS18B20.
   unsigned long ds_request_ts_; ///< Время последнего запроса конверсии для DS18B20 (мс).
+  unsigned long bme_dead_retry_ts_ = 0; ///< Время последней попытки оживления "мертвого" BME280.
+  unsigned long htu_dead_retry_ts_ = 0; ///< Время последней попытки оживления "мертвого" HTU21D.
 
   // --- Внутренние методы инициализации ---
   void InitBme(); ///< Конфигурация и запуск BME280.

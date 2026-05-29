@@ -164,6 +164,17 @@ void SensorManager::Update() {
     }
   }
 
+  if (!bme_stat_.valid && bme_stat_.retries >= kSensorMaxRetries) {
+    unsigned long now_ms = millis();
+    if (now_ms - bme_dead_retry_ts_ >= kSensorDeadRetryInterval) {
+      bme_dead_retry_ts_ = now_ms;
+      bme_stat_.retries = 0; // grant a fresh retry budget
+#ifdef DEBUG
+      Serial.println(F("BME280: dead-sensor hourly re-probe triggered."));
+#endif
+    }
+  }
+
   if (bme_stat_.valid) {
     float raw_temp = bme_.readTemperature();
     float raw_hum = bme_.readHumidity();
@@ -231,6 +242,17 @@ void SensorManager::Update() {
 #endif
       InitHtu();
       if (htu_stat_.valid) i2c_any_success = true;
+    }
+  }
+
+  if (!htu_stat_.valid && htu_stat_.retries >= kSensorMaxRetries) {
+    unsigned long now_ms = millis();
+    if (now_ms - htu_dead_retry_ts_ >= kSensorDeadRetryInterval) {
+      htu_dead_retry_ts_ = now_ms;
+      htu_stat_.retries = 0;
+#ifdef DEBUG
+      Serial.println(F("HTU21D: dead-sensor hourly re-probe triggered."));
+#endif
     }
   }
 
@@ -390,6 +412,8 @@ void SensorManager::Recover() {
   i2c_error_count_ = 0;
   bme_error_count_ = 0;
   htu_error_count_ = 0;
+  bme_dead_retry_ts_ = 0;
+  htu_dead_retry_ts_ = 0;
   InitBme();
   InitHtu();
   InitDs();

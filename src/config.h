@@ -56,6 +56,7 @@ constexpr float kSensorDiffMax = 2.0f;    // Макс. разница между
 // =================================================================
 constexpr uint32_t kSensorPollInterval = 10000UL; // Опрос датчиков раз в 10 секунд
 constexpr uint32_t kSensorRetryInterval = 60000UL; // Интервал повторной попытки опроса датчика
+constexpr uint32_t kSensorDeadRetryInterval = 3600000UL; // Try to re-initialise a "dead" sensor once per hour.
 constexpr uint8_t  kSensorMaxRetries    = 3;       // Макс. количество попыток оживления датчика
 constexpr uint8_t  kSensorStabilityThreshold = 3;  // Кол-во циклов для стабилизации показаний
 constexpr uint32_t kBacklightTimeout    = 60000UL;  // Автовыключение подсветки (60 секунд)
