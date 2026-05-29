@@ -1,6 +1,7 @@
 #include "DisplayUI.h"
 #include "MenuActions.h"
 #include "config.h"
+#include "Types.h"
 
 
 // --- ОПРЕДЕЛЕНИЯ ТАБЛИЦ МЕНЮ (Хранятся во Flash-памяти / PROGMEM) ---
@@ -510,7 +511,9 @@ void DisplayUI::DrawErrorLog() {
     screen_.print(F("SYSTEM OK"));
   } else {
     // Вывод текстового описания ошибки
+#ifdef DEBUG
     screen_.print(ErrorToString(model_.error));
+#endif
     // Подсказка для сброса (UP = Reset)
     screen_.SetPos(1, 12);
     screen_.print(F("UP:R"));

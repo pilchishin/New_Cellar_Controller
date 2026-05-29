@@ -2,6 +2,8 @@
 #define TYPES_H
 
 #include <stdint.h>
+#include <Arduino.h>
+#include "config.h"
 
 /**
  * @enum SystemState
@@ -61,35 +63,37 @@ struct SystemStatistics {
     uint32_t ozoneMinutes;
 };
 
-// Вспомогательные функции для текстового представления (для LCD)
-inline const char* StateToString(SystemState s) {
+#ifdef DEBUG
+// Вспомогательные функции для текстового представления (для Serial debug)
+inline const __FlashStringHelper* StateToString(SystemState s) {
     switch (s) {
-        case SystemState::kIdle:         return "IDLE";
-        case SystemState::kAutoClimate: return "AUTO";
-        case SystemState::kOzoneStart:  return "O3 START";
-        case SystemState::kOzoneActive: return "O3 WORK";
-        case SystemState::kOzoneHold:   return "O3 HOLD";
-        case SystemState::kOzoneVent:   return "O3 VENT";
-        case SystemState::kOzoneAbort:  return "O3 ABORT";
-        case SystemState::kManualFan:   return "MAN FAN";
-        case SystemState::kManualOzone: return "MAN O3";
-        case SystemState::kErrorState:  return "ERROR";
-        default:                        return "UNKNOWN";
+        case SystemState::kIdle:         return F("IDLE");
+        case SystemState::kAutoClimate: return F("AUTO");
+        case SystemState::kOzoneStart:  return F("O3 START");
+        case SystemState::kOzoneActive: return F("O3 WORK");
+        case SystemState::kOzoneHold:   return F("O3 HOLD");
+        case SystemState::kOzoneVent:   return F("O3 VENT");
+        case SystemState::kOzoneAbort:  return F("O3 ABORT");
+        case SystemState::kManualFan:   return F("MAN FAN");
+        case SystemState::kManualOzone: return F("MAN O3");
+        case SystemState::kErrorState:  return F("ERROR");
+        default:                        return F("UNKNOWN");
     }
 }
 
-inline const char* ErrorToString(ErrorCode e) {
+inline const __FlashStringHelper* ErrorToString(ErrorCode e) {
     switch (e) {
-        case ErrorCode::kNone:              return "OK";
-        case ErrorCode::kSensorBmeFail:   return "BME FAIL";
-        case ErrorCode::kSensorHtuFail:   return "HTU FAIL";
-        case ErrorCode::kSensorDsFail:    return "DS FAIL";
-        case ErrorCode::kRtcFail:          return "RTC FAIL";
-        case ErrorCode::kTempMismatch:     return "T MISMATCH";
-        case ErrorCode::kCondensationRisk: return "COND RISK";
-        case ErrorCode::kTempTooLow:      return "FROST ERR";
-        default:                           return "ERR";
+        case ErrorCode::kNone:              return F("OK");
+        case ErrorCode::kSensorBmeFail:   return F("BME FAIL");
+        case ErrorCode::kSensorHtuFail:   return F("HTU FAIL");
+        case ErrorCode::kSensorDsFail:    return F("DS FAIL");
+        case ErrorCode::kRtcFail:          return F("RTC FAIL");
+        case ErrorCode::kTempMismatch:     return F("T MISMATCH");
+        case ErrorCode::kCondensationRisk: return F("COND RISK");
+        case ErrorCode::kTempTooLow:      return F("FROST ERR");
+        default:                           return F("ERR");
     }
 }
+#endif
 
 #endif
