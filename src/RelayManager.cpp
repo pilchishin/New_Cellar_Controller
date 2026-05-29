@@ -43,11 +43,12 @@ void RelayManager::Init() {
  *
  * @param requested_state Целевое состояние.
  * @param force Если true, таймер защиты игнорируется (критические ошибки).
+ * @return true Если реле было переключено.
  */
-void RelayManager::SetFan(bool requested_state, bool force) {
+bool RelayManager::SetFan(bool requested_state, bool force) {
   // Если запрашиваемое состояние уже активно, ничего не делаем
   if (this->fan_state_ == requested_state) {
-    return;
+    return false;
   }
 
   unsigned long current_time = millis();
@@ -68,10 +69,24 @@ void RelayManager::SetFan(bool requested_state, bool force) {
     Serial.println(requested_state ? F("ON") : F("OFF"));
     if (force) Serial.println(F(" (FORCED)"));
 #endif
+    return true;
   }
+
   // Если интервал не прошел, команда игнорируется.
-  // Контроллер продолжит вызывать этот метод в каждом цикле,
-  // и реле сработает сразу, как только время защиты истечет.
+#ifdef DEBUG
+  Serial.print(F("FAN: command blocked, debounce active, remaining ms: "));
+  Serial.println(kFanDebounceDelay - (current_time - last_fan_change_time_));
+#endif
+  return false;
+}
+
+/**
+ * @brief Возвращает оставшееся время блокировки переключения вентилятора.
+ */
+unsigned long RelayManager::FanDebounceRemaining() const {
+  unsigned long elapsed = millis() - last_fan_change_time_;
+  if (elapsed >= kFanDebounceDelay) return 0;
+  return kFanDebounceDelay - elapsed;
 }
 
 /**

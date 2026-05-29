@@ -48,8 +48,15 @@ class RelayManager {
    *
    * @param requested_state Желаемое состояние: true - включить, false - выключить.
    * @param force Принудительное переключение (игнорируя таймер защиты). Используется для аварийного отключения.
+   * @return true Если состояние было успешно изменено, false если команда была проигнорирована (дребезг или состояние совпадает).
    */
-  void SetFan(bool requested_state, bool force = false);
+  bool SetFan(bool requested_state, bool force = false);
+
+  /**
+   * @brief Возвращает оставшееся время блокировки вентилятора в миллисекундах.
+   * @return Оставшееся время в мс, или 0 если переключение разрешено.
+   */
+  unsigned long FanDebounceRemaining() const;
 
   /**
    * @brief Управление озонатором.

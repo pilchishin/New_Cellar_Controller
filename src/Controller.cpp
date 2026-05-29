@@ -161,7 +161,7 @@ void Controller::ProcessStateMachine() {
         }
       } else {
         // Условия в норме - запуск генерации озона
-        relays_->SetFan(false, true); // Вентилятор ВЫКЛ (принудительно)
+        (void)relays_->SetFan(false, true); // Вентилятор ВЫКЛ (принудительно)
         relays_->SetOzone(true);      // Озонатор ВКЛ
         state_timer_ = now;
         ChangeState(SystemState::kOzoneActive);
@@ -201,14 +201,14 @@ void Controller::ProcessStateMachine() {
 
       // Проветривание разрешено только если на улице не мороз
       if (!is_frost_outside) {
-        relays_->SetFan(true);
+        (void)relays_->SetFan(true);
         if (now - state_timer_ >= kOzoneVentTime) {
-          relays_->SetFan(false);
+          (void)relays_->SetFan(false);
           ChangeState(SystemState::kAutoClimate);
         }
       } else {
         // На улице похолодало — прекращаем продувку во избежание заморозки
-        relays_->SetFan(false);
+        (void)relays_->SetFan(false);
         ChangeState(SystemState::kAutoClimate);
       }
       break;
@@ -217,14 +217,14 @@ void Controller::ProcessStateMachine() {
     case SystemState::kOzoneAbort:
       // Экстренная остановка озонирования (например, пришел человек)
       relays_->SetOzone(false);
-      relays_->SetFan(false, true);
+      (void)relays_->SetFan(false, true);
       ChangeState(SystemState::kAutoClimate);
       break;
 
     case SystemState::kManualFan:
       // Ручной запуск вентиляции по таймеру
       if (now - state_timer_ >= (manual_timer_ * 60000UL)) {
-        relays_->SetFan(false);
+        (void)relays_->SetFan(false);
         ChangeState(SystemState::kAutoClimate);
       }
       break;
@@ -233,7 +233,7 @@ void Controller::ProcessStateMachine() {
       // Ручной запуск озонирования по таймеру
       if (now - state_timer_ >= (manual_timer_ * 60000UL)) {
         relays_->SetOzone(false);
-        relays_->SetFan(true);
+        (void)relays_->SetFan(true);
         state_timer_ = now;
         ChangeState(SystemState::kOzoneVent);
       }
@@ -241,7 +241,7 @@ void Controller::ProcessStateMachine() {
 
     case SystemState::kErrorState:
       // Режим ошибки — полная блокировка оборудования
-      relays_->SetFan(false, true);
+      (void)relays_->SetFan(false, true);
       relays_->SetOzone(false);
       break;
 
@@ -261,7 +261,7 @@ void Controller::HandleAutoClimate() {
 
   // Если данные датчиков невалидны — выключаем вентилятор и выходим
   if (!in.valid || !out.valid) {
-    relays_->SetFan(false);
+    (void)relays_->SetFan(false);
     return;
   }
 
@@ -294,9 +294,21 @@ void Controller::HandleAutoClimate() {
   // Вентилятор включается только при соблюдении ВСЕХ условий эффективности и безопасности
   if (ventilation_needed && ventilation_is_effective && condensation_is_safe &&
       freeze_safe && cooling_is_possible && temp_allows_vent) {
-    relays_->SetFan(true);
+    bool res = relays_->SetFan(true);
+    (void)res;
+#ifdef DEBUG
+    if (!res && !relays_->GetFanState()) {
+      Serial.println(F("AutoClimate: FAN ON blocked by debounce"));
+    }
+#endif
   } else {
-    relays_->SetFan(false);  // Выключение (с учетом защиты от частого переключения в RelayManager)
+    bool res = relays_->SetFan(false);  // Выключение (с учетом защиты от частого переключения в RelayManager)
+    (void)res;
+#ifdef DEBUG
+    if (!res && relays_->GetFanState()) {
+      Serial.println(F("AutoClimate: FAN OFF blocked by debounce"));
+    }
+#endif
   }
 }
 
@@ -336,7 +348,7 @@ void Controller::CheckCriticalErrors() {
 void Controller::ChangeState(SystemState new_state) {
   // Действия при переходе в состояние ОШИБКА
   if (new_state == SystemState::kErrorState) {
-    relays_->SetFan(false, true); // Немедленное выключение
+    (void)relays_->SetFan(false, true); // Немедленное выключение
     relays_->SetOzone(false);
   }
 
@@ -365,7 +377,7 @@ void Controller::StartManualFan(uint16_t minutes) {
   if (current_state_ == SystemState::kErrorState) return;
   manual_timer_ = minutes;
   state_timer_ = millis();
-  relays_->SetFan(true, true);
+  (void)relays_->SetFan(true, true);
   ChangeState(SystemState::kManualFan);
 }
 
