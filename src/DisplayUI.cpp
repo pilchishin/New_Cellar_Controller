@@ -279,7 +279,7 @@ void DisplayUI::HandleButtons() {
 void DisplayUI::UpdateBacklight() {
   if (backlight_on_ && (millis() - last_activity_time_ > kBacklightTimeout)) {
     // ВАЖНО: При ручном озонировании подсветка НЕ гаснет (требование безопасности ТЗ)
-    if (model_.state != SystemState::kManualOzone) {
+    if (model_.GetState() != SystemState::kManualOzone) {
       lcd_.noBacklight();
       backlight_on_ = false;
     }
@@ -373,33 +373,33 @@ void DisplayUI::DrawHomeScreen() {
   // Строка 1: Показатели внутри подвала [T] [H] [Индикатор работы]
   screen_.SetPos(0, 0);
   screen_.print(F("IN "));
-  if (model_.inside.valid) screen_.print(model_.inside.temp, 1);
+  if (model_.GetInside().valid) screen_.print(model_.GetInside().temp, 1);
   else screen_.print(F("---"));
   screen_.print(F("C "));
-  if (model_.inside.valid) screen_.print(model_.inside.rh, 0);
+  if (model_.GetInside().valid) screen_.print(model_.GetInside().rh, 0);
   else screen_.print(F("---"));
   screen_.print(F("%"));
 
   // Индикаторы активного оборудования (O - Озон, F - Вентилятор)
   screen_.SetPos(0, 15);
-  if (model_.ozone_on) screen_.print(F("O"));
-  else if (model_.fan_on) screen_.print(F("F"));
+  if (model_.IsOzoneOn()) screen_.print(F("O"));
+  else if (model_.IsFanOn()) screen_.print(F("F"));
   else screen_.print(F(" "));
 
   // Строка 2: Показатели на улице [T] [H] [Режим системы]
   screen_.SetPos(1, 0);
   screen_.print(F("OUT "));
-  if (model_.outside.valid) screen_.print(model_.outside.temp, 1);
+  if (model_.GetOutside().valid) screen_.print(model_.GetOutside().temp, 1);
   else screen_.print(F("---"));
   screen_.print(F("C "));
-  if (model_.outside.valid) screen_.print(model_.outside.rh, 0);
+  if (model_.GetOutside().valid) screen_.print(model_.GetOutside().rh, 0);
   else screen_.print(F("---"));
   screen_.print(F("%"));
 
   // Режим системы (E - Error, A - Auto, M - Manual)
   screen_.SetPos(1, 15);
-  if (model_.state == SystemState::kErrorState) screen_.print(F("E"));
-  else if (model_.is_auto_mode) screen_.print(F("A"));
+  if (model_.GetState() == SystemState::kErrorState) screen_.print(F("E"));
+  else if (model_.IsAutoMode()) screen_.print(F("A"));
   else screen_.print(F("M"));
 }
 
@@ -407,8 +407,8 @@ void DisplayUI::DrawHomeScreen() {
  * @brief Отрисовка страницы детального статуса датчика.
  */
 void DisplayUI::DrawStatus(int index) {
-  if (index == 0) DrawStatusPage(model_.inside, F("IN "));
-  else DrawStatusPage(model_.outside, F("OUT "));
+  if (index == 0) DrawStatusPage(model_.GetInside(), F("IN "));
+  else DrawStatusPage(model_.GetOutside(), F("OUT "));
 }
 
 /**
@@ -489,11 +489,11 @@ void DisplayUI::DrawStats() {
   screen_.SetPos(1, 0);
   if (item_idx == 0) { // Просмотр наработки (в часах)
     screen_.print(F("U"));
-    screen_.print(model_.stats.uptimeMinutes / 60);
+    screen_.print(model_.GetStats().uptimeMinutes / 60);
     screen_.print(F(" F"));
-    screen_.print(model_.stats.fanMinutes / 60);
+    screen_.print(model_.GetStats().fanMinutes / 60);
     screen_.print(F(" O3"));
-    screen_.print(model_.stats.ozoneMinutes / 60);
+    screen_.print(model_.GetStats().ozoneMinutes / 60);
   } else if (item_idx == 1) { // Страница подтверждения сброса
     screen_.print(F("MENU CONFIRM"));
   }
@@ -507,12 +507,12 @@ void DisplayUI::DrawErrorLog() {
   DrawHeader(F("ERRORS"), nav_.GetItemIndex(), root->item_count);
 
   screen_.SetPos(1, 0);
-  if (model_.error == ErrorCode::kNone) {
+  if (model_.GetError() == ErrorCode::kNone) {
     screen_.print(F("SYSTEM OK"));
   } else {
     // Вывод текстового описания ошибки
 #ifdef DEBUG
-    screen_.print(ErrorToString(model_.error));
+    screen_.print(ErrorToString(model_.GetError()));
 #endif
     // Подсказка для сброса (UP = Reset)
     screen_.SetPos(1, 12);

@@ -79,7 +79,7 @@ void MenuActions::ApplyValueChange(DisplayUI* ui, MenuItemID id, float val) {
     vid = ValueID::kTargetHum;
   } else if (id >= MenuItemID::kCalibBmeTemp && id <= MenuItemID::kCalibDsTemp) {
     // Групповая обработка калибровочных констант
-    CalibrationData c = ui->model_.calib;
+    CalibrationData c = ui->model_.GetCalibration();
     if (id == MenuItemID::kCalibBmeTemp) { c.bmeTempOffset = val; vid = ValueID::kCalibBmeTemp; }
     else if (id == MenuItemID::kCalibBmeHum) { c.bmeHumOffset = val; vid = ValueID::kCalibBmeHum; }
     else if (id == MenuItemID::kCalibHtuTemp) { c.htuTempOffset = val; vid = ValueID::kCalibHtuTemp; }

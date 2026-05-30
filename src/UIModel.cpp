@@ -3,81 +3,82 @@
 #include "SensorManager.h"
 
 UIModel::UIModel()
-    : inside{0,0,0,0,false},
-      outside{0,0,0,0,false},
-      state(SystemState::kIdle),
-      error(ErrorCode::kNone),
-      target_temp(0),
-      target_rh(0),
-      calib{0,0,0,0,0},
-      calib_bme_t(0),
-      calib_bme_h(0),
-      calib_htu_t(0),
-      calib_htu_h(0),
-      calib_ds_t(0),
-      stats{0,0,0},
-      fan_on(false),
-      ozone_on(false),
-      is_manual_mode(false),
-      is_auto_mode(false) {
+    : inside_{0,0,0,0,false},
+      outside_{0,0,0,0,false},
+      state_(SystemState::kIdle),
+      error_(ErrorCode::kNone),
+      target_temp_(0),
+      target_rh_(0),
+      calib_{0,0,0,0,0},
+      calib_bme_t_(0),
+      calib_bme_h_(0),
+      calib_htu_t_(0),
+      calib_htu_h_(0),
+      calib_ds_t_(0),
+      stats_{0,0,0},
+      fan_on_(false),
+      ozone_on_(false),
+      is_manual_mode_(false),
+      is_auto_mode_(false) {
 }
 
 void UIModel::Sync(Controller* controller, SensorManager* sensors) {
   if (!controller || !sensors) return;
 
-  inside = sensors->GetInside();
-  outside = sensors->GetOutside();
-  state = controller->GetState();
-  error = controller->GetError();
+  SetInside(sensors->GetInside());
+  SetOutside(sensors->GetOutside());
+  SetState(controller->GetState());
+  SetError(controller->GetError());
 
-  target_temp = controller->GetTargetTemp();
-  target_rh = controller->GetTargetRh();
+  SetTargetTemp(controller->GetTargetTemp());
+  SetTargetRh(controller->GetTargetRh());
 
-  calib = controller->GetCalibration();
-  calib_bme_t = calib.bmeTempOffset;
-  calib_bme_h = calib.bmeHumOffset;
-  calib_htu_t = calib.htuTempOffset;
-  calib_htu_h = calib.htuHumOffset;
-  calib_ds_t = calib.dsTempOffset;
+  SetCalibration(controller->GetCalibration());
+  CalibrationData c = GetCalibration();
+  SetCalibBmeT(c.bmeTempOffset);
+  SetCalibBmeH(c.bmeHumOffset);
+  SetCalibHtuT(c.htuTempOffset);
+  SetCalibHtuH(c.htuHumOffset);
+  SetCalibDsT(c.dsTempOffset);
 
-  stats = controller->GetStats();
+  SetStats(controller->GetStats());
 
   RelayManager* rm = controller->GetRelayManager();
   if (rm) {
-    fan_on = rm->GetFanState();
-    ozone_on = rm->GetOzoneState();
+    SetFanOn(rm->GetFanState());
+    SetOzoneOn(rm->GetOzoneState());
   }
 
-  is_manual_mode = (state == SystemState::kManualFan || state == SystemState::kManualOzone);
-  is_auto_mode = (state == SystemState::kAutoClimate ||
-                  state == SystemState::kOzoneStart ||
-                  state == SystemState::kOzoneActive ||
-                  state == SystemState::kOzoneHold ||
-                  state == SystemState::kOzoneVent);
+  SetManualMode(GetState() == SystemState::kManualFan || GetState() == SystemState::kManualOzone);
+  SetAutoMode(GetState() == SystemState::kAutoClimate ||
+              GetState() == SystemState::kOzoneStart ||
+              GetState() == SystemState::kOzoneActive ||
+              GetState() == SystemState::kOzoneHold ||
+              GetState() == SystemState::kOzoneVent);
 }
 
 float UIModel::GetValue(ValueID id) const {
   switch (id) {
-    case ValueID::kTargetTemp:   return target_temp;
-    case ValueID::kTargetHum:    return target_rh;
-    case ValueID::kCalibBmeTemp: return calib_bme_t;
-    case ValueID::kCalibBmeHum:  return calib_bme_h;
-    case ValueID::kCalibHtuTemp: return calib_htu_t;
-    case ValueID::kCalibHtuHum:  return calib_htu_h;
-    case ValueID::kCalibDsTemp:  return calib_ds_t;
+    case ValueID::kTargetTemp:   return GetTargetTemp();
+    case ValueID::kTargetHum:    return GetTargetRh();
+    case ValueID::kCalibBmeTemp: return GetCalibBmeT();
+    case ValueID::kCalibBmeHum:  return GetCalibBmeH();
+    case ValueID::kCalibHtuTemp: return GetCalibHtuT();
+    case ValueID::kCalibHtuHum:  return GetCalibHtuH();
+    case ValueID::kCalibDsTemp:  return GetCalibDsT();
     default: return 0.0f;
   }
 }
 
 void UIModel::SetValue(ValueID id, float v) {
   switch (id) {
-    case ValueID::kTargetTemp:   target_temp = v; break;
-    case ValueID::kTargetHum:    target_rh = v; break;
-    case ValueID::kCalibBmeTemp: calib_bme_t = v; break;
-    case ValueID::kCalibBmeHum:  calib_bme_h = v; break;
-    case ValueID::kCalibHtuTemp: calib_htu_t = v; break;
-    case ValueID::kCalibHtuHum:  calib_htu_h = v; break;
-    case ValueID::kCalibDsTemp:  calib_ds_t = v; break;
+    case ValueID::kTargetTemp:   SetTargetTemp(v); break;
+    case ValueID::kTargetHum:    SetTargetRh(v); break;
+    case ValueID::kCalibBmeTemp: SetCalibBmeT(v); break;
+    case ValueID::kCalibBmeHum:  SetCalibBmeH(v); break;
+    case ValueID::kCalibHtuTemp: SetCalibHtuT(v); break;
+    case ValueID::kCalibHtuHum:  SetCalibHtuH(v); break;
+    case ValueID::kCalibDsTemp:  SetCalibDsT(v); break;
     default: break;
   }
 }
