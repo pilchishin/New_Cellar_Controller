@@ -39,8 +39,16 @@ void setup() {
   ui.Init();              // Дисплей и кнопки
 
   // 3. Связываем контроллер с интерфейсом
-  // Это нужно, чтобы контроллер мог знать, включена ли подсветка (условие
-  // озонирования)
+  // IMPORTANT: Initialization order is mandatory and must not be changed.
+  // 1. relay_manager.Init()  — safe hardware state before anything else.
+  // 2. sensor_manager.Init() — start sensor warm-up.
+  // 3. time_manager.Init()   — RTC must be ready before controller.
+  // 4. ui.Init()             — display must exist before controller uses it.
+  // 5. controller.SetUI()    — must be called BEFORE controller.Init()
+  //                            because Init() calls ChangeState() which
+  //                            accesses the UI pointer.
+  // 6. controller.Init()     — starts the FSM; requires all above to exist.
+  // 7. wdt_enable()          — LAST: prevents WDT from firing during init.
   controller.SetUI(&ui);
   controller.Init();
 
