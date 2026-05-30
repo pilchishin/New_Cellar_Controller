@@ -168,9 +168,9 @@ void SensorManager::Update() {
     unsigned long now_ms = millis();
     if (now_ms - bme_dead_retry_ts_ >= kSensorDeadRetryInterval) {
       bme_dead_retry_ts_ = now_ms;
-      bme_stat_.retries = 0; // grant a fresh retry budget
+      bme_stat_.retries = 0; // выделяем новый бюджет попыток
 #ifdef DEBUG
-      Serial.println(F("BME280: dead-sensor hourly re-probe triggered."));
+      Serial.println(F("BME280: сработал ежечасный опрос «мертвого» датчика."));
 #endif
     }
   }
@@ -251,7 +251,7 @@ void SensorManager::Update() {
       htu_dead_retry_ts_ = now_ms;
       htu_stat_.retries = 0;
 #ifdef DEBUG
-      Serial.println(F("HTU21D: dead-sensor hourly re-probe triggered."));
+      Serial.println(F("HTU21D: сработал ежечасный опрос «мертвого» датчика."));
 #endif
     }
   }

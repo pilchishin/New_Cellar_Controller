@@ -36,9 +36,9 @@ Controller::Controller(SensorManager* s, RelayManager* r, TimeManager* t)
  */
 void Controller::Init() {
   if (ui_ == nullptr) {
-    // SetUI() was not called before Init() — this is a programming error.
-    // Halt here so the bug is caught during development.
-    while (true) {} // WDT will reset the system after 8 seconds.
+    // SetUI() не был вызван перед Init() — это ошибка программирования.
+    // Останавливаем выполнение здесь, чтобы ошибку можно было заметить при разработке.
+    while (true) {} // Сторожевой таймер (WDT) перезагрузит систему через 8 секунд.
   }
   ChangeState(SystemState::kAutoClimate);
 }

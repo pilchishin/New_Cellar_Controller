@@ -77,7 +77,7 @@ void MenuNavigator::PrevItem(uint8_t item_count) {
  * нет параметров для редактирования. При входе сбрасывает item_index_ в 0.
  */
 void MenuNavigator::EnterSubmenu() {
-  if (root_index_ != 0) { // HOME не имеет подменю
+  if (root_index_ != 0) { // Экран HOME не имеет подменю
     in_submenu_ = true;
     item_index_ = 0;
   }

@@ -7,7 +7,7 @@
  */
 EmaMedianFilter::EmaMedianFilter(float alpha) {
   this->alpha_ = alpha;
-  // Alpha is clamped to (0, 1) exclusive to prevent filter degeneracy.
+  // Коэффициент Alpha ограничивается диапазоном (0, 1) исключительно для предотвращения вырождения фильтра.
   if (this->alpha_ <= 0.0f) this->alpha_ = 0.01f;
   if (this->alpha_ >= 1.0f) this->alpha_ = 0.99f;
 

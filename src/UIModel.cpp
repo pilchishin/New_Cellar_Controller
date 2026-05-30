@@ -1,7 +1,15 @@
+/**
+ * @file UIModel.cpp
+ * @brief Реализация локальной модели данных для пользовательского интерфейса.
+ */
+
 #include "UIModel.h"
 #include "Controller.h"
 #include "SensorManager.h"
 
+/**
+ * @brief Конструктор модели. Инициализирует все поля значениями по умолчанию.
+ */
 UIModel::UIModel()
     : inside_{0,0,0,0,false},
       outside_{0,0,0,0,false},
@@ -22,6 +30,10 @@ UIModel::UIModel()
       is_auto_mode_(false) {
 }
 
+/**
+ * @brief Синхронизация локальной модели с актуальным состоянием системы.
+ * Извлекает данные из контроллера и менеджера датчиков.
+ */
 void UIModel::Sync(Controller* controller, SensorManager* sensors) {
   if (!controller || !sensors) return;
 
@@ -57,6 +69,9 @@ void UIModel::Sync(Controller* controller, SensorManager* sensors) {
               GetState() == SystemState::kOzoneVent);
 }
 
+/**
+ * @brief Получение числового значения параметра по его идентификатору.
+ */
 float UIModel::GetValue(ValueID id) const {
   switch (id) {
     case ValueID::kTargetTemp:   return GetTargetTemp();
@@ -70,6 +85,9 @@ float UIModel::GetValue(ValueID id) const {
   }
 }
 
+/**
+ * @brief Локальное обновление значения параметра в модели.
+ */
 void UIModel::SetValue(ValueID id, float v) {
   switch (id) {
     case ValueID::kTargetTemp:   SetTargetTemp(v); break;

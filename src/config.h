@@ -6,7 +6,7 @@
 // =================================================================
 // 1. СИСТЕМНЫЕ НАСТРОЙКИ И ОТЛАДКА
 // =================================================================
-// #define DEBUG            // Включение вывода отладочных сообщений в Serial-порт
+// #define DEBUG            // Включение вывода отладочных сообщений в последовательный порт (Serial)
 #define SERIAL_SPEED 9600   // Скорость передачи данных Serial-порта
 #define WDT_TIMEOUT WDTO_8S // Тайм-аут сторожевого таймера (перезагрузка при зависании через 8 секунд)
 
@@ -36,7 +36,7 @@
 constexpr float kDefaultTargetTemp = 4.0f;     // Целевая температура в подвале по умолчанию (°C)
 constexpr float kDefaultTargetRh   = 85.0f;    // Целевая относительная влажность по умолчанию (%)
 
-constexpr float kHysteresisTemp = 0.5f; // Hysteresis for temperature: applied symmetrically for turn-on and turn-off
+constexpr float kHysteresisTemp = 0.5f; // Гистерезис по температуре: применяется симметрично для включения и выключения
 constexpr float kHysteresisRh   = 3.0f; // Допустимое отклонение влажности от заданной (+/- 3%)
 
 constexpr float kMarginCondSafety = 2.0f; // Безопасный отступ от точки росы для предотвращения конденсата
@@ -45,10 +45,10 @@ constexpr float kMarginAh          = 1.0f; // Минимальная разни�
 // =================================================================
 // 4. КРИТИЧЕСКИЕ ПОКАЗАТЕЛИ И ОШИБКИ
 // =================================================================
-constexpr float kTempCriticalMin = 2.0f;  // Минимально допустимая T в подвале (ниже - ошибка)
+constexpr float kTempCriticalMin = 2.0f;  // Минимально допустимая T в подвале (ниже — ошибка)
 constexpr float kVentTempMin = 3.0f; // Минимальная T внутри для работы вентилятора
 constexpr float kOutTempFrostLimit = 0.0f; // Минимальная T уличного воздуха для вентиляции (°C)
-constexpr float kCondensationErrDiff = 0.5f; // Ошибка при риске конденсации (dewpoint >= T_in - 0.5)
+constexpr float kCondensationErrDiff = 0.5f; // Ошибка при риске конденсации (точка росы >= T_внутр - 0.5)
 constexpr float kSensorDiffMax = 2.0f;    // Макс. разница между BME280 и DS18B20
 
 // =================================================================
@@ -56,14 +56,14 @@ constexpr float kSensorDiffMax = 2.0f;    // Макс. разница между
 // =================================================================
 constexpr uint32_t kSensorPollInterval = 10000UL; // Опрос датчиков раз в 10 секунд
 constexpr uint32_t kSensorRetryInterval = 60000UL; // Интервал повторной попытки опроса датчика
-constexpr uint32_t kSensorDeadRetryInterval = 3600000UL; // Try to re-initialise a "dead" sensor once per hour.
+constexpr uint32_t kSensorDeadRetryInterval = 3600000UL; // Попытка повторной инициализации "мертвого" датчика раз в час.
 constexpr uint8_t  kSensorMaxRetries    = 3;       // Макс. количество попыток оживления датчика
 constexpr uint8_t  kSensorStabilityThreshold = 3;  // Кол-во циклов для стабилизации показаний
 constexpr uint32_t kBacklightTimeout    = 60000UL;  // Автовыключение подсветки (60 секунд)
 constexpr uint32_t kUserPresenceTimeout = 1800000UL; // Таймаут присутствия пользователя (30 минут)
 
 static_assert(kUserPresenceTimeout >= 300000UL,
-"User presence timeout must be at least 5 minutes");
+"Таймаут присутствия пользователя должен быть не менее 5 минут");
 
 // Интервалы цикла озонирования
 constexpr uint32_t kOzoneWorkTime = 900000UL;   // Работа озонатора (15 минут)
@@ -88,16 +88,16 @@ constexpr float kRawTempMax = 85.0f;
 constexpr float kRawHumMin  = 0.0f;
 constexpr float kRawHumMax  = 100.0f;
 
-// --- Timing intervals (ms) ---
+// --- Интервалы времени (мс) ---
 constexpr uint32_t kRtcPollInterval      = 1000UL;
 constexpr uint32_t kDeferredSaveDelay    = 30000UL;
 
-// --- Button timing (ms) ---
+// --- Тайминги кнопок (мс) ---
 constexpr uint16_t kDebounceMs   = 50;
 constexpr uint16_t kRepeatMs     = 150;
 constexpr uint16_t kLongPressMs  = 600;
 
-// --- Relay protection ---
+// --- Защита реле ---
 constexpr uint32_t kFanDebounceDelay = 300000UL;
 
 // --- TimeManager ---

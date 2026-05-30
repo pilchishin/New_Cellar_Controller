@@ -39,16 +39,16 @@ void setup() {
   ui.Init();              // Дисплей и кнопки
 
   // 3. Связываем контроллер с интерфейсом
-  // IMPORTANT: Initialization order is mandatory and must not be changed.
-  // 1. relay_manager.Init()  — safe hardware state before anything else.
-  // 2. sensor_manager.Init() — start sensor warm-up.
-  // 3. time_manager.Init()   — RTC must be ready before controller.
-  // 4. ui.Init()             — display must exist before controller uses it.
-  // 5. controller.SetUI()    — must be called BEFORE controller.Init()
-  //                            because Init() calls ChangeState() which
-  //                            accesses the UI pointer.
-  // 6. controller.Init()     — starts the FSM; requires all above to exist.
-  // 7. wdt_enable()          — LAST: prevents WDT from firing during init.
+  // ВАЖНО: Порядок инициализации обязателен и не должен изменяться.
+  // 1. relay_manager.Init()  — безопасное состояние оборудования перед всем остальным.
+  // 2. sensor_manager.Init() — запуск прогрева датчиков.
+  // 3. time_manager.Init()   — RTC должен быть готов перед контроллером.
+  // 4. ui.Init()             — дисплей должен существовать перед тем, как контроллер его использует.
+  // 5. controller.SetUI()    — должен быть вызван ДО controller.Init(),
+  //                            так как Init() вызывает ChangeState(), который
+  //                            обращается к указателю на UI.
+  // 6. controller.Init()     — запускает FSM; требует наличия всего вышеперечисленного.
+  // 7. wdt_enable()          — ПОСЛЕДНИМ: предотвращает срабатывание WDT во время инициализации.
   controller.SetUI(&ui);
   controller.Init();
 

@@ -32,9 +32,9 @@ enum class ErrorCode {
     kSensorHtuFail,
     kSensorDsFail,
     kRtcFail,
-    kTempMismatch,      // BME280 vs DS18B20 > 2C
-    kCondensationRisk,  // dewpoint >= T - 4C
-    kTempTooLow        // T <= 2C
+    kTempMismatch,      // Расхождение BME280 vs DS18B20 > 2°C
+    kCondensationRisk,  // Точка росы >= T - 4°C
+    kTempTooLow        // T <= 2°C
 };
 
 /**

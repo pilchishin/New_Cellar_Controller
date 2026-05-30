@@ -48,7 +48,7 @@ class UIModel {
    */
   void SetValue(ValueID id, float v);
 
-  // Getters
+  // Геттеры (Getters)
   SensorData GetInside() const { return inside_; }
   SensorData GetOutside() const { return outside_; }
   SystemState GetState() const { return state_; }
@@ -67,7 +67,7 @@ class UIModel {
   bool IsManualMode() const { return is_manual_mode_; }
   bool IsAutoMode() const { return is_auto_mode_; }
 
-  // Setters
+  // Сеттеры (Setters)
   void SetInside(const SensorData& v) { inside_ = v; }
   void SetOutside(const SensorData& v) { outside_ = v; }
   void SetState(SystemState v) { state_ = v; }

@@ -55,7 +55,7 @@ class AppEEPROM {
    */
   int FindActiveSlot();
 
-  int current_slot_ = -1; ///< Index of the currently active (most recently written) EEPROM slot. -1 means no valid slot exists yet (first boot).
+  int current_slot_ = -1; ///< Индекс текущего активного (последнего записанного) слота EEPROM. -1 означает, что валидный слот еще не существует (первая загрузка).
   uint16_t current_slot_seq_ = 0; ///< Текущий порядковый номер записи
   PersistentData pending_data_; ///< Буфер данных, ожидающих записи
   bool needs_save_;             ///< Флаг наличия изменений, требующих сохранения

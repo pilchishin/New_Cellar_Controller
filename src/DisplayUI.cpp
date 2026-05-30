@@ -292,9 +292,9 @@ void DisplayUI::UpdateBacklight() {
  */
 void DisplayUI::DrawPage() {
   if (nav_.GetRootIndex() == 0) {
-    DrawHomeScreen(); // Главная (Index 0)
+    DrawHomeScreen(); // Главная (индекс 0)
   } else if (!nav_.InSubmenu()) {
-    DrawRootPage();   // Выбор раздела (Root 1-N)
+    DrawRootPage();   // Выбор раздела (корень 1-N)
   } else {
     // Мы внутри раздела — рисуем текущий элемент
     const MenuItemDef* item = GetCurrentItemDef();
@@ -332,7 +332,7 @@ void DisplayUI::RenderItem(const MenuItemDef* item) {
  */
 void DisplayUI::DrawRootPage() {
   const MenuRootDef* root = GetCurrentRootDef();
-  // HOME не считается порядковым номером в полосе прокрутки
+  // Экран HOME не считается порядковым номером в полосе прокрутки
   uint8_t root_idx = nav_.GetRootIndex();
   uint8_t index = (root_idx > 0) ? root_idx - 1 : 0;
   DrawHeader((const __FlashStringHelper*)root->label, index, MENU_TABLE_SIZE - 1);
@@ -380,7 +380,7 @@ void DisplayUI::DrawHomeScreen() {
   else screen_.print(F("---"));
   screen_.print(F("%"));
 
-  // Индикаторы активного оборудования (O - Озон, F - Вентилятор)
+  // Индикаторы активного оборудования (O — Озон, F — Вентилятор)
   screen_.SetPos(0, 15);
   if (model_.IsOzoneOn()) screen_.print(F("O"));
   else if (model_.IsFanOn()) screen_.print(F("F"));
@@ -396,7 +396,7 @@ void DisplayUI::DrawHomeScreen() {
   else screen_.print(F("---"));
   screen_.print(F("%"));
 
-  // Режим системы (E - Error, A - Auto, M - Manual)
+  // Режим системы (E — Ошибка, A — Авто, M — Ручной)
   screen_.SetPos(1, 15);
   if (model_.GetState() == SystemState::kErrorState) screen_.print(F("E"));
   else if (model_.IsAutoMode()) screen_.print(F("A"));
@@ -487,7 +487,7 @@ void DisplayUI::DrawStats() {
   DrawHeader(F("STATS"), item_idx, root->item_count);
 
   screen_.SetPos(1, 0);
-  if (item_idx == 0) { // Просмотр наработки (в часах)
+  if (item_idx == 0) { // Просмотр времени наработки (в часах)
     screen_.print(F("U"));
     screen_.print(model_.GetStats().uptimeMinutes / 60);
     screen_.print(F(" F"));
@@ -514,7 +514,7 @@ void DisplayUI::DrawErrorLog() {
 #ifdef DEBUG
     screen_.print(ErrorToString(model_.GetError()));
 #endif
-    // Подсказка для сброса (UP = Reset)
+    // Подсказка для сброса (UP — сброс)
     screen_.SetPos(1, 12);
     screen_.print(F("UP:R"));
   }
