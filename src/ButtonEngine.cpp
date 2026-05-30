@@ -48,6 +48,11 @@ ButtonEvent ButtonEngine::Poll() {
       menu_pressed_ = true;
       menu_timer_ = millis();
     }
+    // Защита от залипания (stuck button detection)
+    if (millis() - menu_timer_ >= kButtonStuckTimeout) {
+      menu_pressed_ = false;
+      return ButtonEvent::kNone;
+    }
   } else {
     if (menu_pressed_) {
       // Кнопка только что отпущена — вычисляем длительность удержания
@@ -61,10 +66,19 @@ ButtonEvent ButtonEngine::Poll() {
   // --- Логика кнопок UP/DOWN ---
   // Реализован автоповтор: если кнопку держать, события генерируются периодически.
   if ((up || down) && !menu_pressed_) {
+    if (continuous_press_start_ == 0) {
+      continuous_press_start_ = millis();
+    }
+    // Защита от залипания
+    if (millis() - continuous_press_start_ >= kButtonStuckTimeout) {
+      return ButtonEvent::kNone; // Игнорируем — кнопка похоже залипла
+    }
     if (millis() - last_action_ >= kRepeatMs) {
       last_action_ = millis();
       return up ? ButtonEvent::kUp : ButtonEvent::kDown;
     }
+  } else {
+    continuous_press_start_ = 0; // Сброс при отпускании или переключении на MENU
   }
 
   return ButtonEvent::kNone;

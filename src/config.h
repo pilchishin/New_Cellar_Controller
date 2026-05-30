@@ -96,6 +96,7 @@ constexpr uint32_t kDeferredSaveDelay    = 30000UL;
 constexpr uint16_t kDebounceMs   = 50;
 constexpr uint16_t kRepeatMs     = 150;
 constexpr uint16_t kLongPressMs  = 600;
+constexpr uint32_t kButtonStuckTimeout = 30000UL;
 
 // --- Защита реле ---
 constexpr uint32_t kFanDebounceDelay = 300000UL;

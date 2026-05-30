@@ -59,6 +59,7 @@ class ButtonEngine {
   unsigned long last_action_;  ///< Время последнего сгенерированного события UP/DOWN (для автоповтора)
   unsigned long menu_timer_;   ///< Время начала нажатия кнопки MENU
   bool menu_pressed_;          ///< Флаг текущего зажатого состояния кнопки MENU
+  unsigned long continuous_press_start_ = 0; ///< Время начала непрерывного удержания любой кнопки
 };
 
 #endif
