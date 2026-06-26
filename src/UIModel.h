@@ -52,7 +52,8 @@ class UIModel {
   SensorData GetInside() const { return inside_; }
   SensorData GetOutside() const { return outside_; }
   SystemState GetState() const { return state_; }
-  ErrorCode GetError() const { return error_; }
+  ErrorMask GetActiveErrors() const { return active_errors_; }
+  ErrorMask GetLatchedErrors() const { return latched_errors_; }
   float GetTargetTemp() const { return target_temp_; }
   float GetTargetRh() const { return target_rh_; }
   CalibrationData GetCalibration() const { return calib_; }
@@ -71,7 +72,8 @@ class UIModel {
   void SetInside(const SensorData& v) { inside_ = v; }
   void SetOutside(const SensorData& v) { outside_ = v; }
   void SetState(SystemState v) { state_ = v; }
-  void SetError(ErrorCode v) { error_ = v; }
+  void SetActiveErrors(ErrorMask v) { active_errors_ = v; }
+  void SetLatchedErrors(ErrorMask v) { latched_errors_ = v; }
   void SetTargetTemp(float v) { target_temp_ = v; }
   void SetTargetRh(float v) { target_rh_ = v; }
   void SetCalibration(const CalibrationData& v) { calib_ = v; }
@@ -90,7 +92,8 @@ class UIModel {
   SensorData inside_;
   SensorData outside_;
   SystemState state_;
-  ErrorCode error_;
+  ErrorMask active_errors_;
+  ErrorMask latched_errors_;
 
   float target_temp_;
   float target_rh_;

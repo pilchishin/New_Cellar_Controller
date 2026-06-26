@@ -38,6 +38,36 @@ enum class ErrorCode {
 };
 
 /**
+ * @brief Тип маски ошибок (8 бит для 7 возможных ошибок).
+ */
+using ErrorMask = uint8_t;
+
+/**
+ * @brief Преобразование кода ошибки в бит маски.
+ */
+constexpr ErrorMask ErrorBit(ErrorCode e) {
+    return (e == ErrorCode::kNone)
+        ? 0u
+        : static_cast<uint8_t>(1u << (static_cast<uint8_t>(e) - 1u));
+}
+
+/**
+ * @brief Таблица коротких строк ошибок для LCD (в PROGMEM).
+ */
+const char kErrStr0[] PROGMEM = "BME FAIL";
+const char kErrStr1[] PROGMEM = "HTU FAIL";
+const char kErrStr2[] PROGMEM = "DS FAIL";
+const char kErrStr3[] PROGMEM = "RTC FAIL";
+const char kErrStr4[] PROGMEM = "T MISMATCH";
+const char kErrStr5[] PROGMEM = "COND RISK";
+const char kErrStr6[] PROGMEM = "FROST ERR";
+
+const char* const kErrStrTable[] PROGMEM = {
+    kErrStr0, kErrStr1, kErrStr2,
+    kErrStr3, kErrStr4, kErrStr5, kErrStr6
+};
+
+/**
  * @struct SensorData
  * @brief Структура для хранения обработанных данных с одного датчика климата.
  */

@@ -21,7 +21,8 @@ class DisplayUI;
 class Controller {
  private:
   SystemState current_state_; ///< Текущее состояние системы
-  ErrorCode current_error_;   ///< Код активной ошибки (ErrorCode::kNone если все ОК)
+  ErrorMask active_errors_;   ///< Маска активных в данный момент ошибок
+  ErrorMask latched_errors_;  ///< Журнал зафиксированных ошибок
 
   // Уставки климата (загружаются из EEPROM)
   float target_temp_;         ///< Целевая температура (°C)
@@ -107,14 +108,16 @@ class Controller {
   void Tick();
 
   // Методы управления, вызываемые из UI/Меню
-  void ResetError();                    ///< Сброс аварийного состояния
+  void ResetErrors();                    ///< Сброс журнала ошибок
+  void ResetError() { ResetErrors(); }   ///< Legacy-обертка для совместимости
   void StartManualFan(uint16_t minutes);  ///< Запуск вентилятора на время
   void StartManualOzone(uint16_t minutes); ///< Запуск озонатора на время
   void NotifyUserActivity();            ///< Регистрация нажатия кнопок пользователем
 
   // Геттеры состояния для отображения в UI
   SystemState GetState() const { return current_state_; }
-  ErrorCode GetError() const { return current_error_; }
+  ErrorMask GetActiveErrors() const { return active_errors_; }
+  ErrorMask GetLatchedErrors() const { return latched_errors_; }
   RelayManager* GetRelayManager() const { return relays_; }
 
   // Работа с настройками (с автоматическим сохранением в EEPROM)

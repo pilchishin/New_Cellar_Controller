@@ -100,6 +100,7 @@ constexpr uint32_t kButtonStuckTimeout = 30000UL;
 
 // --- Защита реле ---
 constexpr uint32_t kFanDebounceDelay = 300000UL;
+constexpr uint32_t kErrorResetHoldMs = 3000UL;
 
 // --- TimeManager ---
 constexpr uint16_t kMinValidYear = 2023;

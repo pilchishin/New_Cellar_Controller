@@ -90,7 +90,7 @@ static const char root_status[] PROGMEM = "STATUS";
 static const char root_targets[] PROGMEM = "TARGETS";
 static const char root_manual[] PROGMEM = "MANUAL";
 static const char root_stats[] PROGMEM = "STATS";
-static const char root_errors[] PROGMEM = "ERRORS";
+static const char root_errors_label[] PROGMEM = "ERRORS";
 static const char root_service[] PROGMEM = "SERVICE";
 
 /**
@@ -105,7 +105,7 @@ static const MenuRootDef MENU_TABLE[] PROGMEM = {
   { root_targets, TARGET_ITEMS,  2, ActionID::kNavPrevRoot, ActionID::kNavNextRoot, ActionID::kNavNextRoot, ActionID::kEnterSubmenu, 1000 },
   { root_manual,  MANUAL_ITEMS,  2, ActionID::kNavPrevRoot, ActionID::kNavNextRoot, ActionID::kNavNextRoot, ActionID::kEnterSubmenu, 1000 },
   { root_stats,   STATS_ITEMS,   2, ActionID::kNavPrevRoot, ActionID::kNavNextRoot, ActionID::kNavNextRoot, ActionID::kEnterSubmenu, 1000 },
-  { root_errors,  ERROR_ITEMS,   1, ActionID::kNavPrevRoot, ActionID::kNavNextRoot, ActionID::kNavNextRoot, ActionID::kEnterSubmenu, 1000 },
+  { root_errors_label, ERROR_ITEMS, 1, ActionID::kNavPrevRoot, ActionID::kNavNextRoot, ActionID::kNavNextRoot, ActionID::kEnterSubmenu, 1000 },
   { root_service, SERVICE_ITEMS, 5, ActionID::kNavPrevRoot, ActionID::kNavNextRoot, ActionID::kNavNextRoot, ActionID::kEnterSubmenu, 1000 }
 };
 
@@ -130,7 +130,12 @@ DisplayUI::DisplayUI(Controller* c, SensorManager* s, TimeManager* t)
       temp_message_(nullptr),
       last_activity_time_(0),
       backlight_on_(true),
-      needs_redraw_(true) {
+      needs_redraw_(true),
+      error_page_index_(0),
+      error_page_count_(1),
+      error_reset_pending_(false),
+      error_reset_press_start_(0),
+      last_blink_ms_(0) {
   // Очистка кэша строк для корректной первой отрисовки
   memset(last_lines_, 0, sizeof(last_lines_));
 }
@@ -209,6 +214,49 @@ void DisplayUI::Update() {
     last_draw = millis();
     needs_redraw_ = false;
 
+    // Специфическая логика для раздела ошибок
+    if (root && strcmp_P(root->label, root_errors_label) == 0) {
+      ErrorMask mask = model_.GetLatchedErrors();
+      uint8_t count = 0;
+      for (uint8_t i = 0; i < 7; i++) {
+        if (mask & (1u << i)) count++;
+      }
+      uint8_t new_count = (count > 0) ? (count + 1) : 1;
+      if (new_count != error_page_count_) {
+        error_page_count_ = new_count;
+        if (error_page_index_ >= error_page_count_) {
+          error_page_index_ = error_page_count_ - 1;
+        }
+      }
+    }
+
+    // Мигание индикатора ошибки на главном экране
+    if (nav_.GetRootIndex() == 0 && model_.GetActiveErrors() != 0) {
+      if (millis() - last_blink_ms_ >= 500UL) {
+        last_blink_ms_ = millis();
+        needs_redraw_ = true;
+      }
+    }
+
+    // Проверка таймаута сброса ошибок
+    if (error_reset_pending_) {
+      // Если кнопка отпущена до истечения времени — отмена
+      if (digitalRead(BT_MENU) == HIGH) {
+        error_reset_pending_ = false;
+        needs_redraw_ = true;
+      } else if (millis() - error_reset_press_start_ >= kErrorResetHoldMs) {
+        error_reset_pending_ = false;
+        controller_->ResetErrors();
+        error_page_count_ = 1;
+        error_page_index_ = 0;
+        needs_redraw_ = true;
+        memset(last_lines_, 0, sizeof(last_lines_));
+      } else {
+        // Требуется постоянная перерисовка прогресс-бара
+        needs_redraw_ = true;
+      }
+    }
+
     screen_.Clear(); // Очистка виртуального холста
 
     // Приоритет: отображение временного уведомления (например, "SAVED")
@@ -266,6 +314,54 @@ void DisplayUI::HandleButtons() {
 
   // Получение логического события от ButtonEngine (click, long click, repeat)
   ButtonEvent event = buttons_.Poll();
+
+  // Специальная обработка кнопок для раздела ERRORS
+  const MenuRootDef* root = GetCurrentRootDef();
+  bool is_error_view = root && strcmp_P(root->label, root_errors_label) == 0 && nav_.InSubmenu();
+
+  if (is_error_view) {
+    // В разделе ERRORS мы перехватываем события для пагинации и сброса
+    if (event == ButtonEvent::kUp) {
+      error_page_index_ = (error_page_index_ + 1) % error_page_count_;
+      error_reset_pending_ = false;
+      needs_redraw_ = true;
+      return;
+    } else if (event == ButtonEvent::kDown) {
+      error_page_index_ = (error_page_index_ + error_page_count_ - 1) % error_page_count_;
+      error_reset_pending_ = false;
+      needs_redraw_ = true;
+      return;
+    } else if (event == ButtonEvent::kMenuLong) {
+      // kMenuLong приходит через 600мс. Мы используем его для начала 3-секундного процесса.
+      bool is_reset_page = (model_.GetLatchedErrors() != 0) &&
+                          (error_page_index_ == error_page_count_ - 1);
+      if (is_reset_page && !error_reset_pending_) {
+        error_reset_pending_ = true;
+        error_reset_press_start_ = millis();
+        needs_redraw_ = true;
+      }
+      return;
+    } else if (event == ButtonEvent::kMenu) {
+      // kMenu приходит при отпускании после короткого нажатия.
+      // Если мы в процессе сброса, отпускание отменяет его.
+      if (error_reset_pending_) {
+        error_reset_pending_ = false;
+        needs_redraw_ = true;
+      } else {
+        // Обычный выход из подменю
+        dispatcher_.Dispatch(this, event);
+      }
+      return;
+    }
+
+    // Если кнопка МЕНЮ зажата, Poll() возвращает kNone, но AnyPressed() вернет true.
+    // Мы проверяем достижение таймаута сброса в основном Update() или здесь.
+    // Т.к. AnyPressed() вернет true для любой кнопки, проверим конкретно МЕНЮ.
+    // Но у нас нет прямого доступа к пинам из DisplayUI (они инкапсулированы в ButtonEngine).
+    // Мы можем использовать тот факт, что если AnyPressed() true и event kNone,
+    // значит кнопка все еще удерживается.
+  }
+
   if (event != ButtonEvent::kNone) {
     needs_redraw_ = true;
     dispatcher_.Dispatch(this, event); // Передача события в логику навигации/действий
@@ -310,7 +406,7 @@ void DisplayUI::DrawPage() {
 void DisplayUI::RenderItem(const MenuItemDef* item) {
   switch (item->type) {
     case MenuItemType::kView:
-      if (item->id == MenuItemID::kErrorView) DrawErrorLog();
+      if (item->id == MenuItemID::kErrorView) DrawErrorScreen();
       else DrawStatus(item->ctx_index);
       break;
     case MenuItemType::kValue:
@@ -380,11 +476,20 @@ void DisplayUI::DrawHomeScreen() {
   else screen_.print(F("---"));
   screen_.print(F("%"));
 
-  // Индикаторы активного оборудования (O — Озон, F — Вентилятор)
+  // Индикаторы активного оборудования и ошибок
   screen_.SetPos(0, 15);
-  if (model_.IsOzoneOn()) screen_.print(F("O"));
-  else if (model_.IsFanOn()) screen_.print(F("F"));
-  else screen_.print(F(" "));
+  if (model_.GetActiveErrors() != 0) {
+    bool blink_on = ((millis() / 500UL) % 2 == 0);
+    screen_.print(blink_on ? '!' : ' ');
+  } else if (model_.GetLatchedErrors() != 0) {
+    screen_.print('!');
+  } else if (model_.IsOzoneOn()) {
+    screen_.print(F("O"));
+  } else if (model_.IsFanOn()) {
+    screen_.print(F("F"));
+  } else {
+    screen_.print(F(" "));
+  }
 
   // Строка 2: Показатели на улице [T] [H] [Режим системы]
   screen_.SetPos(1, 0);
@@ -502,20 +607,60 @@ void DisplayUI::DrawStats() {
 /**
  * @brief Шаблон страницы просмотра системных ошибок.
  */
-void DisplayUI::DrawErrorLog() {
-  const MenuRootDef* root = GetCurrentRootDef();
-  DrawHeader(F("ERRORS"), nav_.GetItemIndex(), root->item_count);
+void DisplayUI::DrawErrorScreen() {
+  ErrorMask mask = model_.GetLatchedErrors();
 
-  screen_.SetPos(1, 0);
-  if (model_.GetError() == ErrorCode::kNone) {
-    screen_.print(F("SYSTEM OK"));
+  // Line 0: header "ERRORS X/Y"
+  screen_.SetPos(0, 0);
+  screen_.print(F("ERRORS "));
+  screen_.print(error_page_index_ + 1);
+  screen_.print(F("/"));
+  screen_.print(error_page_count_);
+
+  bool is_reset_page = (mask != 0) && (error_page_index_ == error_page_count_ - 1);
+  bool is_system_ok = (mask == 0);
+
+  if (is_system_ok) {
+    screen_.SetPos(1, 0);
+    screen_.print(F("SYSTEM OK       "));
+  } else if (is_reset_page) {
+    if (error_reset_pending_) {
+      uint32_t held = millis() - error_reset_press_start_;
+      uint8_t  dots = (uint8_t)((held * 8) / kErrorResetHoldMs);
+      if (dots > 8) dots = 8;
+      screen_.SetPos(1, 0);
+      screen_.print(F("HOLD: "));
+      for (uint8_t i = 0; i < dots; i++) screen_.print('#');
+      for (uint8_t i = dots; i < 8; i++) screen_.print(' ');
+    } else {
+      screen_.SetPos(1, 0);
+      screen_.print(F("RESET:LONG MENU "));
+    }
   } else {
-    // Вывод текстового описания ошибки
-#ifdef DEBUG
-    screen_.print(ErrorToString(model_.GetError()));
-#endif
-    // Подсказка для сброса (UP — сброс)
-    screen_.SetPos(1, 12);
-    screen_.print(F("UP:R"));
+    ErrorCode ec = ErrorPageAt(error_page_index_, mask);
+    uint8_t bit = static_cast<uint8_t>(ec) - 1;
+    const char* pgm_ptr = (const char*)pgm_read_ptr(&kErrStrTable[bit]);
+    char buf[11];
+    strncpy_P(buf, pgm_ptr, sizeof(buf) - 1);
+    buf[sizeof(buf) - 1] = '\0';
+    screen_.SetPos(1, 0);
+    screen_.print(buf);
+    // Дозаполнение пробелами до 16 символов
+    uint8_t len = strlen(buf);
+    for (uint8_t i = len; i < 16; i++) screen_.print(' ');
   }
+}
+
+/**
+ * @brief Определение ошибки для конкретной страницы.
+ */
+ErrorCode DisplayUI::ErrorPageAt(uint8_t p, ErrorMask mask) const {
+  uint8_t idx = 0;
+  for (uint8_t bit = 0; bit < 7; bit++) {
+    if (mask & (1u << bit)) {
+      if (idx == p) return static_cast<ErrorCode>(bit + 1);
+      idx++;
+    }
+  }
+  return ErrorCode::kNone;
 }

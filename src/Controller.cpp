@@ -8,7 +8,8 @@
 Controller::Controller(SensorManager* s, RelayManager* r, TimeManager* t)
     : sensors_(s), relays_(r), rtc_(t), ui_(nullptr) {
   current_state_ = SystemState::kIdle;
-  current_error_ = ErrorCode::kNone;
+  active_errors_ = 0;
+  latched_errors_ = 0;
 
   // Загрузка сохраненных данных
   PersistentData data;
@@ -35,6 +36,8 @@ Controller::Controller(SensorManager* s, RelayManager* r, TimeManager* t)
  * @brief Начало работы системы.
  */
 void Controller::Init() {
+  active_errors_ = 0;
+  latched_errors_ = 0;
   if (ui_ == nullptr) {
     // SetUI() не был вызван перед Init() — это ошибка программирования.
     // Останавливаем выполнение здесь, чтобы ошибку можно было заметить при разработке.
@@ -101,10 +104,15 @@ void Controller::CheckSystemHealth() {
   // Постоянная проверка критических климатических параметров
   CheckCriticalErrors();
 
-  // При обнаружении критической ошибки — переход в защищенный режим ERROR_STATE
-  if (current_error_ != ErrorCode::kNone &&
-      current_state_ != SystemState::kErrorState) {
-    ChangeState(SystemState::kErrorState);
+  // Управление состоянием ошибки на основе активных масок
+  if (active_errors_ != 0) {
+    if (current_state_ != SystemState::kErrorState) {
+      ChangeState(SystemState::kErrorState);
+    }
+  } else {
+    if (current_state_ == SystemState::kErrorState) {
+      ChangeState(SystemState::kAutoClimate);
+    }
   }
 }
 
@@ -323,30 +331,32 @@ void Controller::HandleAutoClimate() {
  * @brief Проверка аварийных ситуаций.
  */
 void Controller::CheckCriticalErrors() {
+  active_errors_ = 0;
+
   // 1. Ошибки оборудования (SensorManager)
   ErrorCode sErr = sensors_->CheckErrors();
   if (sErr != ErrorCode::kNone) {
-    current_error_ = sErr;
-    return;
+    active_errors_ |= ErrorBit(sErr);
   }
 
   // 2. Ошибки часов реального времени (RTC)
   ErrorCode tErr = rtc_->CheckErrors();
   if (tErr != ErrorCode::kNone) {
-    current_error_ = tErr;
-    return;
+    active_errors_ |= ErrorBit(tErr);
   }
 
   // 3. Проверка критического переохлаждения или риска затопления/конденсата
   SensorData in = sensors_->GetInside();
   if (in.temp <= kTempCriticalMin) {
-    current_error_ = ErrorCode::kTempTooLow;
-  } else if (in.dewpoint >= (in.temp - kCondensationErrDiff)) {
-    current_error_ = ErrorCode::kCondensationRisk;
-  } else {
-    // Ошибок нет — сброс кода ошибки (позволяет системе восстанавливаться самостоятельно)
-    current_error_ = ErrorCode::kNone;
+    active_errors_ |= ErrorBit(ErrorCode::kTempTooLow);
   }
+
+  if (in.dewpoint >= (in.temp - kCondensationErrDiff)) {
+    active_errors_ |= ErrorBit(ErrorCode::kCondensationRisk);
+  }
+
+  // Фиксация новых ошибок в журнале
+  latched_errors_ |= active_errors_;
 }
 
 /**
@@ -371,10 +381,11 @@ void Controller::ChangeState(SystemState new_state) {
 /**
  * @brief Команда сброса ошибки пользователем.
  */
-void Controller::ResetError() {
-  current_error_ = ErrorCode::kNone;
-  ChangeState(SystemState::kIdle);
-  Init();  // Повторная попытка запуска
+void Controller::ResetErrors() {
+  latched_errors_ = 0;
+  // Мы не сбрасываем active_errors_, так как они пересчитываются каждую итерацию.
+  // Мы не форсируем смену состояния здесь. Если причина ошибки устранена,
+  // CheckSystemHealth увидит active_errors_ == 0 и позволит выйти из kErrorState.
 }
 
 /**

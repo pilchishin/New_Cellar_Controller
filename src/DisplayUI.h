@@ -204,6 +204,18 @@ class DisplayUI {
   char last_lines_[2][17];           ///< Кэш предыдущего кадра для поиска изменений
   bool needs_redraw_;                ///< Флаг принудительного обновления кадра
 
+  // --- Состояние навигации ошибок ---
+  uint8_t error_page_index_;         ///< Текущая страница в разделе ERRORS
+  uint8_t error_page_count_;         ///< Общее кол-во страниц ошибок + RESET
+  bool error_reset_pending_;         ///< Флаг процесса долгого нажатия MENU
+  unsigned long error_reset_press_start_; ///< Метка времени начала нажатия
+  unsigned long last_blink_ms_;      ///< Таймер мигания '!' на главном экране
+
+  /**
+   * @brief Возвращает код ошибки для конкретной страницы.
+   */
+  ErrorCode ErrorPageAt(uint8_t p, ErrorMask mask) const;
+
   /**
    * @brief Перенос данных из виртуального буфера на физический дисплей.
    * Отправляет по I2C только те строки, содержимое которых реально изменилось.
@@ -227,7 +239,7 @@ class DisplayUI {
   void DrawManualModes();   ///< Экран управления FAN/OZONE
   void DrawValuePage();     ///< Универсальный экран редактирования числовых параметров
   void DrawStats();         ///< Экран отображения моточасов системы
-  void DrawErrorLog();      ///< Экран просмотра текущей аварии
+  void DrawErrorScreen();   ///< Экран просмотра журнала ошибок
 
   /**
    * @brief Возвращает количество корневых разделов меню.

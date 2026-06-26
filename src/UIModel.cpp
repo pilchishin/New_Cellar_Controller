@@ -14,7 +14,8 @@ UIModel::UIModel()
     : inside_{0,0,0,0,false},
       outside_{0,0,0,0,false},
       state_(SystemState::kIdle),
-      error_(ErrorCode::kNone),
+      active_errors_(0),
+      latched_errors_(0),
       target_temp_(0),
       target_rh_(0),
       calib_{0,0,0,0,0},
@@ -40,7 +41,8 @@ void UIModel::Sync(Controller* controller, SensorManager* sensors) {
   SetInside(sensors->GetInside());
   SetOutside(sensors->GetOutside());
   SetState(controller->GetState());
-  SetError(controller->GetError());
+  SetActiveErrors(controller->GetActiveErrors());
+  SetLatchedErrors(controller->GetLatchedErrors());
 
   SetTargetTemp(controller->GetTargetTemp());
   SetTargetRh(controller->GetTargetRh());
